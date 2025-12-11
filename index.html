@@ -81,8 +81,10 @@
         .btn-pdf { background: #fff; color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
         .btn-pdf:hover { background: #eee; box-shadow: 0 0 15px #fff; }
 
-        .btn-auto { background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); padding: 10px; font-family: 'Orbitron'; font-size: 0.8rem; cursor: pointer; width: 100%; margin-bottom: 10px; transition: 0.3s; }
+        .auto-zone-group { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+        .btn-auto { background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); padding: 12px; font-family: 'Orbitron'; font-size: 0.8rem; cursor: pointer; flex: 2; transition: 0.3s; }
         .btn-auto:hover { background: var(--neon-pink); color: #fff; box-shadow: 0 0 15px var(--neon-pink); }
+        .input-small { width: 80px !important; text-align: center; }
 
         .results-panel { padding: 40px; position: relative; background: radial-gradient(circle at top right, rgba(0,50,100,0.15), transparent); overflow-y: auto; display: flex; flex-direction: column; }
 
@@ -95,22 +97,11 @@
             overflow: hidden; 
         }
         
-        #blueprint-canvas { 
-            width: 100%; height: 100%; display: block; cursor: grab; 
-        }
+        #blueprint-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
         #blueprint-canvas:active { cursor: grabbing; }
 
-        .zoom-controls {
-            position: absolute; bottom: 20px; right: 20px;
-            display: flex; gap: 5px;
-        }
-        .zoom-btn {
-            width: 30px; height: 30px;
-            background: rgba(0,0,0,0.7); color: #fff;
-            border: 1px solid var(--neon-cyan);
-            font-weight: bold; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-        }
+        .zoom-controls { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 5px; }
+        .zoom-btn { width: 30px; height: 30px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid var(--neon-cyan); font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .zoom-btn:hover { background: var(--neon-cyan); color: #000; }
 
         .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -124,7 +115,6 @@
         .data-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
         .footer-brand { position: fixed; bottom: 10px; right: 20px; font-family: 'Orbitron'; font-size: 0.7rem; color: rgba(255,255,255,0.3); }
-        
         #an-info { margin-bottom: 20px; display: flex; gap: 20px; font-size: 0.9rem; color: var(--text-dim); }
         #an-info span { color: #fff; font-family: 'Orbitron'; margin-left: 5px; }
     </style>
@@ -140,7 +130,7 @@
     <!-- MODULE ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">KAUSTIK <span>v17</span></div>
+            <div class="brand">CAUSTIQUE <span>v18</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -157,9 +147,17 @@
             <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1"></div>
             <div class="input-group"><label>Constante (K)</label><input type="number" id="an-kfactor" value="-1" step="0.0001"></div>
             
+            <label style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; display:block;">GÉNÉRATEUR DE ZONES</label>
+            <div class="auto-zone-group">
+                <div style="flex:1;">
+                    <label style="font-size:0.7rem;">NB. ZONES</label>
+                    <input type="number" id="an-nb-zones" class="input-small" placeholder="Auto">
+                </div>
+                <button class="btn-auto" onclick="autoCalcZones()">CALCULER</button>
+            </div>
+
             <div class="input-group">
-                <label>Zones (mm)</label>
-                <button class="btn-auto" onclick="autoCalcZones()">⚡ CALCULER ZONES OPTIMALES</button>
+                <label>Liste des Rayons (mm)</label>
                 <input type="text" id="an-zones" value="50, 100, 140, 200">
             </div>
             
@@ -260,7 +258,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v17</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v18</div>
 </div>
 
 <script>
@@ -272,33 +270,36 @@
     function autoCalcZones() {
         const D = parseFloat(document.getElementById('an-diameter').value);
         const R = parseFloat(document.getElementById('an-radius').value);
+        const forcedN = parseInt(document.getElementById('an-nb-zones').value);
         
         if(!D || !R) { alert("Veuillez saisir Diamètre et Rayon."); return; }
 
-        // Formule Platzeck & Gaviola (Eq 21) pour la largeur max (Delta r)
-        // delta_r = 4.53 * (m * R^2)^(1/3) * 10^-2 (cm)
-        // m = F / D = (R/2) / D
-        
         const m = (R/2) / D;
         const R_cm = R / 10;
         
-        // Calcul largeur max en cm
+        // Largeur max théorique
         const term = m * Math.pow(R_cm, 2);
         const width_cm = 4.53 * Math.pow(term, 1/3) * 0.01;
         const width_mm = width_cm * 10;
 
-        // Génération des zones (toute la surface)
         const radiusMirror = D / 2;
-        // On arrondit au nombre de zones
-        const numZones = Math.ceil(radiusMirror / width_mm);
-        // Largeur réelle pour division égale
-        const actualWidth = radiusMirror / numZones;
+        let numZones;
 
+        // Si l'utilisateur force le nombre
+        if (forcedN > 0) {
+            numZones = forcedN;
+        } else {
+            // Sinon, calcul optimal
+            numZones = Math.ceil(radiusMirror / width_mm);
+            // On met à jour l'input pour info
+            document.getElementById('an-nb-zones').value = numZones;
+        }
+
+        const actualWidth = radiusMirror / numZones;
         let zoneCenters = [];
-        // On prend le centre de chaque bande
+        
         for(let i=0; i<numZones; i++) {
             let center = (i * actualWidth) + (actualWidth/2);
-            // On évite le centre pur si trop petit
             if(center > 10) zoneCenters.push(center.toFixed(1));
         }
 
@@ -425,7 +426,6 @@
             ctx.beginPath(); ctx.arc(m1X - m1Rad*2, axisY, m1Rad*2, -0.25, 0.25); 
             ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
             
-            // Rayons
             ctx.strokeStyle = C_RAY; ctx.lineWidth=1;
             ctx.beginPath(); ctx.moveTo(startX, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad);
             ctx.moveTo(startX, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.stroke();
@@ -434,11 +434,9 @@
             ctx.beginPath(); ctx.moveTo(m1X, axisY-m1Rad); ctx.lineTo(diagX, axisY);
             ctx.moveTo(m1X, axisY+m1Rad); ctx.lineTo(diagX, axisY); ctx.stroke();
             
-            // M2 Plan
             ctx.beginPath(); ctx.moveTo(diagX-10, axisY-10); ctx.lineTo(diagX+10, axisY+10);
             ctx.strokeStyle=C_M2; ctx.lineWidth=2; ctx.stroke();
             
-            // Sortie
             ctx.beginPath(); ctx.moveTo(diagX, axisY); ctx.lineTo(diagX, axisY-(D*1.2*scale)); 
             ctx.strokeStyle=theme==='screen'?"#bc13fe":"#000"; ctx.stroke();
 
@@ -447,25 +445,21 @@
             let m2X = startX; let m1X = startX + Sep * scale; let focusX = m1X + B * scale;
             let m1Rad = (D*scale)/2; let m2Rad = (D2*scale)/2; let holeRad = (holeDiam*scale)/2;
 
-            // M1 (Concave Gauche)
             let R_draw = m1Rad * 4; let R_cx = m1X - R_draw;
             let aOut = Math.asin(m1Rad/R_draw); let aIn = Math.asin(holeRad/R_draw);
             
             ctx.beginPath(); ctx.arc(R_cx, axisY, R_draw, -aOut, -aIn); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
             ctx.beginPath(); ctx.arc(R_cx, axisY, R_draw, aIn, aOut); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
 
-            // M2 (Convexe Droite)
             let R2_draw = m2Rad * 4; let R2_cx = m2X - R2_draw; let aM2 = Math.asin(m2Rad/R2_draw);
             ctx.beginPath(); ctx.arc(R2_cx, axisY, R2_draw, -aM2, aM2); ctx.strokeStyle = C_M2; ctx.lineWidth=3; ctx.stroke();
 
-            // Rayons
             ctx.strokeStyle = C_RAY;
             ctx.beginPath(); ctx.moveTo(startX-30, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad);
             ctx.moveTo(startX-30, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(m1X, axisY-m1Rad); ctx.lineTo(m2X, axisY-m2Rad);
             ctx.moveTo(m1X, axisY+m1Rad); ctx.lineTo(m2X, axisY+m2Rad); ctx.stroke();
             
-            // Sortie
             ctx.strokeStyle = theme==='screen'?"#bc13fe":"#000";
             ctx.beginPath(); ctx.moveTo(m2X, axisY-m2Rad); ctx.lineTo(focusX, axisY);
             ctx.moveTo(m2X, axisY+m2Rad); ctx.lineTo(focusX, axisY); ctx.stroke();
@@ -473,7 +467,6 @@
             drawDim("SEPARATION", m2X, m1X, axisY-m1Rad-30);
             drawDim("BACK FOCUS", m1X, focusX, axisY+m1Rad+30);
             
-            // Trou
             if(holeDiam>0) {
                 let dHx = m1X - 30;
                 ctx.beginPath(); ctx.moveTo(dHx, axisY-holeRad); ctx.lineTo(dHx, axisY+holeRad);
@@ -530,7 +523,6 @@
         cvs.width = cvs.parentElement.offsetWidth - 40; cvs.height = 120;
         ctx.clearRect(0,0,cvs.width,cvs.height);
         
-        // Draw Mirror
         const sc = 50/(D/2); const cx = cvs.width/2; const cy=60;
         ctx.beginPath(); ctx.arc(cx,cy, (D/2)*sc, 0, Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fill(); ctx.strokeStyle="#444"; ctx.stroke();
         zones.forEach(z=>{ ctx.beginPath(); ctx.arc(cx,cy, z*sc, 0, Math.PI*2); ctx.strokeStyle="#00f3ff"; ctx.stroke(); });
@@ -625,7 +617,6 @@
     }
 
     window.onload = function() { 
-        // Lancer un premier calcul pour l'analyseur pour afficher quelque chose
         autoCalcZones();
         setTimeout(runArchitect, 100); 
     };
