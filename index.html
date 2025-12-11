@@ -44,22 +44,26 @@
             gap: 20px;
         }
 
-        .nav-tabs { display: flex; gap: 15px; justify-content: center; }
+        .nav-tabs { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
         .tab-btn {
             background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--text-dim);
-            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.1rem; cursor: pointer; transition: 0.3s;
+            padding: 15px 30px; font-family: 'Orbitron'; font-size: 1rem; cursor: pointer; transition: 0.3s;
             clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+            text-align: center;
         }
         .tab-btn.active { background: var(--neon-cyan); color: #000; font-weight: bold; box-shadow: 0 0 20px rgba(0, 243, 255, 0.3); }
 
         .interface-container {
             background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
-            border-radius: 4px; box-shadow: 0 0 50px rgba(0, 0, 0, 0.9); display: grid;
-            grid-template-columns: 360px 1fr; overflow: hidden; min-height: 850px; display: none;
+            border-radius: 4px; box-shadow: 0 0 50px rgba(0, 0, 0, 0.9); display: none;
+            grid-template-columns: 360px 1fr; overflow: hidden; min-height: 850px;
             clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
         }
         .interface-container.active { display: grid; }
+        
+        #course.interface-container.active { display: block; padding: 40px; overflow-y: auto; }
 
+        /* Controles */
         .controls {
             padding: 30px; border-right: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.3);
             display: flex; flex-direction: column; gap: 18px; overflow-y: auto; z-index: 2;
@@ -88,18 +92,25 @@
 
         .results-panel { padding: 40px; position: relative; background: radial-gradient(circle at top right, rgba(0,50,100,0.15), transparent); overflow-y: auto; display: flex; flex-direction: column; }
 
-        .blueprint-wrapper {
-            position: relative;
-            width: 100%; height: 450px;
-            background: #080810;
-            border: 1px solid var(--glass-border);
-            margin-bottom: 20px;
-            overflow: hidden; 
-        }
+        /* Styles spécifiques au Cours */
+        .course-content { max-width: 900px; margin: 0 auto; color: #e0e0e0; line-height: 1.6; }
+        .course-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--neon-cyan); padding-bottom: 20px; margin-bottom: 40px; }
+        .course-title { font-family: 'Orbitron'; font-size: 2.5rem; color: #fff; line-height: 1.1; }
+        .course-author { color: var(--text-dim); font-family: 'Rajdhani'; font-size: 1.2rem; margin-top: 5px; font-style: italic; }
+        .chapter { margin-bottom: 50px; background: rgba(255,255,255,0.02); padding: 30px; border-radius: 8px; border-left: 4px solid var(--neon-pink); }
+        .chapter h2 { font-family: 'Orbitron'; color: var(--neon-cyan); margin-top: 0; }
+        .chapter h3 { color: var(--neon-orange); margin-top: 20px; }
+        .formula-box { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; margin: 20px 0; border: 1px solid var(--glass-border); text-align: center; font-size: 1.1rem; color: var(--neon-green); }
+        .example-box { background: rgba(255, 157, 0, 0.1); border: 1px dashed var(--neon-orange); padding: 20px; border-radius: 8px; }
+        .variable { color: var(--neon-pink); font-weight: bold; }
         
+        /* Blueprint & Viz */
+        .blueprint-wrapper {
+            position: relative; width: 100%; height: 450px; background: #080810;
+            border: 1px solid var(--glass-border); margin-bottom: 20px; overflow: hidden; 
+        }
         #blueprint-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
         #blueprint-canvas:active { cursor: grabbing; }
-
         .zoom-controls { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 5px; }
         .zoom-btn { width: 30px; height: 30px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid var(--neon-cyan); font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .zoom-btn:hover { background: var(--neon-cyan); color: #000; }
@@ -125,12 +136,13 @@
     <div class="nav-tabs">
         <div class="tab-btn active" onclick="switchTab('analyzer')">ANALYSEUR CAUSTIQUE</div>
         <div class="tab-btn" onclick="switchTab('architect')">ARCHITECTE OPTIQUE</div>
+        <div class="tab-btn" onclick="switchTab('course')">COURS & THÉORIE</div>
     </div>
 
-    <!-- MODULE ANALYZER -->
+    <!-- MODULE 1: ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v19</span></div>
+            <div class="brand">CAUSTIQUE <span>v21</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -172,7 +184,7 @@
         </div>
     </div>
 
-    <!-- MODULE ARCHITECT -->
+    <!-- MODULE 2: ARCHITECT -->
     <div id="architect" class="interface-container">
         <div class="controls">
             <div class="brand">ARCHITECT <span>PRO</span></div>
@@ -253,11 +265,107 @@
             </div>
         </div>
     </div>
+
+    <!-- MODULE 3: COURS & THÉORIE -->
+    <div id="course" class="interface-container">
+        <div class="course-content" id="course-text">
+            <div class="course-header">
+                <div>
+                    <div class="course-title">COURS D'OPTIQUE APPLIQUÉE</div>
+                    <div class="course-author">Rédigé par Ludovic Laval</div>
+                </div>
+                <button class="btn-pdf" style="width:auto; margin:0;" onclick="downloadCoursePDF()">TÉLÉCHARGER LE COURS (PDF)</button>
+            </div>
+
+            <div class="chapter">
+                <h2>1. LE TEST DE LA CAUSTIQUE</h2>
+                <h3>Le Problème de l'Aberration Sphérique</h3>
+                <p>Un miroir sphérique focalise tous les rayons en un point unique (le centre de courbure). Mais pour un télescope, nous utilisons souvent des formes <strong>Paraboliques</strong> ou <strong>Hyperboliques</strong> pour corriger les images venues de l'infini.</p>
+                <p>Ces miroirs asphériques n'ont pas un rayon de courbure constant. Le "centre" varie selon la zone du miroir. L'ensemble de ces centres forme une courbe appelée <strong>La Caustique</strong>.</p>
+                
+                <h3>La Méthode Platzeck-Gaviola</h3>
+                <p>Ce logiciel utilise les équations dérivées par <em>Cornejo & Malacara (1978)</em> pour calculer où placer l'appareil de contrôle (Foucault) pour chaque zone du miroir.</p>
+                
+                <div class="formula-box">
+                    Données d'Entrée :<br>
+                    R = Rayon de Courbure au centre<br>
+                    K = Constante Conique<br>
+                    S = Hauteur de la Zone (distance au centre)
+                </div>
+            </div>
+
+            <div class="chapter">
+                <h2>2. LES FORMULES MATHÉMATIQUES</h2>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Vous pouvez utiliser ces formules pour vérifier les résultats à la main.</p>
+
+                <h3>Étape 1 : La Courbure (c)</h3>
+                <div class="formula-box">c = 1 / R</div>
+
+                <h3>Étape 2 : La Flèche (z) - "Sagitta"</h3>
+                <p>C'est la profondeur du miroir à la hauteur S.</p>
+                <div class="formula-box">
+                    z = (c * S²) / (1 + √(1 - (K+1) * c² * S²))
+                </div>
+
+                <h3>Étape 3 : Coordonnées de la Caustique (X, Y)</h3>
+                <p>Le logiciel calcule deux valeurs. <strong>Y</strong> est la position longitudinale (avant/arrière) et <strong>X</strong> est la position transversale (latérale).</p>
+                <div class="formula-box">
+                    Terme A = c * z * (K + 1)<br><br>
+                    Y = -K * z * [3 + A * (A - 3)]<br>
+                    X = -2 * S * c * K * z * [2 + A * (A - 3)] / (1 - A)
+                </div>
+            </div>
+
+            <div class="chapter">
+                <h2>3. EXEMPLE DE CALCUL À LA MAIN</h2>
+                <div class="example-box">
+                    <p>Prenons un miroir standard :</p>
+                    <ul>
+                        <li><strong>R = 6200 mm</strong></li>
+                        <li><strong>K = -1</strong> (Parabole)</li>
+                        <li>Zone à tester : <strong>S = 250 mm</strong></li>
+                    </ul>
+                    
+                    <p><strong>1. Calcul de c :</strong><br>
+                    c = 1 / 6200 ≈ 0.00016129</p>
+
+                    <p><strong>2. Calcul de z :</strong><br>
+                    Pour K = -1, le terme sous la racine devient 1. La formule se simplifie :<br>
+                    z = c * S² / 2 = 250² / (2 * 6200) ≈ <strong>5.0403 mm</strong></p>
+
+                    <p><strong>3. Calcul de A :</strong><br>
+                    Comme K+1 = 0, alors <strong>A = 0</strong>.</p>
+
+                    <p><strong>4. Calcul de Y :</strong><br>
+                    Y = -(-1) * 5.0403 * [3 + 0] = 5.0403 * 3 = <strong>15.1209 mm</strong></p>
+
+                    <p><strong>5. Calcul de X :</strong><br>
+                    X = -2 * 250 * c * (-1) * z * [2] / 1<br>
+                    X = 500 * (1/6200) * 5.0403 * 2 ≈ <strong>0.8129 mm</strong></p>
+                    
+                    <p style="margin-top:10px; font-weight:bold; color:#fff">
+                        Résultat du Logiciel : Y=15.121, X=0.813. C'est identique !
+                    </p>
+                </div>
+            </div>
+            
+            <div class="chapter">
+                <h2>4. MODULE ARCHITECTE OPTIQUE</h2>
+                <p>Ce module utilise la théorie de Schwarzschild pour calculer les miroirs.</p>
+                <h3>Dall-Kirkham</h3>
+                <p>Pour un DK, on impose que le miroir secondaire soit sphérique (<span class="variable">K2=0</span>). Pour corriger l'aberration sphérique résultante, le miroir primaire doit être une <strong>Ellipse Prolate</strong>.</p>
+                <div class="formula-box">
+                    K1 = -1 + [ (M² - 1) / M³ ] * (Distance Secondaire-Foyer / Focale Primaire)
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v19</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v21</div>
 </div>
 
 <script>
+    // Variables globales
     let currentData = {};
     let viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
     let calculationMode = 'f1';
@@ -271,7 +379,6 @@
         if(!D || !R) { alert("Saisir Diamètre et Rayon"); return; }
 
         const m = (R/2) / D;
-        // Largeur max théorique (Platzeck Gaviola)
         const R_cm = R / 10;
         const term = m * Math.pow(R_cm, 2);
         const width_cm = 4.53 * Math.pow(term, 1/3) * 0.01;
@@ -284,7 +391,7 @@
             numZones = forcedN;
         } else {
             numZones = Math.ceil(radiusMirror / width_mm);
-            document.getElementById('an-nb-zones').value = numZones; // Affiche ce qui est calculé
+            document.getElementById('an-nb-zones').value = numZones; 
         }
 
         const actualWidth = radiusMirror / numZones;
@@ -343,7 +450,14 @@
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         event.target.classList.add('active');
-        if(tabId === 'architect') { canvas.width = canvas.parentElement.offsetWidth; canvas.height = canvas.parentElement.offsetHeight; setTimeout(runArchitect, 50); }
+        
+        // Refresh canvas size if architect is shown
+        if(tabId === 'architect') { 
+            const wrap = document.querySelector('.blueprint-wrapper');
+            canvas.width = wrap.offsetWidth; 
+            canvas.height = wrap.offsetHeight; 
+            setTimeout(runArchitect, 50); 
+        }
     }
 
     // --- ARCHITECT LOGIC ---
@@ -379,7 +493,7 @@
         runArchitect();
     }
 
-    // --- DRAWING ENGINE (v16 ROBUST) ---
+    // --- DRAWING ENGINE ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
         ctx.clearRect(0,0, width, height);
         ctx.save();
@@ -415,16 +529,21 @@
             let m1X = startX + F1 * scale; let m1Rad = (D * scale) / 2;
             ctx.beginPath(); ctx.arc(m1X - m1Rad*2, axisY, m1Rad*2, -0.25, 0.25); 
             ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
+            
             ctx.strokeStyle = C_RAY; ctx.lineWidth=1;
             ctx.beginPath(); ctx.moveTo(startX, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad);
             ctx.moveTo(startX, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.stroke();
+            
             let diagX = m1X - (F1*scale) + (D*1.2*scale);
             ctx.beginPath(); ctx.moveTo(m1X, axisY-m1Rad); ctx.lineTo(diagX, axisY);
             ctx.moveTo(m1X, axisY+m1Rad); ctx.lineTo(diagX, axisY); ctx.stroke();
+            
             ctx.beginPath(); ctx.moveTo(diagX-10, axisY-10); ctx.lineTo(diagX+10, axisY+10);
             ctx.strokeStyle=C_M2; ctx.lineWidth=2; ctx.stroke();
+            
             ctx.beginPath(); ctx.moveTo(diagX, axisY); ctx.lineTo(diagX, axisY-(D*1.2*scale)); 
             ctx.strokeStyle=theme==='screen'?"#bc13fe":"#000"; ctx.stroke();
+
             drawDim("F1", diagX, m1X, axisY+m1Rad+30);
         } else {
             let m2X = startX; let m1X = startX + Sep * scale; let focusX = m1X + B * scale;
@@ -433,15 +552,12 @@
             let R_draw = m1Rad * 4; let R_cx = m1X - R_draw;
             let aOut = Math.asin(m1Rad/R_draw); let aIn = Math.asin(holeRad/R_draw);
             
-            // Miroir M1 (EN ENTIER)
             ctx.beginPath(); ctx.arc(R_cx, axisY, R_draw, -aOut, -aIn); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
             ctx.beginPath(); ctx.arc(R_cx, axisY, R_draw, aIn, aOut); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
 
-            // Miroir M2
             let R2_draw = m2Rad * 4; let R2_cx = m2X - R2_draw; let aM2 = Math.asin(m2Rad/R2_draw);
             ctx.beginPath(); ctx.arc(R2_cx, axisY, R2_draw, -aM2, aM2); ctx.strokeStyle = C_M2; ctx.lineWidth=3; ctx.stroke();
 
-            // Rayons
             ctx.strokeStyle = C_RAY;
             ctx.beginPath(); ctx.moveTo(startX-30, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad);
             ctx.moveTo(startX-30, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.stroke();
@@ -466,6 +582,7 @@
         ctx.restore();
     }
 
+    // --- PDF ---
     function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -498,6 +615,56 @@
         doc.save("Rapport_Optique.pdf");
     }
 
+    function downloadCoursePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Fonction pour ajouter du texte long
+        const addWrappedText = (text, x, y, maxWidth, lineHeight) => {
+            const lines = doc.splitTextToSize(text, maxWidth);
+            doc.text(lines, x, y);
+            return lines.length * lineHeight;
+        };
+
+        doc.setFontSize(22); doc.setTextColor(0,0,0);
+        doc.text("LAVAL SOFTWARE // COURS OPTIQUE", 20, 20);
+        
+        doc.setFontSize(16); doc.setTextColor(0, 86, 179);
+        doc.text("THÉORIE DE LA CAUSTIQUE & ARCHITECTURE", 20, 35);
+        
+        doc.setFontSize(12); doc.setTextColor(100, 100, 100);
+        doc.text("Auteur : Ludovic Laval", 20, 45);
+        
+        doc.setFontSize(11); doc.setTextColor(0,0,0);
+        let y = 60;
+        
+        y += addWrappedText("1. LE TEST DE LA CAUSTIQUE (PLATZECK-GAVIOLA)\n\nLes miroirs paraboliques ou hyperboliques ne focalisent pas la lumière en un point unique lorsqu'on les teste depuis leur centre de courbure (contrairement à une sphère). Chaque zone du miroir a un point de convergence différent. L'ensemble de ces points forme une courbe appelée 'Caustique'. Ce logiciel calcule les coordonnées exactes (X, Y) où vous devez placer votre appareil de mesure (couteau de Foucault) pour vérifier chaque zone.", 20, y, 170, 5);
+        
+        y += 20;
+        doc.setFont("helvetica", "bold"); doc.text("2. FORMULES MATHÉMATIQUES", 20, y); y+=10;
+        doc.setFont("courier", "normal"); doc.setFontSize(10);
+        doc.text("c = 1 / R", 25, y); y+=10;
+        doc.text("z = (c * S^2) / (1 + sqrt(1 - (K+1)*c^2*S^2))", 25, y); y+=10;
+        doc.text("Y = -K*z * [3 + c*z*(K+1)*(c*z*(K+1)-3)]", 25, y); y+=10;
+        doc.text("X = -2*S*c*K*z * [2 + ... ] / (1 - ...)", 25, y); y+=15;
+        
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+        doc.text("3. EXEMPLE DE CALCUL (K=-1, R=6200, S=250)", 20, y); y+=10;
+        doc.setFont("helvetica", "normal");
+        doc.text("- Courbure c = 0.00016129", 25, y); y+=7;
+        doc.text("- Flèche z = 5.0403 mm", 25, y); y+=7;
+        doc.text("- Position Longitudinale Y = 15.12 mm", 25, y); y+=7;
+        doc.text("- Position Transversale X = 0.81 mm", 25, y); y+=15;
+        
+        doc.setFont("helvetica", "bold");
+        doc.text("4. ARCHITECTURE OPTIQUE (Formules de Schwarzschild)", 20, y); y+=10;
+        doc.setFont("helvetica", "normal");
+        y += addWrappedText("Le module Architecte utilise les équations du 3ème ordre pour éliminer l'aberration sphérique et la coma (pour le Ritchey-Chrétien). Pour le Dall-Kirkham, il calcule la déformation ellipsoïdale du primaire (K < 0) nécessaire pour compenser un secondaire sphérique (K=0).", 20, y, 170, 5);
+
+        doc.save("Cours_Optique_LavalSoftware.pdf");
+    }
+
+    // --- CALCULATORS ---
     function runAnalyzer() {
         const D = parseFloat(document.getElementById('an-diameter').value);
         const R = parseFloat(document.getElementById('an-radius').value);
@@ -516,10 +683,7 @@
 
         zones.forEach((S,i)=>{
             const term = 1-(K+1)*Math.pow(c*S,2);
-            let err = "";
-            if(S > D/2) err = "HORS MIROIR";
-            else if(term<0) err = "ERR GEOM";
-
+            let err = ""; if(S > D/2) err = "HORS MIROIR"; else if(term<0) err = "ERR GEOM";
             if(err) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`;
             else {
                 const z = (c*S*S)/(1+Math.sqrt(term));
