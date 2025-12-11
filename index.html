@@ -142,11 +142,11 @@
     <!-- MODULE 1: ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v23</span></div>
+            <div class="brand">CAUSTIQUE <span>v24</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
-                <select id="an-type" onchange="updateAnalyzerK()">
+                <select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()">
                     <option value="parabola" selected>Parabole (K = -1)</option>
                     <option value="hyperbola">Hyperbole (K < -1)</option>
                     <option value="sphere">Sphère (K = 0)</option>
@@ -155,13 +155,13 @@
                 </select>
             </div>
 
-            <div class="input-group"><label>Diamètre Miroir (mm)</label><input type="number" id="an-diameter" value="300"></div>
-            <div class="input-group"><label>Trou Central (mm)</label><input type="number" id="an-hole" value="0" placeholder="0"></div>
-            <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1"></div>
+            <div class="input-group"><label>Diamètre Miroir (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
+            <div class="input-group"><label>Trou Central (mm)</label><input type="number" id="an-hole" value="0" placeholder="0" oninput="runAnalyzer()"></div>
+            <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1" oninput="runAnalyzer()"></div>
             
             <div class="input-group">
                 <label>Constante (K)</label>
-                <input type="number" id="an-kfactor" value="-1" step="0.0001" disabled>
+                <input type="number" id="an-kfactor" value="-1" step="0.0001" disabled oninput="runAnalyzer()">
             </div>
             
             <label style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; display:block;">GÉNÉRATEUR DE ZONES</label>
@@ -173,8 +173,13 @@
                 <button class="btn-auto" onclick="autoCalcZones()">CALCULER ZONES</button>
             </div>
 
-            <div class="input-group"><label>Liste Rayons (mm)</label><input type="text" id="an-zones" value="50, 100, 140, 200"></div>
-            <button class="btn-action" onclick="runAnalyzer()">Lancer Analyse</button>
+            <div class="input-group">
+                <label>Liste Rayons (mm)</label>
+                <!-- onchange pour éviter le clignotement pendant la frappe, ou onblur -->
+                <input type="text" id="an-zones" value="50, 100, 140, 200" onchange="runAnalyzer()">
+            </div>
+            
+            <!-- Bouton "Lancer Analyse" supprimé car automatique -->
         </div>
         <div class="results-panel">
             <div id="an-info">
@@ -366,7 +371,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v23</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v24</div>
 </div>
 
 <script>
@@ -689,7 +694,12 @@
         const holeD = parseFloat(document.getElementById('an-hole').value) || 0;
         const R = parseFloat(document.getElementById('an-radius').value);
         const K = parseFloat(document.getElementById('an-kfactor').value);
-        const zones = document.getElementById('an-zones').value.split(',').map(Number).filter(n=>n);
+        const zonesStr = document.getElementById('an-zones').value;
+        
+        // Validation basique
+        if (!zonesStr) return;
+        const zones = zonesStr.split(',').map(Number).filter(n=>n);
+        
         const tbody = document.getElementById('an-results'); tbody.innerHTML="";
         const c = 1/R;
         
