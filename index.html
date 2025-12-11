@@ -78,10 +78,7 @@
         .btn-action { background: linear-gradient(90deg, var(--neon-cyan), #0088ff); color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: auto; text-transform: uppercase; }
         .btn-action:hover { box-shadow: 0 0 20px var(--neon-cyan); letter-spacing: 2px; }
         
-        .pdf-group {
-            margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;
-        }
-        .btn-pdf { width: 100%; background: #fff; color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .btn-pdf { background: #fff; color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
         .btn-pdf:hover { background: #eee; box-shadow: 0 0 15px #fff; }
 
         .results-panel { padding: 40px; position: relative; background: radial-gradient(circle at top right, rgba(0,50,100,0.15), transparent); overflow-y: auto; display: flex; flex-direction: column; }
@@ -137,7 +134,7 @@
     <!-- MODULE ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">KAUSTIK <span>v16</span></div>
+            <div class="brand">KAUSTIK <span>v15</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -248,7 +245,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v16</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v15</div>
 </div>
 
 <script>
@@ -467,12 +464,13 @@
             let holeRad = (holeDiam * scale) / 2;
 
             // --- MIROIR PRIMAIRE (M1) ---
+            // Correction Forme : Dessiner arc Haut et Bas distincts pour éviter l'effet "fermé"
             let R_draw = m1Rad * 4; 
             let R_center_x = m1X - R_draw; 
             let angleOuter = Math.asin(m1Rad / R_draw);
             let angleInner = Math.asin(holeRad / R_draw);
             
-            // Haut
+            // Haut: Arc centré à gauche, dessinant la partie droite (face à l'entrée)
             ctx.beginPath();
             ctx.arc(R_center_x, axisY, R_draw, -angleOuter, -angleInner);
             ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
@@ -520,7 +518,7 @@
             drawDim("SEPARATION = " + Sep.toFixed(1), m2X, m1X, axisY - m1Rad - 30, 5);
             drawDim("BACK FOCUS = " + B, m1X, focusX, axisY + m1Rad + 30, 5);
             
-            // Trou (Cote décalée)
+            // Trou (Cote décalée pour éviter chevauchement)
             if(holeDiam > 0) {
                  let dimHoleX = m1X - 30; // Décalage vers la gauche
                  ctx.beginPath();
@@ -547,10 +545,8 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Récupérer le nom du projet
         const projectName = document.getElementById('project-name').value || "Projet Optique Sans Nom";
 
-        // En-tête
         doc.setFontSize(22); doc.text("LAVAL SOFTWARE // RAPPORT OPTIQUE", 20, 20);
         doc.setFontSize(16); doc.setTextColor(0, 86, 179);
         doc.text(projectName, 20, 30);
@@ -559,13 +555,11 @@
         doc.text("Date: " + new Date().toLocaleDateString(), 150, 20);
         doc.text("Type: " + currentData.type, 150, 25);
 
-        // Dessin
         const canvas = document.createElement('canvas');
         canvas.width = 2000; canvas.height = 1000;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0, canvas.width, canvas.height);
         
-        // Dessiner le schéma version "Encre" (sans zoom)
         const tempState = {...viewState};
         viewState = { scale: 1, offsetX: 0, offsetY: 0 };
         drawBlueprintGeneric(ctx, canvas.width, canvas.height, 
@@ -576,14 +570,12 @@
         const imgData = canvas.toDataURL("image/png");
         doc.addImage(imgData, 'PNG', 10, 40, 190, 95);
 
-        // Données
         let startY = 150;
         doc.setLineWidth(0.5); doc.line(10, startY, 200, startY);
         doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("PARAMÈTRES DE FABRICATION", 10, startY - 5);
 
         doc.setFontSize(10);
         doc.text(`Diamètre Physique: ${currentData.D} mm`, 15, startY + 10);
-        // Ajout Diamètre Pur (calculé dans runArchitect)
         doc.text(`Diamètre Pur (Effectif): ${currentData.Deff} mm`, 15, startY + 20);
         doc.text(`Focale Système: ${currentData.F} mm`, 15, startY + 30);
         doc.text(`Ouverture: f/${(currentData.F/currentData.D).toFixed(1)}`, 15, startY + 40);
@@ -689,9 +681,7 @@
             else if (type === 'sct') { K1 = 0; K2 = 0; shape1="Sphère"; shape2="Sphère"; }
         }
 
-        // Calcul Diamètre Pur (Effective) = Racine(D^2 - Obst^2)
-        // On prend l'obstruction géométrique D2 (le miroir secondaire bloque la lumière)
-        let D_obs = (type === 'newton') ? 0 : Math.abs(D2); // En Newton, on néglige souvent pour le pur, ou on prend D2
+        let D_obs = (type === 'newton') ? 0 : Math.abs(D2); 
         let Deff = Math.sqrt(Math.pow(D, 2) - Math.pow(D_obs, 2)).toFixed(1);
 
         currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Separation, M: M, R1: R1, K1: K1, Shape1: shape1, Hole: holeDiam, R2: Math.abs(R2), K2: K2, Shape2: shape2, D2: Math.abs(D2), Deff: Deff };
