@@ -128,7 +128,7 @@
     <!-- ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v38</span></div>
+            <div class="brand">CAUSTIQUE <span>v39</span></div>
             <div class="input-group"><label>Type</label><select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()"><option value="parabola" selected>Parabole</option><option value="hyperbola">Hyperbole</option><option value="sphere">Sphère</option><option value="ellipse">Ellipse</option><option value="custom">Perso</option></select></div>
             <div class="input-group"><label>Diamètre (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
             <div class="input-group"><label>Épaisseur (mm)</label><input type="number" id="an-thickness" value="35" oninput="runAnalyzer()"></div>
@@ -201,9 +201,11 @@
                 <div class="formula-box">c = 1 / R</div>
 
                 <h3>Étape 2 : La Flèche (z) - "Sagitta"</h3>
+                <p>C'est la profondeur du miroir à la hauteur S.</p>
                 <div class="formula-box">z = (c * S²) / (1 + √(1 - (K+1) * c² * S²))</div>
 
                 <h3>Étape 3 : Coordonnées de la Caustique (X, Y)</h3>
+                <p>Le logiciel calcule deux valeurs. <strong>Y</strong> est la position longitudinale (avant/arrière) et <strong>X</strong> est la position transversale (latérale).</p>
                 <div class="formula-box">Terme A = c * z * (K + 1)<br><br>Y = -K * z * [3 + A * (A - 3)]<br>X = -2 * S * c * K * z * [2 + A * (A - 3)] / (1 - A)</div>
             </div>
 
@@ -229,11 +231,11 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v38</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v39</div>
 </div>
 
 <script>
-    // === GLOBALS ===
+    // === 1. VARIABLES GLOBALES ===
     var currentData = {};
     var viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
     var calculationMode = 'f1';
@@ -241,32 +243,36 @@
     var vizModeAn = '2d';
     var vizModeArch = '2d';
     
+    // Variables 3D
     var scenes = { an: null, arch: null };
     var renderers = { an: null, arch: null };
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
     var meshes = { an: null, arch_m1: null, arch_m2: null, arch_rays: null, arch_struct: null };
 
-    // === FONCTIONS ===
+    // === 2. DESSIN 2D SAFE & ROBUSTE ===
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
+        // SANITISATION DES DONNÉES (Prevent crash)
+        D = Math.abs(D) || 1; F1 = F1 || 1; Sep = Math.abs(Sep) || 0; B = Math.abs(B) || 0; D2 = Math.abs(D2) || 1; holeDiam = Math.abs(holeDiam) || 0;
+        
         ctx.clearRect(0,0, width, height); ctx.save();
         if(theme === 'screen') { 
-            const dpr = window.devicePixelRatio || 1;
+            var dpr = window.devicePixelRatio || 1;
             ctx.translate(viewState.offsetX, viewState.offsetY); 
             ctx.translate(width/2, height/2); 
             ctx.scale(viewState.scale, viewState.scale); 
             ctx.translate(-width/2, -height/2); 
         }
         
-        const C_AXIS = "#cccccc"; const C_DIM = "#0000ff"; const C_TEXT = "#000000";
-        const C_M1 = "#ff8800"; const C_M2 = "#00aa00"; const C_RAY = "rgba(0,0,0,0.2)";
+        var C_AXIS = "#cccccc"; var C_DIM = "#0000ff"; var C_TEXT = "#000000";
+        var C_M1 = "#ff8800"; var C_M2 = "#00aa00"; var C_RAY = "rgba(0,0,0,0.2)";
 
-        let totalLen = (type === 'newton') ? Math.abs(F1) * 1.3 : (Math.abs(Sep) + Math.abs(B)) * 1.2;
+        var totalLen = (type === 'newton') ? Math.abs(F1) * 1.3 : (Math.abs(Sep) + Math.abs(B)) * 1.2;
         if(totalLen <= 0) totalLen = 500;
-        let scale = (width - 120) / totalLen; 
+        var scale = (width - 120) / totalLen; 
         if(scale <= 0) scale = 0.1;
 
-        let startX = 60; let axisY = height / 2;
+        var startX = 60; var axisY = height / 2;
 
         ctx.beginPath(); ctx.moveTo(-1000, axisY); ctx.lineTo(width+1000, axisY);
         ctx.setLineDash([5, 5]); ctx.strokeStyle = C_AXIS; ctx.stroke(); ctx.setLineDash([]);
@@ -279,26 +285,26 @@
         }
 
         if(type === 'newton') {
-            let m1X = startX + F1 * scale; let m1Rad = (D * scale) / 2;
+            var m1X = startX + F1 * scale; var m1Rad = (D * scale) / 2;
             ctx.beginPath(); ctx.arc(m1X - m1Rad*2, axisY, m1Rad*2, -0.25, 0.25); ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
-            let dX = m1X - (F1*scale) + (D*1.2*scale);
+            var dX = m1X - (F1*scale) + (D*1.2*scale);
             ctx.strokeStyle = C_RAY; ctx.beginPath(); ctx.moveTo(startX, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad); ctx.lineTo(dX, axisY); ctx.lineTo(dX, axisY-(D*1.2*scale)); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(startX, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.lineTo(dX, axisY); ctx.stroke();
             dDim("F1", dX, m1X, axisY+m1Rad+30);
         } else {
-            let m2X = startX; let m1X = startX + Sep * scale; let fX = m1X + B * scale;
-            let m1Rad = (D*scale)/2; let m2Rad = (D2*scale)/2; let hRad = (holeDiam*scale)/2;
-            let R_draw = m1Rad*4; if(R_draw===0) R_draw=10;
-            let Rcx = m1X-R_draw; 
-            let aO = Math.asin(Math.min(1, m1Rad/R_draw)); 
-            let aI = Math.asin(Math.min(1, hRad/R_draw));
+            var m2X = startX; var m1X = startX + Sep * scale; var fX = m1X + B * scale;
+            var m1Rad = (D*scale)/2; var m2Rad = (D2*scale)/2; var hRad = (holeDiam*scale)/2;
+            var R_draw = m1Rad*4; if(R_draw===0) R_draw=10;
+            var Rcx = m1X-R_draw; 
+            var aO = Math.asin(Math.min(1, m1Rad/R_draw)); 
+            var aI = Math.asin(Math.min(1, hRad/R_draw));
             
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, -aI); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, aI, aO); ctx.stroke();
             
-            let R2d = m2Rad*4; if(R2d===0) R2d=10; 
-            let R2cx = m2X-R2d; 
-            let aM2 = Math.asin(Math.min(1, m2Rad/R2d));
+            var R2d = m2Rad*4; if(R2d===0) R2d=10; 
+            var R2cx = m2X-R2d; 
+            var aM2 = Math.asin(Math.min(1, m2Rad/R2d));
             ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle = C_M2; ctx.lineWidth=3; ctx.stroke();
 
             ctx.strokeStyle = C_RAY; ctx.beginPath(); ctx.moveTo(startX-30, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad); ctx.lineTo(m2X, axisY-m2Rad); ctx.lineTo(fX, axisY); ctx.stroke();
@@ -306,7 +312,7 @@
             dDim("SEPARATION", m2X, m1X, axisY-m1Rad-30); dDim("BACK FOCUS", m1X, fX, axisY+m1Rad+30);
             
             if(holeDiam>0){
-                let dHx = m1X - 30; ctx.beginPath(); ctx.moveTo(dHx, axisY-hRad); ctx.lineTo(dHx, axisY+hRad);
+                var dHx = m1X - 30; ctx.beginPath(); ctx.moveTo(dHx, axisY-hRad); ctx.lineTo(dHx, axisY+hRad);
                 ctx.setLineDash([2,2]); ctx.strokeStyle=theme==='screen'?"rgba(255,255,255,0.3)":"#888"; ctx.lineWidth=1; 
                 ctx.moveTo(dHx, axisY-hRad); ctx.lineTo(m1X, axisY-hRad); ctx.moveTo(dHx, axisY+hRad); ctx.lineTo(m1X, axisY+hRad); ctx.stroke(); ctx.setLineDash([]);
                 ctx.fillStyle = theme==='screen'?"#ff0055":"#000"; ctx.textAlign="right"; ctx.fillText("Ø "+holeDiam.toFixed(1), dHx-5, axisY+4);
@@ -315,101 +321,17 @@
         ctx.restore();
     }
 
-    // --- 3D ENGINE ---
-    function init3D(type) {
-        var container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
-        var w = container.offsetWidth; var h = container.offsetHeight;
-        var sc = new THREE.Scene(); sc.background = new THREE.Color(0xffffff); 
-        var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
-        if(type==='an') cam.position.set(0, 300, 500); else cam.position.set(500, 500, 1000);
-        var ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(w, h);
-        container.innerHTML = ""; container.appendChild(ren.domElement);
-        var ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
-        sc.add(new THREE.AmbientLight(0xffffff, 0.8));
-        var dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(500,1000,500); sc.add(dl);
-        scenes[type] = sc; cameras[type] = cam; renderers[type] = ren; controlsList[type] = ctr;
-        var animate = function() { requestAnimationFrame(animate); ctr.update(); ren.render(sc, cam); };
-        animate();
-    }
+    // --- 3. FONCTIONS GLOBALES EXPOSÉES ---
 
-    function updateAn3D() {
-        if(!scenes.an) init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
-        var D = parseFloat(document.getElementById('an-diameter').value); var thick = parseFloat(document.getElementById('an-thickness').value)||30; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value); var R = (anMode === 'F') ? R_val * 2 : R_val;
-        var points = []; var segments = 40; var radius = D/2; var holeR = holeD/2;
-        points.push(new THREE.Vector2(holeR, 0)); points.push(new THREE.Vector2(radius, 0)); points.push(new THREE.Vector2(radius, thick));
-        for(let i=0; i<=segments; i++) { let r = radius - (i/segments)*(radius-holeR); let z = (r*r)/(4*D); points.push(new THREE.Vector2(r, thick - ((radius*radius)/(4*D)) + z)); }
-        points.push(new THREE.Vector2(holeR, 0));
-        var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
-        var mat = new THREE.MeshPhysicalMaterial({ color: 0xcccccc, metalness:0.8, roughness:0.2, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
-        meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
-    }
-
-    function updateArch3D() {
-        if(!scenes.arch) init3D('arch'); var sc = scenes.arch;
-        if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
-        if(!currentData.type) return;
-
-        var R1 = currentData.D/2; var H1 = currentData.Hole/2;
-        var pts1 = [new THREE.Vector2(H1, 0), new THREE.Vector2(R1, 0), new THREE.Vector2(R1, 30)];
-        for(let i=0; i<=20; i++){ let r = R1 - (i/20)*(R1-H1); let sag = (r*r)/(4*currentData.F1); pts1.push(new THREE.Vector2(r, 30 - ((R1*R1)/(4*currentData.F1)) + sag)); }
-        pts1.push(new THREE.Vector2(H1,0));
-        var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), new THREE.MeshPhysicalMaterial({ color: 0xffaa00, metalness:0.8, roughness:0.2, side:THREE.DoubleSide }));
-        m1.position.z = 0; m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
-
-        if(currentData.type !== 'NEWTON') {
-            var R2 = currentData.D2/2; var Sep = currentData.Sep;
-            var pts2 = [new THREE.Vector2(0,0), new THREE.Vector2(R2,0), new THREE.Vector2(R2, 10)];
-            for(let i=0; i<=20; i++){ let r = R2 - (i/20)*R2; let sag = (r*r)/(1000); pts2.push(new THREE.Vector2(r, 10 + sag)); }
-            pts2.push(new THREE.Vector2(0,0));
-            var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), new THREE.MeshPhysicalMaterial({ color: 0x00ff00, metalness:0.8, roughness:0.2, side:THREE.DoubleSide }));
-            m2.position.z = -Sep; m2.rotation.x = -Math.PI/2; sc.add(m2); meshes.arch_m2 = m2;
-
-            var numRays = 16; var ptsAll = [];
-            for(let i=0; i<numRays; i++) {
-                var angle = (i/numRays) * Math.PI * 2;
-                var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
-                var x2 = Math.cos(angle) * (currentData.D2/2); var y2 = Math.sin(angle) * (currentData.D2/2);
-                ptsAll.push(new THREE.Vector3(x, y, -Sep-200), new THREE.Vector3(x, y, 0));
-                ptsAll.push(new THREE.Vector3(x, y, 0), new THREE.Vector3(x2, y2, -Sep));
-                ptsAll.push(new THREE.Vector3(x2, y2, -Sep), new THREE.Vector3(0, 0, currentData.B));
-            }
-            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xbc13fe }));
-            sc.add(lRays); meshes.arch_rays = lRays;
-            
-            // SERRURIER + ARAIGNEE
-            var trussGroup = new THREE.Group(); var boxR = R1*1.2; var trussLen = Sep; var matTruss = new THREE.MeshPhysicalMaterial({color: 0x333333});
-            for(let i=0; i<8; i++) {
-                var a1 = (Math.floor(i/2)*90)*(Math.PI/180); var a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
-                var v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0);
-                var v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, -trussLen);
-                var dist = v1.distanceTo(v2);
-                var tube = new THREE.Mesh(new THREE.CylinderGeometry(5,5,dist,8), matTruss);
-                tube.position.copy(new THREE.Vector3().addVectors(v1,v2).multiplyScalar(0.5));
-                tube.lookAt(v2); tube.rotateX(Math.PI/2); trussGroup.add(tube);
-            }
-            // Araignée (Spider Vanes)
-            var spiderMat = new THREE.MeshBasicMaterial({color: 0x000000});
-            var spiderV = new THREE.Mesh(new THREE.BoxGeometry(2, boxR*2, 20), spiderMat);
-            spiderV.position.z = -trussLen;
-            trussGroup.add(spiderV);
-            var spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 2, 20), spiderMat);
-            spiderH.position.z = -trussLen;
-            trussGroup.add(spiderH);
-
-            var cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshPhysicalMaterial({color:0x222222})); cell.rotation.x = Math.PI/2; cell.position.z = 10; trussGroup.add(cell);
-            var cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = -trussLen; trussGroup.add(cage);
-            sc.add(trussGroup); meshes.arch_struct = trussGroup;
-        }
-    }
-
-    // --- GLOBALS EXPOSED ---
     window.redrawCurrentBlueprint = function() {
         if(!currentData.type) return;
         var canvas = document.getElementById('blueprint-canvas');
         if (!canvas) return; 
+        
+        // Safety check for hidden canvas
         var rect = canvas.parentElement.getBoundingClientRect();
         if(rect.width === 0 || rect.height === 0) return;
+
         var ctx = canvas.getContext('2d');
         var dpr = window.devicePixelRatio || 1;
         canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
@@ -423,7 +345,10 @@
         document.getElementById(tabId).classList.add('active');
         var btns = document.querySelectorAll('.tab-btn');
         btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
-        if(tabId === 'architect') setTimeout(window.runArchitect, 100);
+
+        if(tabId === 'architect') { 
+            setTimeout(window.runArchitect, 100); 
+        }
     }
 
     window.setAnMode = function(mode) {
@@ -452,54 +377,6 @@
             document.getElementById('container3d_arch').style.display = mode==='3d'?'block':'none';
             if(mode==='2d') window.redrawCurrentBlueprint(); else updateArch3D();
         }
-    }
-
-    window.runAnalyzer = function() {
-        var D = parseFloat(document.getElementById('an-diameter').value)||0; var holeD = parseFloat(document.getElementById('an-hole').value)||0; var thick = parseFloat(document.getElementById('an-thickness').value)||0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
-        var R = (anMode === 'F') ? R_val * 2 : R_val;
-        var K = parseFloat(document.getElementById('an-kfactor').value);
-        var zonesStr = document.getElementById('an-zones').value;
-        var zones = zonesStr.split(',').map(Number).filter(n=>n);
-        var tbody = document.getElementById('an-results'); tbody.innerHTML="";
-        
-        // Poids
-        var r_cm=(D/2)/10; var h_cm=thick/10; var rh_cm=(holeD/2)/10; var zmax_cm=(R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
-        var vol = (Math.PI*r_cm*r_cm*h_cm) - (Math.PI*rh_cm*rh_cm*h_cm) - (0.5*Math.PI*r_cm*r_cm*zmax_cm);
-        document.getElementById('an-weight').innerText = (vol*2.53/1000).toFixed(2)+" kg";
-
-        if (vizModeAn === '2d') {
-            var cvs = document.getElementById('visualizer'); 
-            var dpr = window.devicePixelRatio || 1;
-            var rect = cvs.parentElement.getBoundingClientRect();
-            cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
-            var ctx = cvs.getContext('2d'); ctx.scale(dpr, dpr);
-            ctx.clearRect(0,0,rect.width,rect.height); ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,rect.width,rect.height); 
-            var sc = (D>0)?50/(D/2):1; var cx = rect.width/2; var cy=rect.height/2;
-            ctx.beginPath(); ctx.arc(cx,cy, (D/2)*sc, 0, Math.PI*2); ctx.fillStyle="#eee"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke();
-            if(holeD > 0) { ctx.beginPath(); ctx.arc(cx, cy, (holeD/2)*sc, 0, Math.PI*2); ctx.fillStyle="#fff"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke(); }
-            
-            // CHANFREIN 2D (visualisation)
-            // On dessine des petits traits en biais aux 4 coins cardinaux pour symboliser le chanfrein
-            var radPx = (D/2)*sc;
-            ctx.beginPath();
-            ctx.moveTo(cx+radPx, cy); ctx.lineTo(cx+radPx-5, cy-5); ctx.lineTo(cx+radPx-5, cy+5); ctx.lineTo(cx+radPx, cy);
-            ctx.fillStyle="#ccc"; ctx.fill(); 
-
-            zones.forEach(z=>{ ctx.beginPath(); ctx.arc(cx,cy, z*sc, 0, Math.PI*2); ctx.strokeStyle="#0000ff"; ctx.stroke(); });
-        } else { updateAn3D(); }
-
-        var c = (R>0)?1/R:0;
-        zones.forEach((S,i)=>{
-            var term = 1-(K+1)*Math.pow(c*S,2);
-            var err = ""; if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU"; else if(term<0) err="ERR GEOM";
-            if(err) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`;
-            else {
-                var z = (c*S*S)/(1+Math.sqrt(term));
-                var A = c*z*(K+1); var Y = -K*z*(3+A*(A-3)); var X = (-2*S*c*K*z*(2+A*(A-3)))/(1-A);
-                tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
-            }
-        });
     }
 
     window.updateAnalyzerK = function() {
@@ -610,6 +487,53 @@
         window.runAnalyzer();
     }
 
+    window.runAnalyzer = function() {
+        var D = parseFloat(document.getElementById('an-diameter').value)||0; var holeD = parseFloat(document.getElementById('an-hole').value)||0; var thick = parseFloat(document.getElementById('an-thickness').value)||0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
+        var R = (anMode === 'F') ? R_val * 2 : R_val;
+        var K = parseFloat(document.getElementById('an-kfactor').value);
+        var zonesStr = document.getElementById('an-zones').value;
+        var zones = zonesStr.split(',').map(Number).filter(n=>n);
+        var tbody = document.getElementById('an-results'); tbody.innerHTML="";
+        
+        // Poids
+        var r_cm=(D/2)/10; var h_cm=thick/10; var rh_cm=(holeD/2)/10; var zmax_cm=(R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
+        var vol = (Math.PI*r_cm*r_cm*h_cm) - (Math.PI*rh_cm*rh_cm*h_cm) - (0.5*Math.PI*r_cm*r_cm*zmax_cm);
+        document.getElementById('an-weight').innerText = (vol*2.53/1000).toFixed(2)+" kg";
+
+        if (vizModeAn === '2d') {
+            var cvs = document.getElementById('visualizer'); 
+            var dpr = window.devicePixelRatio || 1;
+            var rect = cvs.parentElement.getBoundingClientRect();
+            cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
+            var ctx = cvs.getContext('2d'); ctx.scale(dpr, dpr);
+            ctx.clearRect(0,0,rect.width,rect.height); ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,rect.width,rect.height); 
+            var sc = (D>0)?50/(D/2):1; var cx = rect.width/2; var cy=rect.height/2;
+            ctx.beginPath(); ctx.arc(cx,cy, (D/2)*sc, 0, Math.PI*2); ctx.fillStyle="#eee"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke();
+            if(holeD > 0) { ctx.beginPath(); ctx.arc(cx, cy, (holeD/2)*sc, 0, Math.PI*2); ctx.fillStyle="#fff"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke(); }
+            
+            // CHANFREIN 2D (visualisation)
+            var radPx = (D/2)*sc;
+            ctx.beginPath();
+            ctx.moveTo(cx+radPx, cy); ctx.lineTo(cx+radPx-5, cy-5); ctx.lineTo(cx+radPx-5, cy+5); ctx.lineTo(cx+radPx, cy);
+            ctx.fillStyle="#ccc"; ctx.fill(); 
+
+            zones.forEach(z=>{ ctx.beginPath(); ctx.arc(cx,cy, z*sc, 0, Math.PI*2); ctx.strokeStyle="#0000ff"; ctx.stroke(); });
+        } else { updateAn3D(); }
+
+        var c = (R>0)?1/R:0;
+        zones.forEach((S,i)=>{
+            var term = 1-(K+1)*Math.pow(c*S,2);
+            var err = ""; if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU"; else if(term<0) err="ERR GEOM";
+            if(err) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`;
+            else {
+                var z = (c*S*S)/(1+Math.sqrt(term));
+                var A = c*z*(K+1); var Y = -K*z*(3+A*(A-3)); var X = (-2*S*c*K*z*(2+A*(A-3)))/(1-A);
+                tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
+            }
+        });
+    }
+
     window.runArchitect = function() {
         var type = document.getElementById('arch-type').value;
         var D = parseFloat(document.getElementById('arch-D').value) || 0;
@@ -662,7 +586,93 @@
         if(vizModeArch === '2d') window.redrawCurrentBlueprint(); else updateArch3D();
     }
 
-    // INIT
+    // --- 3D ENGINE ---
+    function init3D(type) {
+        var container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
+        var w = container.offsetWidth; var h = container.offsetHeight;
+        var sc = new THREE.Scene(); sc.background = new THREE.Color(0xffffff); 
+        var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
+        if(type==='an') cam.position.set(0, 300, 500); else cam.position.set(500, 500, 1000);
+        var ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(w, h);
+        container.innerHTML = ""; container.appendChild(ren.domElement);
+        var ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
+        sc.add(new THREE.AmbientLight(0xffffff, 0.8));
+        var dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(500,1000,500); sc.add(dl);
+        scenes[type] = sc; cameras[type] = cam; renderers[type] = ren; controlsList[type] = ctr;
+        var animate = function() { requestAnimationFrame(animate); ctr.update(); ren.render(sc, cam); };
+        animate();
+    }
+
+    function updateAn3D() {
+        if(!scenes.an) init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
+        var D = parseFloat(document.getElementById('an-diameter').value); var thick = parseFloat(document.getElementById('an-thickness').value)||30; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value); var R = (anMode === 'F') ? R_val * 2 : R_val;
+        var points = []; var segments = 40; var radius = D/2; var holeR = holeD/2;
+        points.push(new THREE.Vector2(holeR, 0)); points.push(new THREE.Vector2(radius, 0)); points.push(new THREE.Vector2(radius, thick));
+        for(let i=0; i<=segments; i++) { let r = radius - (i/segments)*(radius-holeR); let z = (r*r)/(4*D); points.push(new THREE.Vector2(r, thick - ((radius*radius)/(4*D)) + z)); }
+        points.push(new THREE.Vector2(holeR, 0));
+        var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
+        var mat = new THREE.MeshPhysicalMaterial({ color: 0xcccccc, metalness:0.8, roughness:0.2, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
+        meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
+    }
+
+    function updateArch3D() {
+        if(!scenes.arch) init3D('arch'); var sc = scenes.arch;
+        if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
+        if(!currentData.type) return;
+
+        var R1 = currentData.D/2; var H1 = currentData.Hole/2;
+        var pts1 = [new THREE.Vector2(H1, 0), new THREE.Vector2(R1, 0), new THREE.Vector2(R1, 30)];
+        for(let i=0; i<=20; i++){ let r = R1 - (i/20)*(R1-H1); let sag = (r*r)/(4*currentData.F1); pts1.push(new THREE.Vector2(r, 30 - ((R1*R1)/(4*currentData.F1)) + sag)); }
+        pts1.push(new THREE.Vector2(H1,0));
+        var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), new THREE.MeshPhysicalMaterial({ color: 0xffaa00, metalness:0.8, roughness:0.2, side:THREE.DoubleSide }));
+        m1.position.z = 0; m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
+
+        if(currentData.type !== 'NEWTON') {
+            var R2 = currentData.D2/2; var Sep = currentData.Sep;
+            var pts2 = [new THREE.Vector2(0,0), new THREE.Vector2(R2,0), new THREE.Vector2(R2, 10)];
+            for(let i=0; i<=20; i++){ let r = R2 - (i/20)*R2; let sag = (r*r)/(1000); pts2.push(new THREE.Vector2(r, 10 + sag)); }
+            pts2.push(new THREE.Vector2(0,0));
+            var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), new THREE.MeshPhysicalMaterial({ color: 0x00ff00, metalness:0.8, roughness:0.2, side:THREE.DoubleSide }));
+            m2.position.z = -Sep; m2.rotation.x = -Math.PI/2; sc.add(m2); meshes.arch_m2 = m2;
+
+            var numRays = 16; var ptsAll = [];
+            for(let i=0; i<numRays; i++) {
+                var angle = (i/numRays) * Math.PI * 2;
+                var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
+                var x2 = Math.cos(angle) * (currentData.D2/2); var y2 = Math.sin(angle) * (currentData.D2/2);
+                ptsAll.push(new THREE.Vector3(x, y, -Sep-200), new THREE.Vector3(x, y, 0));
+                ptsAll.push(new THREE.Vector3(x, y, 0), new THREE.Vector3(x2, y2, -Sep));
+                ptsAll.push(new THREE.Vector3(x2, y2, -Sep), new THREE.Vector3(0, 0, currentData.B));
+            }
+            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xbc13fe }));
+            sc.add(lRays); meshes.arch_rays = lRays;
+            
+            // SERRURIER + ARAIGNEE
+            var trussGroup = new THREE.Group(); var boxR = R1*1.2; var trussLen = Sep; var matTruss = new THREE.MeshPhysicalMaterial({color: 0x333333});
+            for(let i=0; i<8; i++) {
+                var a1 = (Math.floor(i/2)*90)*(Math.PI/180); var a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
+                var v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0);
+                var v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, -trussLen);
+                var dist = v1.distanceTo(v2);
+                var tube = new THREE.Mesh(new THREE.CylinderGeometry(5,5,dist,8), matTruss);
+                tube.position.copy(new THREE.Vector3().addVectors(v1,v2).multiplyScalar(0.5));
+                tube.lookAt(v2); tube.rotateX(Math.PI/2); trussGroup.add(tube);
+            }
+            var spiderMat = new THREE.MeshBasicMaterial({color: 0x000000});
+            var spiderV = new THREE.Mesh(new THREE.BoxGeometry(2, boxR*2, 20), spiderMat);
+            spiderV.position.z = -trussLen;
+            trussGroup.add(spiderV);
+            var spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 2, 20), spiderMat);
+            spiderH.position.z = -trussLen;
+            trussGroup.add(spiderH);
+
+            var cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshPhysicalMaterial({color:0x222222})); cell.rotation.x = Math.PI/2; cell.position.z = 10; trussGroup.add(cell);
+            var cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = -trussLen; trussGroup.add(cage);
+            sc.add(trussGroup); meshes.arch_struct = trussGroup;
+        }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         var cvs = document.getElementById('blueprint-canvas');
         if(cvs) {
