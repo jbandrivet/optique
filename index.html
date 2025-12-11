@@ -66,7 +66,7 @@
         /* Controles */
         .controls {
             padding: 30px; border-right: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.3);
-            display: flex; flex-direction: column; gap: 18px; overflow-y: auto; z-index: 2;
+            display: flex; flex-direction: column; gap: 15px; overflow-y: auto; z-index: 2;
         }
         .brand { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: #fff; border-bottom: 2px solid var(--neon-cyan); padding-bottom: 15px; margin-bottom: 10px; }
         .brand span { color: var(--neon-pink); }
@@ -142,7 +142,7 @@
     <!-- MODULE 1: ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v22</span></div>
+            <div class="brand">CAUSTIQUE <span>v23</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -156,6 +156,7 @@
             </div>
 
             <div class="input-group"><label>Diamètre Miroir (mm)</label><input type="number" id="an-diameter" value="300"></div>
+            <div class="input-group"><label>Trou Central (mm)</label><input type="number" id="an-hole" value="0" placeholder="0"></div>
             <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1"></div>
             
             <div class="input-group">
@@ -365,7 +366,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v22</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v23</div>
 </div>
 
 <script>
@@ -377,6 +378,7 @@
     // --- ANALYZEUR: CALCUL AUTO ---
     function autoCalcZones() {
         const D = parseFloat(document.getElementById('an-diameter').value);
+        const holeD = parseFloat(document.getElementById('an-hole').value) || 0;
         const R = parseFloat(document.getElementById('an-radius').value);
         const forcedN = parseInt(document.getElementById('an-nb-zones').value);
         
@@ -403,7 +405,10 @@
         
         for(let i=0; i<numZones; i++) {
             let center = (i * actualWidth) + (actualWidth/2);
-            if(center > 10) zoneCenters.push(center.toFixed(1));
+            // On ajoute la zone seulement si elle est en dehors du trou (+ marge 2mm)
+            if(center > (holeD/2 + 2)) {
+                zoneCenters.push(center.toFixed(1));
+            }
         }
 
         document.getElementById('an-zones').value = zoneCenters.join(', ');
@@ -681,6 +686,7 @@
     // --- CALCULATORS ---
     function runAnalyzer() {
         const D = parseFloat(document.getElementById('an-diameter').value);
+        const holeD = parseFloat(document.getElementById('an-hole').value) || 0;
         const R = parseFloat(document.getElementById('an-radius').value);
         const K = parseFloat(document.getElementById('an-kfactor').value);
         const zones = document.getElementById('an-zones').value.split(',').map(Number).filter(n=>n);
@@ -693,11 +699,22 @@
         
         const sc = 50/(D/2); const cx = cvs.width/2; const cy=60;
         ctx.beginPath(); ctx.arc(cx,cy, (D/2)*sc, 0, Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fill(); ctx.strokeStyle="#444"; ctx.stroke();
+        
+        // Draw Hole
+        if(holeD > 0) {
+            ctx.beginPath(); ctx.arc(cx, cy, (holeD/2)*sc, 0, Math.PI*2);
+            ctx.fillStyle="#000"; ctx.fill(); ctx.strokeStyle="#333"; ctx.stroke();
+        }
+
         zones.forEach(z=>{ ctx.beginPath(); ctx.arc(cx,cy, z*sc, 0, Math.PI*2); ctx.strokeStyle="#00f3ff"; ctx.stroke(); });
 
         zones.forEach((S,i)=>{
             const term = 1-(K+1)*Math.pow(c*S,2);
-            let err = ""; if(S > D/2) err = "HORS MIROIR"; else if(term<0) err = "ERR GEOM";
+            let err = ""; 
+            if(S > D/2) err = "HORS MIROIR"; 
+            else if(S < holeD/2) err = "DANS TROU";
+            else if(term<0) err = "ERR GEOM";
+
             if(err) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`;
             else {
                 const z = (c*S*S)/(1+Math.sqrt(term));
@@ -787,4 +804,4 @@
     };
 </script>
 </body>
-</ht
+</html>
