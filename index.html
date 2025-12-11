@@ -142,7 +142,7 @@
     <!-- MODULE 1: ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v21</span></div>
+            <div class="brand">CAUSTIQUE <span>v22</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -157,7 +157,11 @@
 
             <div class="input-group"><label>Diamètre Miroir (mm)</label><input type="number" id="an-diameter" value="300"></div>
             <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1"></div>
-            <div class="input-group"><label>Constante (K)</label><input type="number" id="an-kfactor" value="-1" step="0.0001"></div>
+            
+            <div class="input-group">
+                <label>Constante (K)</label>
+                <input type="number" id="an-kfactor" value="-1" step="0.0001" disabled>
+            </div>
             
             <label style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; display:block;">GÉNÉRATEUR DE ZONES</label>
             <div class="auto-group">
@@ -361,7 +365,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v21</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v22</div>
 </div>
 
 <script>
@@ -412,10 +416,20 @@
     function updateAnalyzerK() {
         const type = document.getElementById('an-type').value;
         const kInput = document.getElementById('an-kfactor');
-        if(type === 'parabola') kInput.value = -1;
-        else if(type === 'sphere') kInput.value = 0;
-        else if(type === 'hyperbola') kInput.value = -1.1;
-        else if(type === 'ellipse') kInput.value = -0.5;
+        
+        if(type === 'custom') {
+            kInput.disabled = false;
+            kInput.style.backgroundColor = 'rgba(255,255,255,0.15)'; // Highlight
+            kInput.focus();
+        } else {
+            kInput.disabled = true;
+            kInput.style.backgroundColor = 'rgba(255,255,255,0.05)';
+            
+            if(type === 'parabola') kInput.value = -1;
+            else if(type === 'sphere') kInput.value = 0;
+            else if(type === 'hyperbola') kInput.value = -1.1;
+            else if(type === 'ellipse') kInput.value = -0.5;
+        }
     }
 
     // --- BLUEPRINT ZOOM ---
@@ -773,4 +787,4 @@
     };
 </script>
 </body>
-</html>
+</ht
