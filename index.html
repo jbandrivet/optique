@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPTICAL SUITE // LAVAL SOFTWARE</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #050510;
+            --glass: rgba(20, 20, 35, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-cyan: #00f3ff;
+            --neon-pink: #bc13fe;
+            --neon-green: #0f0;
+            --neon-orange: #ff9d00;
+            --text-main: #e0e0e0;
+            --text-dim: #8b9bb4;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .nav-tabs { display: flex; gap: 15px; justify-content: center; }
+        .tab-btn {
+            background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--text-dim);
+            padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.1rem; cursor: pointer; transition: 0.3s;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+        }
+        .tab-btn.active { background: var(--neon-cyan); color: #000; font-weight: bold; box-shadow: 0 0 20px rgba(0, 243, 255, 0.3); }
+
+        .interface-container {
+            background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
+            border-radius: 4px; box-shadow: 0 0 50px rgba(0, 0, 0, 0.9); display: grid;
+            grid-template-columns: 360px 1fr; overflow: hidden; min-height: 850px; display: none;
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+        }
+        .interface-container.active { display: grid; }
+
+        .controls {
+            padding: 30px; border-right: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.3);
+            display: flex; flex-direction: column; gap: 18px; overflow-y: auto; z-index: 2;
+        }
+        .brand { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: #fff; border-bottom: 2px solid var(--neon-cyan); padding-bottom: 15px; margin-bottom: 10px; }
+        .brand span { color: var(--neon-pink); }
+
+        .input-group label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; }
+        .input-group input, .input-group select { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: #fff; padding: 12px; font-family: 'Orbitron'; font-size: 1rem; }
+        .input-group input:disabled { background: rgba(0,0,0,0.5); color: #555; cursor: not-allowed; }
+
+        .mode-switch { display: flex; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 4px; margin-bottom: 10px; }
+        .mode-option { flex: 1; text-align: center; padding: 8px; font-size: 0.75rem; cursor: pointer; color: var(--text-dim); font-family: 'Orbitron'; }
+        .mode-option.active { background: var(--neon-pink); color: white; font-weight: bold; }
+
+        .btn-action { background: linear-gradient(90deg, var(--neon-cyan), #0088ff); color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: auto; text-transform: uppercase; }
+        .btn-action:hover { box-shadow: 0 0 20px var(--neon-cyan); letter-spacing: 2px; }
+        
+        .pdf-group {
+            margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;
+        }
+        .btn-pdf { width: 100%; background: #fff; color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .btn-pdf:hover { background: #eee; box-shadow: 0 0 15px #fff; }
+
+        .results-panel { padding: 40px; position: relative; background: radial-gradient(circle at top right, rgba(0,50,100,0.15), transparent); overflow-y: auto; display: flex; flex-direction: column; }
+
+        .blueprint-wrapper {
+            position: relative;
+            width: 100%; height: 450px;
+            background: #080810;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 20px;
+            overflow: hidden; 
+        }
+        
+        #blueprint-canvas { 
+            width: 100%; height: 100%; display: block; cursor: grab; 
+        }
+        #blueprint-canvas:active { cursor: grabbing; }
+
+        .zoom-controls {
+            position: absolute; bottom: 20px; right: 20px;
+            display: flex; gap: 5px;
+        }
+        .zoom-btn {
+            width: 30px; height: 30px;
+            background: rgba(0,0,0,0.7); color: #fff;
+            border: 1px solid var(--neon-cyan);
+            font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .zoom-btn:hover { background: var(--neon-cyan); color: #000; }
+
+        .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .mirror-card { background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); padding: 25px; }
+        .mirror-card h3 { margin: 0 0 20px 0; font-family: 'Orbitron'; font-size: 1rem; color: var(--text-dim); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;}
+        .res-val { font-family: 'Orbitron'; color: #fff; font-size: 1.2rem; text-align: right; }
+        .result-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; font-size: 0.9rem;}
+
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { text-align: left; color: var(--text-dim); padding: 10px; border-bottom: 1px solid var(--neon-cyan); }
+        .data-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        .footer-brand { position: fixed; bottom: 10px; right: 20px; font-family: 'Orbitron'; font-size: 0.7rem; color: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="nav-tabs">
+        <div class="tab-btn active" onclick="switchTab('analyzer')">ANALYSEUR CAUSTIQUE</div>
+        <div class="tab-btn" onclick="switchTab('architect')">ARCHITECTE OPTIQUE</div>
+    </div>
+
+    <!-- MODULE ANALYZER -->
+    <div id="analyzer" class="interface-container active">
+        <div class="controls">
+            <div class="brand">KAUSTIK <span>v16</span></div>
+            
+            <div class="input-group">
+                <label>Type de Miroir</label>
+                <select id="an-type" onchange="updateAnalyzerK()">
+                    <option value="parabola" selected>Parabole (K = -1)</option>
+                    <option value="hyperbola">Hyperbole (K < -1)</option>
+                    <option value="sphere">Sphère (K = 0)</option>
+                    <option value="ellipse">Ellipse (-1 < K < 0)</option>
+                    <option value="custom">Personnalisé</option>
+                </select>
+            </div>
+
+            <div class="input-group"><label>Diamètre Miroir (mm)</label><input type="number" id="an-diameter" value="300"></div>
+            <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1"></div>
+            <div class="input-group"><label>Constante (K)</label><input type="number" id="an-kfactor" value="-1" step="0.0001"></div>
+            <div class="input-group"><label>Zones (mm)</label><input type="text" id="an-zones" value="50, 100, 140, 200"></div>
+            
+            <button class="btn-action" onclick="runAnalyzer()">Lancer Analyse</button>
+        </div>
+        <div class="results-panel">
+            <canvas id="visualizer" style="width:100%; height:120px; background:rgba(0,0,0,0.2); border:1px solid #333; margin-bottom:20px;"></canvas>
+            <table class="data-table">
+                <thead><tr><th>ZONE</th><th>RAYON (S)</th><th>PROF. (Z)</th><th>AXIAL (Y)</th><th>TRANSV. (X)</th></tr></thead>
+                <tbody id="an-results"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODULE ARCHITECT -->
+    <div id="architect" class="interface-container">
+        <div class="controls">
+            <div class="brand">ARCHITECT <span>PRO</span></div>
+            
+            <div class="input-group">
+                <label>Architecture</label>
+                <select id="arch-type" onchange="updateArchUI()">
+                    <option value="newton">Newton (Parabolique)</option>
+                    <option value="cassegrain">Cassegrain Classique</option>
+                    <option value="dk">Dall-Kirkham (DK)</option>
+                    <option value="rc" selected>Ritchey-Chrétien (RC)</option>
+                    <option value="sct">Schmidt-Cassegrain (SCT)</option>
+                </select>
+            </div>
+
+            <div class="input-group"><label>Diamètre (D) mm</label><input type="number" id="arch-D" value="300"></div>
+            <div class="input-group"><label>Focale Système (F) mm</label><input type="number" id="arch-F" value="4500"></div>
+            <div class="input-group"><label>Back Focus (B) mm</label><input type="number" id="arch-B" value="300"></div>
+
+            <div id="calc-mode-container">
+                <label style="color:var(--text-dim); font-size:0.7rem; margin-bottom:5px;">CONTRAINTE</label>
+                <div class="mode-switch">
+                    <div class="mode-option active" id="mode-f1" onclick="setCalcMode('f1')">FIXER FOCALE F1</div>
+                    <div class="mode-option" id="mode-sep" onclick="setCalcMode('sep')">FIXER SÉPARATION</div>
+                </div>
+            </div>
+
+            <div class="input-group"><label>Focale Primaire (F1) <span id="lock-f1">🔒</span></label><input type="number" id="arch-F1" value="900"></div>
+            <div class="input-group"><label>Séparation (d) <span id="lock-sep" style="display:none">🔒</span></label><input type="number" id="arch-Sep" value="650" disabled></div>
+
+            <button class="btn-action" onclick="runArchitect()">CALCULER & DESSINER</button>
+            
+            <div class="pdf-group">
+                <div class="input-group">
+                    <label>Nom du Projet</label>
+                    <input type="text" id="project-name" placeholder="Ex: Mon Dall-Kirkham 300">
+                </div>
+                <button class="btn-pdf" onclick="downloadPDF()">TÉLÉCHARGER LE PLAN (PDF)</button>
+            </div>
+        </div>
+
+        <div class="results-panel">
+            <div style="font-family:'Orbitron'; font-size:1.2rem; color:var(--text-dim); margin-bottom:10px;">PLAN TECHNIQUE</div>
+            
+            <div class="blueprint-wrapper">
+                <canvas id="blueprint-canvas"></canvas>
+                <div class="zoom-controls">
+                    <div class="zoom-btn" onclick="zoomBlueprint(0.1)">+</div>
+                    <div class="zoom-btn" onclick="zoomBlueprint(-0.1)">-</div>
+                    <div class="zoom-btn" onclick="resetZoom()">R</div>
+                </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid var(--glass-border); padding-bottom:10px;">
+                <div><div style="font-size:0.8rem; color:var(--text-dim)">OUVERTURE</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:#fff" id="res-fd">-</div></div>
+                <div><div style="font-size:0.8rem; color:var(--text-dim)">GRANDISSEMENT</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:#fff" id="res-mag">-</div></div>
+                <div><div style="font-size:0.8rem; color:var(--text-dim)">OBSTRUCTION</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:#fff" id="res-obst">-</div></div>
+                <div><div style="font-size:0.8rem; color:var(--text-dim)">DIAMÈTRE PUR</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:var(--neon-cyan)" id="res-d-eff">-</div></div>
+            </div>
+
+            <div class="arch-grid">
+                <div class="mirror-card">
+                    <h3 style="color:var(--neon-orange)">MIROIR PRIMAIRE</h3>
+                    <div class="result-row"><span>Rayon Courbure (R1)</span><div class="res-val" id="res-r1">-</div></div>
+                    <div class="result-row"><span>Focale (F1)</span><div class="res-val" id="res-f1-out">-</div></div>
+                    <div class="result-row"><span>Constante (K1)</span><div class="res-val" id="res-k1">-</div></div>
+                    <div class="result-row"><span>Forme</span><div class="res-val" id="res-shape1" style="font-size:0.8rem">-</div></div>
+                    <div class="result-row"><span>Trou Central (Min)</span><div class="res-val" id="res-hole" style="color:var(--neon-pink)">-</div></div>
+                </div>
+
+                <div class="mirror-card" id="sec-card">
+                    <h3 style="color:var(--neon-green)">MIROIR SECONDAIRE</h3>
+                    <div class="result-row"><span>Rayon Courbure (R2)</span><div class="res-val" id="res-r2">-</div></div>
+                    <div class="result-row"><span>Séparation (d)</span><div class="res-val" id="res-sep-out">-</div></div>
+                    <div class="result-row"><span>Constante (K2)</span><div class="res-val" id="res-k2">-</div></div>
+                    <div class="result-row"><span>Diamètre Optique</span><div class="res-val" id="res-d2">-</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v16</div>
+</div>
+
+<script>
+    // Variables globales
+    let currentData = {};
+    let viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
+    let calculationMode = 'f1';
+
+    // --- GESTION ZOOM & PAN ---
+    const canvas = document.getElementById('blueprint-canvas');
+    
+    canvas.addEventListener('mousedown', (e) => {
+        viewState.isDragging = true;
+        viewState.lastX = e.clientX;
+        viewState.lastY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { viewState.isDragging = false; });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!viewState.isDragging) return;
+        const dx = e.clientX - viewState.lastX;
+        const dy = e.clientY - viewState.lastY;
+        viewState.offsetX += dx;
+        viewState.offsetY += dy;
+        viewState.lastX = e.clientX;
+        viewState.lastY = e.clientY;
+        redrawCurrentBlueprint();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomSpeed = 0.1;
+        const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+        zoomBlueprint(delta);
+    });
+
+    function zoomBlueprint(delta) {
+        viewState.scale += delta;
+        if (viewState.scale < 0.1) viewState.scale = 0.1;
+        if (viewState.scale > 5) viewState.scale = 5;
+        redrawCurrentBlueprint();
+    }
+
+    function resetZoom() {
+        viewState.scale = 1;
+        viewState.offsetX = 0;
+        viewState.offsetY = 0;
+        redrawCurrentBlueprint();
+    }
+
+    function redrawCurrentBlueprint() {
+        if(!currentData.type) return;
+        const ctx = canvas.getContext('2d');
+        // On re-dessine avec les paramètres courants et l'état de vue
+        drawBlueprintGeneric(ctx, canvas.width, canvas.height, 
+            currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.Sep, 
+            currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
+    }
+
+    // --- LOGIQUE UI ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.interface-container').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+        if(tabId === 'architect') {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+            setTimeout(runArchitect, 50);
+        }
+    }
+
+    function setCalcMode(mode) {
+        calculationMode = mode;
+        const inpF1 = document.getElementById('arch-F1');
+        const inpSep = document.getElementById('arch-Sep');
+        const lockF1 = document.getElementById('lock-f1');
+        const lockSep = document.getElementById('lock-sep');
+        const btnF1 = document.getElementById('mode-f1');
+        const btnSep = document.getElementById('mode-sep');
+
+        if(mode === 'f1') {
+            btnF1.classList.add('active'); btnSep.classList.remove('active');
+            inpF1.disabled = false; inpSep.disabled = true;
+            lockF1.style.display = 'inline'; lockSep.style.display = 'none';
+        } else {
+            btnF1.classList.remove('active'); btnSep.classList.add('active');
+            inpF1.disabled = true; inpSep.disabled = false;
+            lockF1.style.display = 'none'; lockSep.style.display = 'inline';
+        }
+    }
+
+    function updateArchUI() {
+        const type = document.getElementById('arch-type').value;
+        const modeDiv = document.getElementById('calc-mode-container');
+        const inpSep = document.getElementById('arch-Sep');
+        if(type === 'newton') {
+            modeDiv.style.opacity = '0.3'; modeDiv.style.pointerEvents = 'none';
+            setCalcMode('f1');
+            document.getElementById('sec-card').style.opacity = '0.3';
+            inpSep.value = "0";
+        } else {
+            modeDiv.style.opacity = '1'; modeDiv.style.pointerEvents = 'all';
+            document.getElementById('sec-card').style.opacity = '1';
+        }
+        runArchitect();
+    }
+
+    function updateAnalyzerK() {
+        const type = document.getElementById('an-type').value;
+        const kInput = document.getElementById('an-kfactor');
+        if(type === 'parabola') kInput.value = -1;
+        else if(type === 'sphere') kInput.value = 0;
+        else if(type === 'hyperbola') kInput.value = -1.1;
+        else if(type === 'ellipse') kInput.value = -0.5;
+    }
+
+    // --- MOTEUR GRAPHIQUE ---
+    function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
+        ctx.clearRect(0,0, width, height);
+        
+        ctx.save();
+        
+        if(theme === 'screen') {
+            ctx.translate(viewState.offsetX, viewState.offsetY);
+            ctx.translate(width/2, height/2);
+            ctx.scale(viewState.scale, viewState.scale);
+            ctx.translate(-width/2, -height/2);
+        }
+
+        const C_M1 = theme === 'screen' ? "#ff9d00" : "#000000";
+        const C_M2 = theme === 'screen' ? "#0f0" : "#000000";
+        const C_RAY_IN = theme === 'screen' ? "rgba(0, 243, 255, 0.2)" : "rgba(0,0,255,0.2)";
+        const C_RAY_MID = theme === 'screen' ? "rgba(0, 243, 255, 0.6)" : "rgba(0,0,255,0.6)";
+        const C_RAY_OUT = theme === 'screen' ? "#bc13fe" : "#FF0000";
+        const C_DIM = theme === 'screen' ? "#00f3ff" : "#444444";
+        const C_AXIS = theme === 'screen' ? "rgba(255,255,255,0.1)" : "#cccccc";
+        const C_TEXT = theme === 'screen' ? "#ffffff" : "#000000";
+
+        let totalLen = (type === 'newton') ? F1 * 1.3 : (Sep + B) * 1.2;
+        let scale = (width - 120) / totalLen; 
+        
+        let startX = 60;
+        let axisY = height / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(-1000, axisY); ctx.lineTo(width+1000, axisY);
+        ctx.setLineDash([5, 5]); ctx.strokeStyle = C_AXIS; ctx.stroke(); ctx.setLineDash([]);
+
+        function drawDim(label, x1, x2, y, offsetText) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y); ctx.lineTo(x2, y);
+            ctx.moveTo(x1, y-5); ctx.lineTo(x1, y+5);
+            ctx.moveTo(x2, y-5); ctx.lineTo(x2, y+5);
+            ctx.strokeStyle = C_DIM; ctx.lineWidth = 1/viewState.scale; ctx.stroke();
+            
+            ctx.fillStyle = C_TEXT; 
+            ctx.font = theme === 'screen' ? "12px Orbitron" : "10px Helvetica"; 
+            ctx.textAlign = "center";
+            ctx.fillText(label, x1 + (x2-x1)/2, y - offsetText);
+        }
+
+        function drawVertDim(label, x, y1, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x, y1); ctx.lineTo(x, y2);
+            ctx.moveTo(x-5, y1); ctx.lineTo(x+5, y1);
+            ctx.moveTo(x-5, y2); ctx.lineTo(x+5, y2);
+            ctx.strokeStyle = C_DIM; ctx.lineWidth = 1/viewState.scale; ctx.stroke();
+            
+            ctx.fillStyle = C_TEXT;
+            ctx.font = theme === 'screen' ? "12px Orbitron" : "10px Helvetica"; 
+            ctx.textAlign = "left";
+            ctx.fillText(label, x + 8, y1 + (y2-y1)/2);
+        }
+
+        if(type === 'newton') {
+            let m1X = startX + F1 * scale;
+            let m1Rad = (D * scale) / 2;
+            
+            ctx.beginPath();
+            ctx.arc(m1X - m1Rad*2, axisY, m1Rad*2, -0.25, 0.25); 
+            ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
+            drawVertDim("D=" + D, m1X + 20, axisY - m1Rad, axisY + m1Rad);
+
+            ctx.strokeStyle = C_RAY_IN; ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad);
+            ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
+            ctx.stroke();
+
+            let diagDist = D * 1.2; 
+            let diagX = m1X - (F1 * scale) + (diagDist * scale); 
+
+            ctx.beginPath();
+            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(diagX, axisY);
+            ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(diagX, axisY);
+            ctx.strokeStyle = C_RAY_MID; ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(diagX - 10, axisY - 10); ctx.lineTo(diagX + 10, axisY + 10);
+            ctx.strokeStyle = C_M2; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(diagX, axisY); ctx.lineTo(diagX, axisY - (diagDist * scale));
+            ctx.strokeStyle = C_RAY_OUT; ctx.stroke();
+            
+            drawDim("FOCALE (F1)", diagX, m1X, axisY + m1Rad + 40, 5);
+
+        } else {
+            let m2X = startX;               
+            let m1X = startX + Sep * scale; 
+            let focusX = m1X + B * scale;   
+            let m1Rad = (D * scale) / 2;
+            let m2Rad = (D2 * scale) / 2;
+            let holeRad = (holeDiam * scale) / 2;
+
+            // --- MIROIR PRIMAIRE (M1) ---
+            let R_draw = m1Rad * 4; 
+            let R_center_x = m1X - R_draw; 
+            let angleOuter = Math.asin(m1Rad / R_draw);
+            let angleInner = Math.asin(holeRad / R_draw);
+            
+            // Haut
+            ctx.beginPath();
+            ctx.arc(R_center_x, axisY, R_draw, -angleOuter, -angleInner);
+            ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
+            
+            // Bas
+            ctx.beginPath();
+            ctx.arc(R_center_x, axisY, R_draw, angleInner, angleOuter);
+            ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
+
+            // M1 Diamètre Cote
+            drawVertDim("D=" + D, m1X + 20, axisY - m1Rad, axisY + m1Rad);
+
+            // --- MIROIR SECONDAIRE (M2) ---
+            let R2_draw = m2Rad * 4;
+            let R2_center_x = m2X - R2_draw; 
+            let angleM2 = Math.asin(m2Rad / R2_draw);
+            
+            ctx.beginPath();
+            ctx.arc(R2_center_x, axisY, R2_draw, -angleM2, angleM2);
+            ctx.strokeStyle = C_M2; ctx.lineWidth = 3; ctx.stroke();
+
+            // M2 Diamètre Cote
+            drawVertDim("d2=" + Math.abs(D2).toFixed(1), m2X - 50, axisY - m2Rad, axisY + m2Rad);
+
+            // Rayons
+            ctx.strokeStyle = C_RAY_IN;
+            ctx.beginPath();
+            ctx.moveTo(startX - 30, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad);
+            ctx.moveTo(startX - 30, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
+            ctx.stroke();
+
+            ctx.strokeStyle = C_RAY_MID;
+            ctx.beginPath();
+            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(m2X, axisY - m2Rad);
+            ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(m2X, axisY + m2Rad);
+            ctx.stroke();
+
+            ctx.strokeStyle = C_RAY_OUT;
+            ctx.beginPath();
+            ctx.moveTo(m2X, axisY - m2Rad); ctx.lineTo(focusX, axisY);
+            ctx.moveTo(m2X, axisY + m2Rad); ctx.lineTo(focusX, axisY);
+            ctx.stroke();
+
+            // Cotes Horizontales
+            drawDim("SEPARATION = " + Sep.toFixed(1), m2X, m1X, axisY - m1Rad - 30, 5);
+            drawDim("BACK FOCUS = " + B, m1X, focusX, axisY + m1Rad + 30, 5);
+            
+            // Trou (Cote décalée)
+            if(holeDiam > 0) {
+                 let dimHoleX = m1X - 30; // Décalage vers la gauche
+                 ctx.beginPath();
+                 ctx.moveTo(dimHoleX, axisY - holeRad); ctx.lineTo(dimHoleX, axisY + holeRad);
+                 // Petites barres
+                 ctx.moveTo(dimHoleX-3, axisY - holeRad); ctx.lineTo(dimHoleX+3, axisY - holeRad);
+                 ctx.moveTo(dimHoleX-3, axisY + holeRad); ctx.lineTo(dimHoleX+3, axisY + holeRad);
+                 // Lignes de rappel
+                 ctx.setLineDash([2, 2]); ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth=1;
+                 ctx.moveTo(dimHoleX, axisY - holeRad); ctx.lineTo(m1X, axisY - holeRad);
+                 ctx.moveTo(dimHoleX, axisY + holeRad); ctx.lineTo(m1X, axisY + holeRad);
+                 ctx.stroke(); ctx.setLineDash([]);
+                 
+                 ctx.fillStyle = theme==='screen' ? "#ff0055" : "#FF0000"; 
+                 ctx.textAlign="right"; 
+                 ctx.fillText("Ø " + holeDiam.toFixed(1), dimHoleX - 5, axisY + 4);
+            }
+        }
+        
+        ctx.restore();
+    }
+
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Récupérer le nom du projet
+        const projectName = document.getElementById('project-name').value || "Projet Optique Sans Nom";
+
+        // En-tête
+        doc.setFontSize(22); doc.text("LAVAL SOFTWARE // RAPPORT OPTIQUE", 20, 20);
+        doc.setFontSize(16); doc.setTextColor(0, 86, 179);
+        doc.text(projectName, 20, 30);
+        
+        doc.setFontSize(10); doc.setTextColor(0,0,0);
+        doc.text("Date: " + new Date().toLocaleDateString(), 150, 20);
+        doc.text("Type: " + currentData.type, 150, 25);
+
+        // Dessin
+        const canvas = document.createElement('canvas');
+        canvas.width = 2000; canvas.height = 1000;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0, canvas.width, canvas.height);
+        
+        // Dessiner le schéma version "Encre" (sans zoom)
+        const tempState = {...viewState};
+        viewState = { scale: 1, offsetX: 0, offsetY: 0 };
+        drawBlueprintGeneric(ctx, canvas.width, canvas.height, 
+            currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.Sep, 
+            currentData.B, currentData.D2, currentData.F, currentData.Hole, 'print');
+        viewState = tempState;
+
+        const imgData = canvas.toDataURL("image/png");
+        doc.addImage(imgData, 'PNG', 10, 40, 190, 95);
+
+        // Données
+        let startY = 150;
+        doc.setLineWidth(0.5); doc.line(10, startY, 200, startY);
+        doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("PARAMÈTRES DE FABRICATION", 10, startY - 5);
+
+        doc.setFontSize(10);
+        doc.text(`Diamètre Physique: ${currentData.D} mm`, 15, startY + 10);
+        // Ajout Diamètre Pur (calculé dans runArchitect)
+        doc.text(`Diamètre Pur (Effectif): ${currentData.Deff} mm`, 15, startY + 20);
+        doc.text(`Focale Système: ${currentData.F} mm`, 15, startY + 30);
+        doc.text(`Ouverture: f/${(currentData.F/currentData.D).toFixed(1)}`, 15, startY + 40);
+        
+        doc.text(`MIROIR PRIMAIRE`, 80, startY + 10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Rayon (R1): ${currentData.R1.toFixed(2)} mm`, 80, startY + 20);
+        doc.text(`Constante (K1): ${currentData.K1.toFixed(4)}`, 80, startY + 30);
+        doc.text(`Forme: ${currentData.Shape1}`, 80, startY + 40);
+        doc.text(`Trou Central: ${currentData.Hole > 0 ? currentData.Hole.toFixed(1) : '0'} mm`, 80, startY + 50);
+        
+        if(currentData.type !== 'NEWTON') {
+            doc.setFont("helvetica", "bold");
+            doc.text(`MIROIR SECONDAIRE`, 140, startY + 10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Rayon (R2): ${currentData.R2.toFixed(2)} mm`, 140, startY + 20);
+            doc.text(`Constante (K2): ${currentData.K2.toFixed(4)}`, 140, startY + 30);
+            doc.text(`Diamètre Opt.: ${currentData.D2.toFixed(1)} mm`, 140, startY + 40);
+            doc.text(`Séparation: ${currentData.Sep.toFixed(2)} mm`, 140, startY + 50);
+        }
+
+        const fileName = projectName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        doc.save(`RAPPORT_${fileName}.pdf`);
+    }
+
+    function runAnalyzer() {
+        const D = parseFloat(document.getElementById('an-diameter').value);
+        const R = parseFloat(document.getElementById('an-radius').value);
+        const K = parseFloat(document.getElementById('an-kfactor').value);
+        const zones = document.getElementById('an-zones').value.split(',').map(Number).filter(n=>n);
+        const tbody = document.getElementById('an-results'); tbody.innerHTML="";
+        const c = 1/R;
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.parentElement.offsetWidth - 40; canvas.height = 120;
+        
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const scaleD = 50 / (D/2);
+        const cx = canvas.width/2; const cy=60;
+        
+        ctx.beginPath(); ctx.arc(cx, cy, (D/2)*scaleD, 0, Math.PI*2); 
+        ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fill();
+        ctx.strokeStyle="rgba(255,255,255,0.2)"; ctx.lineWidth=1; ctx.stroke();
+
+        zones.forEach(z=>{
+            ctx.beginPath(); ctx.arc(cx,cy, z*scaleD, 0, Math.PI*2); ctx.strokeStyle="#00f3ff"; ctx.stroke();
+        });
+
+        zones.forEach((S,i)=>{
+            const term = 1-(K+1)*Math.pow(c*S,2);
+            let errMsg = "";
+            if(S > D/2) errMsg = "HORS MIROIR";
+            else if(term<0) errMsg = "ERR GEOM";
+
+            if(errMsg) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${errMsg}</td></tr>`;
+            else {
+                const z = (c*S*S)/(1+Math.sqrt(term));
+                const A = c*z*(K+1);
+                const Y = -K*z*(3+A*(A-3));
+                const X = (-2*S*c*K*z*(2+A*(A-3)))/(1-A);
+                tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
+            }
+        });
+    }
+
+    function runArchitect() {
+        const type = document.getElementById('arch-type').value;
+        const D = parseFloat(document.getElementById('arch-D').value);
+        const F = parseFloat(document.getElementById('arch-F').value);
+        const B = parseFloat(document.getElementById('arch-B').value);
+        
+        let F1, Separation, M;
+
+        if (type === 'newton') { F1 = F; Separation = 0; M = 1; } 
+        else {
+            if (calculationMode === 'f1') {
+                F1 = parseFloat(document.getElementById('arch-F1').value);
+                M = F / F1;
+                Separation = (M * F1 - B) / (M + 1);
+                document.getElementById('arch-Sep').value = Separation.toFixed(2);
+            } else {
+                Separation = parseFloat(document.getElementById('arch-Sep').value);
+                M = (F - B - Separation) / Separation;
+                if (M <= 0) { alert("Géométrie Impossible"); return; }
+                F1 = F / M;
+                document.getElementById('arch-F1').value = F1.toFixed(2);
+            }
+        }
+
+        let R1, K1, R2, K2, shape1, shape2, D2, holeDiam;
+        R1 = 2 * F1;
+        
+        if (type === 'newton') {
+            K1 = -1; R2 = 0; K2 = 0; shape1="Parabole"; shape2="Plan"; D2 = D/4; holeDiam=0;
+        } else {
+            R2 = (2 * Separation * M) / (M - 1);
+            D2 = (D * (F1 - Separation)) / F1;
+            holeDiam = D2 * (B / (Separation + B));
+
+            if (type === 'cassegrain') { K1 = -1; shape1="Parabole"; const t = (M+1)/(M-1); K2 = -(t*t); shape2="Hyperbole"; } 
+            else if (type === 'dk') { K2 = 0; shape2="Sphère"; const p_prime = Separation + B; const term = (Math.pow(M, 2) - 1) / Math.pow(M, 3); K1 = -1 + term * (p_prime / F1); shape1 = "Ellipse Prolate (" + K1.toFixed(3) + ")"; }
+            else if (type === 'rc') { K1 = -1 - (2 * B) / (Math.pow(M, 3) * Separation); K2 = - Math.pow((M+1)/(M-1), 2) - (4*M*(M+1))/((M-1)*Math.pow(M,2)) * (B/Separation); shape1 = "Hyperbole"; shape2 = "Hyperbole"; }
+            else if (type === 'sct') { K1 = 0; K2 = 0; shape1="Sphère"; shape2="Sphère"; }
+        }
+
+        // Calcul Diamètre Pur (Effective) = Racine(D^2 - Obst^2)
+        // On prend l'obstruction géométrique D2 (le miroir secondaire bloque la lumière)
+        let D_obs = (type === 'newton') ? 0 : Math.abs(D2); // En Newton, on néglige souvent pour le pur, ou on prend D2
+        let Deff = Math.sqrt(Math.pow(D, 2) - Math.pow(D_obs, 2)).toFixed(1);
+
+        currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Separation, M: M, R1: R1, K1: K1, Shape1: shape1, Hole: holeDiam, R2: Math.abs(R2), K2: K2, Shape2: shape2, D2: Math.abs(D2), Deff: Deff };
+
+        document.getElementById('res-fd').innerText = "f/" + (F/D).toFixed(1);
+        document.getElementById('res-mag').innerText = M.toFixed(2) + "x";
+        let obst = (Math.abs(D2)/D)*100;
+        document.getElementById('res-obst').innerText = obst.toFixed(1) + "%";
+        document.getElementById('res-d-eff').innerText = Deff + " mm";
+
+        document.getElementById('res-r1').innerText = R1.toFixed(2);
+        document.getElementById('res-f1-out').innerText = F1.toFixed(2);
+        document.getElementById('res-k1').innerText = K1.toFixed(4);
+        document.getElementById('res-shape1').innerText = shape1;
+        document.getElementById('res-hole').innerText = holeDiam > 0 ? holeDiam.toFixed(1) + " mm" : "N/A";
+
+        if(type !== 'newton') {
+            document.getElementById('res-r2').innerText = Math.abs(R2).toFixed(2);
+            document.getElementById('res-sep-out').innerText = Separation.toFixed(2);
+            document.getElementById('res-k2').innerText = K2.toFixed(4);
+            document.getElementById('res-d2').innerText = Math.abs(D2).toFixed(1);
+        } else {
+            document.getElementById('res-r2').innerText = "-";
+            document.getElementById('res-sep-out').innerText = "-";
+            document.getElementById('res-k2').innerText = "-";
+            document.getElementById('res-d2').innerText = "-";
+        }
+        
+        const colMap = { 'dk': '#ff0055', 'rc': '#00f3ff', 'cassegrain': '#ff9d00', 'newton': '#fff', 'sct': '#fff' };
+        document.getElementById('res-k1').style.color = colMap[type] || '#fff';
+
+        redrawCurrentBlueprint();
+    }
+
+    window.onload = function() { 
+        runAnalyzer();
+        setTimeout(runArchitect, 100); 
+    };
+</script>
+</body>
+</html>
