@@ -71,13 +71,18 @@
         .brand { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: #fff; border-bottom: 2px solid var(--neon-cyan); padding-bottom: 15px; margin-bottom: 10px; }
         .brand span { color: var(--neon-pink); }
 
-        .input-group label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; }
+        .input-group label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; align-items: center; }
         .input-group input, .input-group select { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: #fff; padding: 12px; font-family: 'Orbitron'; font-size: 1rem; }
         .input-group input:disabled { background: rgba(0,0,0,0.5); color: #555; cursor: not-allowed; }
 
         .mode-switch { display: flex; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 4px; margin-bottom: 10px; }
         .mode-option { flex: 1; text-align: center; padding: 8px; font-size: 0.75rem; cursor: pointer; color: var(--text-dim); font-family: 'Orbitron'; }
         .mode-option.active { background: var(--neon-pink); color: white; font-weight: bold; }
+
+        /* Mini Switch pour Rayon/Focale */
+        .mode-switch-mini { display: flex; font-size: 0.7rem; gap: 5px; cursor: pointer; }
+        .mode-switch-mini span { color: var(--text-dim); padding: 2px 5px; border-radius: 2px; transition: 0.3s; }
+        .mode-switch-mini span.active { color: #000; background: var(--neon-cyan); font-weight: bold; }
 
         .btn-action { background: linear-gradient(90deg, var(--neon-cyan), #0088ff); color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: auto; text-transform: uppercase; }
         .btn-action:hover { box-shadow: 0 0 20px var(--neon-cyan); letter-spacing: 2px; }
@@ -142,7 +147,7 @@
     <!-- MODULE 1: ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v24</span></div>
+            <div class="brand">CAUSTIQUE <span>v25</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -157,7 +162,17 @@
 
             <div class="input-group"><label>Diamètre Miroir (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
             <div class="input-group"><label>Trou Central (mm)</label><input type="number" id="an-hole" value="0" placeholder="0" oninput="runAnalyzer()"></div>
-            <div class="input-group"><label>Rayon Courbure (R)</label><input type="number" id="an-radius" value="6200" step="0.1" oninput="runAnalyzer()"></div>
+            
+            <div class="input-group">
+                <label>
+                    COURBURE
+                    <div class="mode-switch-mini">
+                        <span id="mode-an-R" class="active" onclick="setAnMode('R')">RAYON</span>
+                        <span id="mode-an-F" onclick="setAnMode('F')">FOCALE</span>
+                    </div>
+                </label>
+                <input type="number" id="an-curvature-val" value="6200" step="0.1" oninput="runAnalyzer()">
+            </div>
             
             <div class="input-group">
                 <label>Constante (K)</label>
@@ -175,11 +190,8 @@
 
             <div class="input-group">
                 <label>Liste Rayons (mm)</label>
-                <!-- onchange pour éviter le clignotement pendant la frappe, ou onblur -->
                 <input type="text" id="an-zones" value="50, 100, 140, 200" onchange="runAnalyzer()">
             </div>
-            
-            <!-- Bouton "Lancer Analyse" supprimé car automatique -->
         </div>
         <div class="results-panel">
             <div id="an-info">
@@ -371,7 +383,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v24</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v25</div>
 </div>
 
 <script>
@@ -379,15 +391,41 @@
     let currentData = {};
     let viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
     let calculationMode = 'f1';
+    let anMode = 'R'; // R = Rayon, F = Focale
+
+    // --- ANALYZEUR: MODES ---
+    function setAnMode(mode) {
+        if(mode === anMode) return;
+        const input = document.getElementById('an-curvature-val');
+        let val = parseFloat(input.value);
+        
+        if(mode === 'F') {
+            // R -> F (Focale = Rayon / 2)
+            input.value = (val / 2).toFixed(2);
+            document.getElementById('mode-an-R').classList.remove('active');
+            document.getElementById('mode-an-F').classList.add('active');
+        } else {
+            // F -> R (Rayon = Focale * 2)
+            input.value = (val * 2).toFixed(2);
+            document.getElementById('mode-an-F').classList.remove('active');
+            document.getElementById('mode-an-R').classList.add('active');
+        }
+        anMode = mode;
+        runAnalyzer();
+    }
 
     // --- ANALYZEUR: CALCUL AUTO ---
     function autoCalcZones() {
         const D = parseFloat(document.getElementById('an-diameter').value);
         const holeD = parseFloat(document.getElementById('an-hole').value) || 0;
-        const R = parseFloat(document.getElementById('an-radius').value);
+        
+        // Récupérer R selon le mode
+        let R_val = parseFloat(document.getElementById('an-curvature-val').value);
+        let R = (anMode === 'F') ? R_val * 2 : R_val;
+
         const forcedN = parseInt(document.getElementById('an-nb-zones').value);
         
-        if(!D || !R) { alert("Saisir Diamètre et Rayon"); return; }
+        if(!D || !R) { alert("Saisir Diamètre et Courbure"); return; }
 
         const m = (R/2) / D;
         const R_cm = R / 10;
@@ -643,7 +681,6 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Fonction pour ajouter du texte long
         const addWrappedText = (text, x, y, maxWidth, lineHeight) => {
             const lines = doc.splitTextToSize(text, maxWidth);
             doc.text(lines, x, y);
@@ -692,11 +729,14 @@
     function runAnalyzer() {
         const D = parseFloat(document.getElementById('an-diameter').value);
         const holeD = parseFloat(document.getElementById('an-hole').value) || 0;
-        const R = parseFloat(document.getElementById('an-radius').value);
+        
+        // RECUPERER R SELON MODE (Rayon ou Focale)
+        let R_val = parseFloat(document.getElementById('an-curvature-val').value);
+        let R = (anMode === 'F') ? R_val * 2 : R_val;
+
         const K = parseFloat(document.getElementById('an-kfactor').value);
         const zonesStr = document.getElementById('an-zones').value;
         
-        // Validation basique
         if (!zonesStr) return;
         const zones = zonesStr.split(',').map(Number).filter(n=>n);
         
