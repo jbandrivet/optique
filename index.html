@@ -81,9 +81,9 @@
         .btn-pdf { background: #fff; color: #000; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
         .btn-pdf:hover { background: #eee; box-shadow: 0 0 15px #fff; }
 
-        .auto-zone-group { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
-        .btn-auto { background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); padding: 12px; font-family: 'Orbitron'; font-size: 0.8rem; cursor: pointer; flex: 2; transition: 0.3s; }
+        .btn-auto { background: transparent; border: 1px solid var(--neon-pink); color: var(--neon-pink); padding: 10px; font-family: 'Orbitron'; font-size: 0.8rem; cursor: pointer; width: 100%; transition: 0.3s; }
         .btn-auto:hover { background: var(--neon-pink); color: #fff; box-shadow: 0 0 15px var(--neon-pink); }
+        .auto-group { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px; }
         .input-small { width: 80px !important; text-align: center; }
 
         .results-panel { padding: 40px; position: relative; background: radial-gradient(circle at top right, rgba(0,50,100,0.15), transparent); overflow-y: auto; display: flex; flex-direction: column; }
@@ -130,7 +130,7 @@
     <!-- MODULE ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v18</span></div>
+            <div class="brand">CAUSTIQUE <span>v19</span></div>
             
             <div class="input-group">
                 <label>Type de Miroir</label>
@@ -148,19 +148,15 @@
             <div class="input-group"><label>Constante (K)</label><input type="number" id="an-kfactor" value="-1" step="0.0001"></div>
             
             <label style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; display:block;">GÉNÉRATEUR DE ZONES</label>
-            <div class="auto-zone-group">
-                <div style="flex:1;">
-                    <label style="font-size:0.7rem;">NB. ZONES</label>
+            <div class="auto-group">
+                <div style="flex:1">
+                    <label style="font-size:0.6rem">NB. ZONES</label>
                     <input type="number" id="an-nb-zones" class="input-small" placeholder="Auto">
                 </div>
-                <button class="btn-auto" onclick="autoCalcZones()">CALCULER</button>
+                <button class="btn-auto" onclick="autoCalcZones()">CALCULER ZONES</button>
             </div>
 
-            <div class="input-group">
-                <label>Liste des Rayons (mm)</label>
-                <input type="text" id="an-zones" value="50, 100, 140, 200">
-            </div>
-            
+            <div class="input-group"><label>Liste Rayons (mm)</label><input type="text" id="an-zones" value="50, 100, 140, 200"></div>
             <button class="btn-action" onclick="runAnalyzer()">Lancer Analyse</button>
         </div>
         <div class="results-panel">
@@ -209,7 +205,7 @@
 
             <button class="btn-action" onclick="runArchitect()">CALCULER & DESSINER</button>
             
-            <div class="pdf-group">
+            <div class="pdf-group" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
                 <div class="input-group">
                     <label>Nom du Projet</label>
                     <input type="text" id="project-name" placeholder="Ex: Mon Dall-Kirkham 300">
@@ -258,7 +254,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v18</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v19</div>
 </div>
 
 <script>
@@ -266,18 +262,17 @@
     let viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
     let calculationMode = 'f1';
 
-    // --- ANALYZEUR: CALCUL AUTO ZONES ---
+    // --- ANALYZEUR: CALCUL AUTO ---
     function autoCalcZones() {
         const D = parseFloat(document.getElementById('an-diameter').value);
         const R = parseFloat(document.getElementById('an-radius').value);
         const forcedN = parseInt(document.getElementById('an-nb-zones').value);
         
-        if(!D || !R) { alert("Veuillez saisir Diamètre et Rayon."); return; }
+        if(!D || !R) { alert("Saisir Diamètre et Rayon"); return; }
 
         const m = (R/2) / D;
+        // Largeur max théorique (Platzeck Gaviola)
         const R_cm = R / 10;
-        
-        // Largeur max théorique
         const term = m * Math.pow(R_cm, 2);
         const width_cm = 4.53 * Math.pow(term, 1/3) * 0.01;
         const width_mm = width_cm * 10;
@@ -285,14 +280,11 @@
         const radiusMirror = D / 2;
         let numZones;
 
-        // Si l'utilisateur force le nombre
         if (forcedN > 0) {
             numZones = forcedN;
         } else {
-            // Sinon, calcul optimal
             numZones = Math.ceil(radiusMirror / width_mm);
-            // On met à jour l'input pour info
-            document.getElementById('an-nb-zones').value = numZones;
+            document.getElementById('an-nb-zones').value = numZones; // Affiche ce qui est calculé
         }
 
         const actualWidth = radiusMirror / numZones;
@@ -310,6 +302,15 @@
         runAnalyzer();
     }
 
+    function updateAnalyzerK() {
+        const type = document.getElementById('an-type').value;
+        const kInput = document.getElementById('an-kfactor');
+        if(type === 'parabola') kInput.value = -1;
+        else if(type === 'sphere') kInput.value = 0;
+        else if(type === 'hyperbola') kInput.value = -1.1;
+        else if(type === 'ellipse') kInput.value = -0.5;
+    }
+
     // --- BLUEPRINT ZOOM ---
     const canvas = document.getElementById('blueprint-canvas');
     canvas.addEventListener('mousedown', (e) => { viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY; });
@@ -321,10 +322,7 @@
         viewState.lastX = e.clientX; viewState.lastY = e.clientY;
         redrawCurrentBlueprint();
     });
-    canvas.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        zoomBlueprint(e.deltaY > 0 ? -0.1 : 0.1);
-    });
+    canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomBlueprint(e.deltaY > 0 ? -0.1 : 0.1); });
 
     function zoomBlueprint(delta) {
         viewState.scale += delta;
@@ -339,7 +337,7 @@
         drawBlueprintGeneric(ctx, canvas.width, canvas.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
     }
 
-    // --- UI LOGIC ---
+    // --- UI TABS ---
     function switchTab(tabId) {
         document.querySelectorAll('.interface-container').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -348,6 +346,7 @@
         if(tabId === 'architect') { canvas.width = canvas.parentElement.offsetWidth; canvas.height = canvas.parentElement.offsetHeight; setTimeout(runArchitect, 50); }
     }
 
+    // --- ARCHITECT LOGIC ---
     function setCalcMode(mode) {
         calculationMode = mode;
         const inpF1 = document.getElementById('arch-F1');
@@ -380,16 +379,7 @@
         runArchitect();
     }
 
-    function updateAnalyzerK() {
-        const type = document.getElementById('an-type').value;
-        const kInput = document.getElementById('an-kfactor');
-        if(type === 'parabola') kInput.value = -1;
-        else if(type === 'sphere') kInput.value = 0;
-        else if(type === 'hyperbola') kInput.value = -1.1;
-        else if(type === 'ellipse') kInput.value = -0.5;
-    }
-
-    // --- BLUEPRINT DRAWING ---
+    // --- DRAWING ENGINE (v16 ROBUST) ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
         ctx.clearRect(0,0, width, height);
         ctx.save();
@@ -425,21 +415,16 @@
             let m1X = startX + F1 * scale; let m1Rad = (D * scale) / 2;
             ctx.beginPath(); ctx.arc(m1X - m1Rad*2, axisY, m1Rad*2, -0.25, 0.25); 
             ctx.strokeStyle = C_M1; ctx.lineWidth = 3; ctx.stroke();
-            
             ctx.strokeStyle = C_RAY; ctx.lineWidth=1;
             ctx.beginPath(); ctx.moveTo(startX, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad);
             ctx.moveTo(startX, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.stroke();
-            
             let diagX = m1X - (F1*scale) + (D*1.2*scale);
             ctx.beginPath(); ctx.moveTo(m1X, axisY-m1Rad); ctx.lineTo(diagX, axisY);
             ctx.moveTo(m1X, axisY+m1Rad); ctx.lineTo(diagX, axisY); ctx.stroke();
-            
             ctx.beginPath(); ctx.moveTo(diagX-10, axisY-10); ctx.lineTo(diagX+10, axisY+10);
             ctx.strokeStyle=C_M2; ctx.lineWidth=2; ctx.stroke();
-            
             ctx.beginPath(); ctx.moveTo(diagX, axisY); ctx.lineTo(diagX, axisY-(D*1.2*scale)); 
             ctx.strokeStyle=theme==='screen'?"#bc13fe":"#000"; ctx.stroke();
-
             drawDim("F1", diagX, m1X, axisY+m1Rad+30);
         } else {
             let m2X = startX; let m1X = startX + Sep * scale; let focusX = m1X + B * scale;
@@ -448,18 +433,20 @@
             let R_draw = m1Rad * 4; let R_cx = m1X - R_draw;
             let aOut = Math.asin(m1Rad/R_draw); let aIn = Math.asin(holeRad/R_draw);
             
+            // Miroir M1 (EN ENTIER)
             ctx.beginPath(); ctx.arc(R_cx, axisY, R_draw, -aOut, -aIn); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
             ctx.beginPath(); ctx.arc(R_cx, axisY, R_draw, aIn, aOut); ctx.strokeStyle = C_M1; ctx.lineWidth=3; ctx.stroke();
 
+            // Miroir M2
             let R2_draw = m2Rad * 4; let R2_cx = m2X - R2_draw; let aM2 = Math.asin(m2Rad/R2_draw);
             ctx.beginPath(); ctx.arc(R2_cx, axisY, R2_draw, -aM2, aM2); ctx.strokeStyle = C_M2; ctx.lineWidth=3; ctx.stroke();
 
+            // Rayons
             ctx.strokeStyle = C_RAY;
             ctx.beginPath(); ctx.moveTo(startX-30, axisY-m1Rad); ctx.lineTo(m1X, axisY-m1Rad);
             ctx.moveTo(startX-30, axisY+m1Rad); ctx.lineTo(m1X, axisY+m1Rad); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(m1X, axisY-m1Rad); ctx.lineTo(m2X, axisY-m2Rad);
             ctx.moveTo(m1X, axisY+m1Rad); ctx.lineTo(m2X, axisY+m2Rad); ctx.stroke();
-            
             ctx.strokeStyle = theme==='screen'?"#bc13fe":"#000";
             ctx.beginPath(); ctx.moveTo(m2X, axisY-m2Rad); ctx.lineTo(focusX, axisY);
             ctx.moveTo(m2X, axisY+m2Rad); ctx.lineTo(focusX, axisY); ctx.stroke();
