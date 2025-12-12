@@ -285,7 +285,7 @@
     var renderers = { an: null, arch: null };
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
-    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_rays: null, arch_struct: null, arch_cam: null };
+    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null };
 
     // --- 2D DRAWING SAFE ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
@@ -448,13 +448,36 @@
     // Fonction de 3D pour l'Analyseur (Déclaration explicite pour hoisting)
     function updateAn3D() {
         if(!scenes.an) init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
-        var D = parseFloat(document.getElementById('an-diameter').value); var thick = parseFloat(document.getElementById('an-thickness').value)||30; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value); var R = (anMode === 'F') ? R_val * 2 : R_val;
+        
+        var D = parseFloat(document.getElementById('an-diameter').value) || 0; 
+        var thick = parseFloat(document.getElementById('an-thickness').value) || 0; 
+        var holeD = parseFloat(document.getElementById('an-hole').value) || 0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value) || 0; 
+        
+        if (D <= 0 || R_val === 0) return; // Stop if invalid dimensions
+
+        var R = (anMode === 'F') ? R_val * 2 : R_val;
+        
         var points = []; var segments = 40; var radius = D/2; var holeR = holeD/2;
         
-        points.push(new THREE.Vector2(holeR, 0)); points.push(new THREE.Vector2(radius, 0)); points.push(new THREE.Vector2(radius, thick));
-        for(let i=0; i<=segments; i++) { let r = radius - (i/segments)*(radius-holeR); let z = (r*r)/(4*D); points.push(new THREE.Vector2(r, thick - ((radius*radius)/(4*D)) + z)); }
-        points.push(new THREE.Vector2(holeR, 0));
+        // Sagitta at edge
+        var sagEdge = (radius*radius)/(2*R);
+
+        // Back is flat at y=0
+        points.push(new THREE.Vector2(holeR, 0)); 
+        points.push(new THREE.Vector2(radius, 0)); 
+        points.push(new THREE.Vector2(radius, thick));
+        
+        // Front surface (Concave)
+        for(let i=0; i<=segments; i++) { 
+            let r = radius - (i/segments)*(radius-holeR); 
+            // Sagitta at r
+            let sagLocal = (r*r)/(2*R);
+            // y position relative to edge
+            let y = thick - (sagEdge - sagLocal);
+            points.push(new THREE.Vector2(r, y)); 
+        }
+        points.push(new THREE.Vector2(holeR, 0)); // Close loop
 
         var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
         var mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.9, roughness:0.1, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
@@ -509,11 +532,11 @@
             ctx.beginPath();
             var z_edge = (rad*rad)/(2*R);
             // 1. Haut-Ext
-            ctx.moveTo(cxC + rad*scCoupe, cyC - z_edge*scCoupe*50);
+            ctx.moveTo(cxC + rad*scCoupe, cyC - z_edge*scCoupe); // removed *50
             // 2. Courbe vers Haut-Int
             for(let x=rad; x>=hRad; x-=1) {
                 let z = (x*x)/(2*R);
-                ctx.lineTo(cxC + x*scCoupe, cyC - z*scCoupe*50);
+                ctx.lineTo(cxC + x*scCoupe, cyC - z*scCoupe); // removed *50
             }
             // 3. Bas-Int
             ctx.lineTo(cxC + hRad*scCoupe, cyC + thick*scCoupe);
@@ -525,10 +548,10 @@
 
             // Partie Gauche
             ctx.beginPath();
-            ctx.moveTo(cxC - rad*scCoupe, cyC - z_edge*scCoupe*50);
+            ctx.moveTo(cxC - rad*scCoupe, cyC - z_edge*scCoupe);
             for(let x=rad; x>=hRad; x-=1) {
                 let z = (x*x)/(2*R);
-                ctx.lineTo(cxC - x*scCoupe, cyC - z*scCoupe*50);
+                ctx.lineTo(cxC - x*scCoupe, cyC - z*scCoupe);
             }
             ctx.lineTo(cxC - hRad*scCoupe, cyC + thick*scCoupe);
             ctx.lineTo(cxC - rad*scCoupe, cyC + thick*scCoupe);
@@ -538,11 +561,11 @@
             // Chanfreins
             ctx.fillStyle="#999";
             // Droit
-            ctx.beginPath(); ctx.moveTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe*50); ctx.lineTo(cxC+rad*scCoupe-5, cyC - z_edge*scCoupe*50 + 5); ctx.lineTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe*50 + 10); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe); ctx.lineTo(cxC+rad*scCoupe-5, cyC - z_edge*scCoupe + 5); ctx.lineTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe + 10); ctx.fill();
             // Gauche
-            ctx.beginPath(); ctx.moveTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe*50); ctx.lineTo(cxC-rad*scCoupe+5, cyC - z_edge*scCoupe*50 + 5); ctx.lineTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe*50 + 10); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe); ctx.lineTo(cxC-rad*scCoupe+5, cyC - z_edge*scCoupe + 5); ctx.lineTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe + 10); ctx.fill();
             
-            ctx.fillStyle="#000"; ctx.fillText("PROFIL (Z x50)", cxC, H - 10);
+            ctx.fillStyle="#000"; ctx.fillText("PROFIL (Z x1)", cxC, H - 10);
 
         } else { updateAn3D(); }
 
@@ -648,12 +671,23 @@
             var inputF = parseFloat(document.getElementById('arch-F').value) || 0;
             var inputF1 = parseFloat(document.getElementById('arch-F1').value) || 0;
             
-            // Priorité : Si on vient de changer F1, on met à jour F. 
-            // Mais ici on relance tout. Prenons F1 comme maître si F1 > 0 et si le champ F1 est actif.
-            F1 = inputF1;
-            if(F1 <= 0) F1 = inputF;
-            F = F1;
+            // Détection de changement pour Newton : Prioriser l'utilisateur s'il change F ou F1
+            // Si c'est le premier run ou switch de type, on garde F.
+            if(currentData.type === 'NEWTON') {
+                if (inputF !== currentData.F) {
+                    F = inputF;
+                } else if (inputF1 !== currentData.F1) {
+                    F = inputF1;
+                } else {
+                    F = inputF;
+                }
+            } else {
+                F = inputF;
+            }
             
+            F1 = F;
+            
+            // Update UI fields
             document.getElementById('arch-F').value = F.toFixed(2);
             document.getElementById('arch-F1').value = F1.toFixed(2); // Sync
 
@@ -883,13 +917,36 @@
 
     function updateAn3D() {
         if(!scenes.an) init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
-        var D = parseFloat(document.getElementById('an-diameter').value); var thick = parseFloat(document.getElementById('an-thickness').value)||30; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value); var R = (anMode === 'F') ? R_val * 2 : R_val;
+        
+        var D = parseFloat(document.getElementById('an-diameter').value) || 0; 
+        var thick = parseFloat(document.getElementById('an-thickness').value) || 0; 
+        var holeD = parseFloat(document.getElementById('an-hole').value) || 0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value) || 0; 
+        
+        if (D <= 0 || R_val === 0) return; // Stop if invalid dimensions
+
+        var R = (anMode === 'F') ? R_val * 2 : R_val;
+        
         var points = []; var segments = 40; var radius = D/2; var holeR = holeD/2;
         
-        points.push(new THREE.Vector2(holeR, 0)); points.push(new THREE.Vector2(radius, 0)); points.push(new THREE.Vector2(radius, thick));
-        for(let i=0; i<=segments; i++) { let r = radius - (i/segments)*(radius-holeR); let z = (r*r)/(4*D); points.push(new THREE.Vector2(r, thick - ((radius*radius)/(4*D)) + z)); }
-        points.push(new THREE.Vector2(holeR, 0));
+        // Sagitta at edge
+        var sagEdge = (radius*radius)/(2*R);
+
+        // Back is flat at y=0
+        points.push(new THREE.Vector2(holeR, 0)); 
+        points.push(new THREE.Vector2(radius, 0)); 
+        points.push(new THREE.Vector2(radius, thick));
+        
+        // Front surface (Concave)
+        for(let i=0; i<=segments; i++) { 
+            let r = radius - (i/segments)*(radius-holeR); 
+            // Sagitta at r
+            let sagLocal = (r*r)/(2*R);
+            // y position relative to edge
+            let y = thick - (sagEdge - sagLocal);
+            points.push(new THREE.Vector2(r, y)); 
+        }
+        points.push(new THREE.Vector2(holeR, 0)); // Close loop
 
         var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
         var mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.9, roughness:0.1, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
@@ -900,6 +957,7 @@
         if(!scenes.arch) init3D('arch'); var sc = scenes.arch;
         if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
         if(meshes.arch_cam) sc.remove(meshes.arch_cam);
+        if(meshes.arch_foc) sc.remove(meshes.arch_foc); // NEW: Clean up focuser mesh
 
         if(!currentData.type) return;
 
@@ -1041,6 +1099,7 @@
             var foc = new THREE.Mesh(focGeo, focMat);
             foc.position.set(0, tubeR + currentData.B/2, Sep);
             sc.add(foc);
+            meshes.arch_foc = foc; // NEW: Track focuser mesh
 
             var camRad = 35; var camLen = 40; 
             var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
