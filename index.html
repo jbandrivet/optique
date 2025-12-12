@@ -324,22 +324,37 @@
             ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2);
             ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
 
-            // Rayons
+            // Rayons NEWTON CORRIGÉS : Cône vers M2, puis Focus
+            // Le cône se rétrécit de M1 vers le Foyer F1.
+            // Il est intercepté par M2.
+            // Diamètre au niveau de M2 : D2 (environ)
+            var m2Rad_ray = (D2*scale)/2; 
+            
             ctx.strokeStyle=C_RAY; ctx.beginPath(); 
             // Entrée -> M1
             ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad);
             ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
-            // M1 -> M2
-            ctx.lineTo(m2X, axisY); 
-            // Reprise du haut
-            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(m2X, axisY);
-            // M2 -> Sortie (Vers le haut pour le dessin 2D)
-            var focH = tubeR + B*scale;
-            ctx.moveTo(m2X, axisY); ctx.lineTo(m2X, axisY - focH);
+            
+            // M1 -> M2 (Convergence partielle)
+            // Rayon du haut vers bord haut M2
+            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(m2X, axisY - m2Rad_ray);
+            // Rayon du bas vers bord bas M2
+            ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(m2X, axisY + m2Rad_ray);
+            
+            // M2 -> Sortie (Vers le foyer)
+            var focH = tubeR + B*scale; // Distance M2 -> Foyer
+            // Les rayons se croisent au foyer
+            var focusY = axisY - focH;
+            
+            // Le rayon qui arrive en haut de M2 est réfléchi vers le foyer
+            ctx.moveTo(m2X, axisY - m2Rad_ray); ctx.lineTo(m2X, focusY);
+            // Le rayon qui arrive en bas de M2 est réfléchi vers le foyer
+            ctx.moveTo(m2X, axisY + m2Rad_ray); ctx.lineTo(m2X, focusY);
+            
             ctx.stroke();
 
             dDim("F1", m2X, m1X, axisY+m1Rad+30);
-            dDim("BACK FOCUS", m2X, m2X, axisY-focH-10); // Un peu hacky pour le dessin vertical
+            dDim("BACK FOCUS", m2X, m2X, focusY - 10);
             
         } else {
             var m2X=startX; var m1X=startX+Sep*scale; var fX=m1X+B*scale;
@@ -961,35 +976,53 @@
             sc.add(trussGroup); meshes.arch_struct = trussGroup;
 
         } else {
-            // --- LOGIQUE SPÉCIFIQUE NEWTON 3D ---
+            // --- LOGIQUE SPÉCIFIQUE NEWTON 3D CORRIGÉE ---
             var Sep = visualSep; // Utilisation de la séparation calculée
             var D2 = currentData.D2; // Petit axe
             
             // Miroir Secondaire (Plan 45°)
-            var m2Geo = new THREE.CylinderGeometry(D2/2, D2/2, 5, 32);
+            // Elliptique : Petit axe D2, Grand axe D2*sqrt(2)
+            // Cylinder génère un cercle. On scale un axe.
+            // Cylinder along Y. Cap in XZ.
+            // On veut étirer selon l'axe qui sera projeté : Z.
+            var m2Geo = new THREE.CylinderGeometry(D2/2, D2/2, 2, 32);
             var m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1 });
             var m2 = new THREE.Mesh(m2Geo, m2Mat);
             m2.position.z = Sep;
-            m2.rotation.x = Math.PI/4; // 45 deg
+            m2.rotation.x = -Math.PI/4; // Face au primaire, renvoi vers +Y
+            m2.scale.z = 1.414; // Elongation pour projection circulaire
             sc.add(m2); meshes.arch_m2 = m2;
 
-            // Rayons Newton (Entrée -> M1 -> M2 -> Sortie Latérale)
+            // Rayons Newton (Entrée -> M1 -> M2 (intercepte cône) -> Sortie Latérale)
             var numRays = 16; var ptsAll = [];
             var Z_start = Sep + 500; var Z_m1 = thick1; var Z_m2 = Sep; 
             var tubeR = R1*1.1; // Rayon approx du tube
-            var Y_exit = tubeR + currentData.B; // Sortie sur axe Y
+            var Y_exit = tubeR + currentData.B; // Sortie sur axe Y (Foyer)
+
+            // Ratio de réduction du cône au niveau de M2
+            // Focale = F1. Distance M1->M2 = Sep.
+            // Ratio = (F1 - Sep) / F1;
+            // Pour être précis, Sep est la distance depuis le sommet du primaire (approx Z=0)
+            // Donc distance restante = F1 - Sep.
+            var ratio = Math.max(0, (currentData.F1 - Sep) / currentData.F1);
 
             for(let i=0; i<numRays; i++) {
                 var angle = (i/numRays) * Math.PI * 2;
                 var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
+                
+                // Coordonnées d'impact sur le plan transversal de M2 (avant reflection)
+                var xi = x * ratio;
+                var yi = y * ratio;
+
                 // Entrée -> M1
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
-                // M1 -> M2 (On triche un peu, on fait converger tout au centre de M2 pour simplification visuelle,
-                // ou vers un cercle sur M2. Le Newton est complexe à tracer parfaitement sans raytracing)
-                // Simplification : M1 -> Centre M2 -> Sortie
-                ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(0, 0, Z_m2));
-                // M2 -> Sortie (+Y)
-                ptsAll.push(new THREE.Vector3(0, 0, Z_m2)); ptsAll.push(new THREE.Vector3(0, Y_exit, Z_m2));
+                
+                // M1 -> M2 (Impact sur le bord du secondaire, pas le centre)
+                ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(xi, yi, Z_m2));
+                
+                // M2 -> Sortie (+Y) (Convergence vers le foyer unique)
+                // Ici on simplifie visuellement : les rayons rebondissent et vont vers le foyer.
+                ptsAll.push(new THREE.Vector3(xi, yi, Z_m2)); ptsAll.push(new THREE.Vector3(0, Y_exit, Z_m2));
             }
             var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
             sc.add(lRays); meshes.arch_rays = lRays;
