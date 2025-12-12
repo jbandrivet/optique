@@ -212,7 +212,7 @@
             </div>
             <div class="arch-grid">
                 <div class="mirror-card"><h3 style="color:var(--neon-orange)">MIROIR PRIMAIRE</h3><div class="result-row"><span>Rayon R1</span><div class="res-val" id="res-r1">-</div></div><div class="result-row"><span>Focale F1</span><div class="res-val" id="res-f1-out">-</div></div><div class="result-row"><span>Constante K1</span><div class="res-val" id="res-k1">-</div></div><div class="result-row"><span>Forme</span><div class="res-val" id="res-shape1" style="font-size:0.8rem">-</div></div><div class="result-row"><span>Trou Central (Min)</span><div class="res-val" id="res-hole" style="color:var(--neon-pink)">-</div></div></div>
-                <div class="mirror-card" id="sec-card"><h3 style="color:var(--neon-green)">MIROIR SECONDAIRE</h3><div class="result-row"><span>Rayon R2</span><div class="res-val" id="res-r2">-</div></div><div class="result-row"><span>Séparation d</span><div class="res-val" id="res-sep-out">-</div></div><div class="result-row"><span>Constante K2</span><div class="res-val" id="res-k2">-</div></div><div class="result-row"><span>Diamètre Optique</span><div class="res-val" id="res-d2">-</div></div></div>
+                <div class="mirror-card" id="sec-card"><h3 style="color:var(--neon-green)">MIROIR SECONDAIRE</h3><div class="result-row"><span>Rayon R2</span><div class="res-val" id="res-r2">-</div></div><div class="result-row"><span>Séparation d</span><div class="res-val" id="res-sep-out">-</div></div><div class="result-row"><span>Constante K2</span><div class="res-val" id="res-k2">-</div></div><div class="result-row"><span>Forme</span><div class="res-val" id="res-shape2" style="font-size:0.8rem">-</div></div><div class="result-row"><span>Diamètre Optique</span><div class="res-val" id="res-d2">-</div></div></div>
             </div>
         </div>
     </div>
@@ -743,6 +743,9 @@
         document.getElementById('res-shape1').innerText = s1;
         document.getElementById('res-hole').innerText = hD>0 ? hD.toFixed(1)+" mm" : "N/A";
         
+        // --- Added: Display Shape2 ---
+        document.getElementById('res-shape2').innerText = s2;
+
         if(type !== 'newton') {
             document.getElementById('res-r2').innerText = isFinite(R2) ? Math.abs(R2).toFixed(2) : "-";
             document.getElementById('res-sep-out').innerText = Sep.toFixed(2);
