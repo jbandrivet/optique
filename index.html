@@ -208,6 +208,7 @@
                 <div><div style="font-size:0.8rem; color:var(--text-dim)">GRANDISSEMENT</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:#fff" id="res-mag">-</div></div>
                 <div><div style="font-size:0.8rem; color:var(--text-dim)">OBSTRUCTION</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:#fff" id="res-obst">-</div></div>
                 <div><div style="font-size:0.8rem; color:var(--text-dim)">DIAMÈTRE PUR</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:var(--neon-cyan)" id="res-d-eff">-</div></div>
+                <div><div style="font-size:0.8rem; color:var(--text-dim)">RÉSOLUTION</div><div style="font-family:'Orbitron'; font-size:1.2rem; color:var(--neon-pink)" id="res-resol">-</div></div>
             </div>
             <div class="arch-grid">
                 <div class="mirror-card"><h3 style="color:var(--neon-orange)">MIROIR PRIMAIRE</h3><div class="result-row"><span>Rayon R1</span><div class="res-val" id="res-r1">-</div></div><div class="result-row"><span>Focale F1</span><div class="res-val" id="res-f1-out">-</div></div><div class="result-row"><span>Constante K1</span><div class="res-val" id="res-k1">-</div></div><div class="result-row"><span>Forme</span><div class="res-val" id="res-shape1" style="font-size:0.8rem">-</div></div><div class="result-row"><span>Trou Central (Min)</span><div class="res-val" id="res-hole" style="color:var(--neon-pink)">-</div></div></div>
@@ -284,7 +285,7 @@
     var renderers = { an: null, arch: null };
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
-    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_rays: null, arch_struct: null };
+    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_rays: null, arch_struct: null, arch_cam: null };
 
     // --- 2D DRAWING SAFE ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
@@ -307,11 +308,39 @@
 
         if(type==='newton') {
             var m1X = startX+F1*scale; var m1Rad = (D*scale)/2;
+            // Miroir Primaire
             ctx.beginPath(); ctx.arc(m1X-m1Rad*2, axisY, Math.max(0, m1Rad*2), -0.25, 0.25); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
-            var dX = m1X-(F1*scale)+(D*1.2*scale);
-            ctx.strokeStyle=C_RAY; ctx.beginPath(); ctx.moveTo(startX,axisY-m1Rad); ctx.lineTo(m1X,axisY-m1Rad); ctx.lineTo(dX,axisY); ctx.lineTo(dX,axisY-(D*1.2*scale)); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(startX,axisY+m1Rad); ctx.lineTo(m1X,axisY+m1Rad); ctx.lineTo(dX,axisY); ctx.stroke();
-            dDim("F1",dX,m1X,axisY+m1Rad+30);
+            
+            // Calcul Position M2 (Séparation Visuelle)
+            var tubeR = (D/2)*scale; // Approx tube radius
+            // VizSep a été passé dans Sep pour le Newton dans le code appelant
+            var intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale);
+            var m2X = m1X - intercept;
+            
+            // Miroir Secondaire (Ligne à 45°)
+            var m2Size = (D2*scale); // Petit axe
+            ctx.beginPath(); 
+            ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); 
+            ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2);
+            ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
+
+            // Rayons
+            ctx.strokeStyle=C_RAY; ctx.beginPath(); 
+            // Entrée -> M1
+            ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad);
+            ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
+            // M1 -> M2
+            ctx.lineTo(m2X, axisY); 
+            // Reprise du haut
+            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(m2X, axisY);
+            // M2 -> Sortie (Vers le haut pour le dessin 2D)
+            var focH = tubeR + B*scale;
+            ctx.moveTo(m2X, axisY); ctx.lineTo(m2X, axisY - focH);
+            ctx.stroke();
+
+            dDim("F1", m2X, m1X, axisY+m1Rad+30);
+            dDim("BACK FOCUS", m2X, m2X, axisY-focH-10); // Un peu hacky pour le dessin vertical
+            
         } else {
             var m2X=startX; var m1X=startX+Sep*scale; var fX=m1X+B*scale;
             var m1Rad=(D*scale)/2; var m2Rad=(D2*scale)/2; var hRad=(holeDiam*scale)/2;
@@ -340,7 +369,8 @@
         var dpr = window.devicePixelRatio || 1;
         canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
-        drawBlueprintGeneric(ctx, rect.width, rect.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
+        // On passe VizSep pour le dessin 2D Newton
+        drawBlueprintGeneric(ctx, rect.width, rect.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
     }
 
     window.switchTab = function(tabId) {
@@ -398,6 +428,22 @@
         }
         cam.lookAt(0,0,0);
         ctr.update();
+    }
+
+    // Fonction de 3D pour l'Analyseur (Déclaration explicite pour hoisting)
+    function updateAn3D() {
+        if(!scenes.an) init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
+        var D = parseFloat(document.getElementById('an-diameter').value); var thick = parseFloat(document.getElementById('an-thickness').value)||30; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value); var R = (anMode === 'F') ? R_val * 2 : R_val;
+        var points = []; var segments = 40; var radius = D/2; var holeR = holeD/2;
+        
+        points.push(new THREE.Vector2(holeR, 0)); points.push(new THREE.Vector2(radius, 0)); points.push(new THREE.Vector2(radius, thick));
+        for(let i=0; i<=segments; i++) { let r = radius - (i/segments)*(radius-holeR); let z = (r*r)/(4*D); points.push(new THREE.Vector2(r, thick - ((radius*radius)/(4*D)) + z)); }
+        points.push(new THREE.Vector2(holeR, 0));
+
+        var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
+        var mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.9, roughness:0.1, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
+        meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
     }
 
     window.runAnalyzer = function() {
@@ -574,20 +620,54 @@
         var D = parseFloat(document.getElementById('arch-D').value) || 0;
         var B = parseFloat(document.getElementById('arch-B').value) || 0;
         
-        var F, F1, Sep, M;
+        var F=0, F1=0, Sep=0, M=0;
+        var VizSep = 0; 
+        
+        // Variables pour les résultats, initialisées ici pour éviter les problèmes de portée (scoping)
+        var R1=0, K1=0, R2=0, K2=0, s1="-", s2="-", D2_val=0, hD=0;
 
         if(type === 'newton') {
-            F = parseFloat(document.getElementById('arch-F').value) || 0;
-            F1=F; Sep=0; M=1; 
+            // Newton: On force F = F1. On lit F1 car le mode par défaut est 'FIXER F1'.
+            // Si on est en mode 'Focale Système', on force F1 = F.
+            // Simplification : Dans Newton, F = F1.
+            var inputF = parseFloat(document.getElementById('arch-F').value) || 0;
+            var inputF1 = parseFloat(document.getElementById('arch-F1').value) || 0;
+            
+            // Priorité : Si on vient de changer F1, on met à jour F. 
+            // Mais ici on relance tout. Prenons F1 comme maître si F1 > 0 et si le champ F1 est actif.
+            F1 = inputF1;
+            if(F1 <= 0) F1 = inputF;
+            F = F1;
+            
+            document.getElementById('arch-F').value = F.toFixed(2);
+            document.getElementById('arch-F1').value = F1.toFixed(2); // Sync
+
+            Sep = 0; M = 1; 
+            
+            // Calculer D2 (Petit Axe) pour avoir le champ pleine lumière minimal au foyer
+            // Distance du primaire au foyer = F
+            // Distance du primaire au secondaire = F - (D/2 + B)
+            // Distance du foyer au secondaire = D/2 + B
+            // Thales: d / D = (D/2 + B) / F
+            if (F > 0) {
+                // Petit axe géométrique minimum pour illuminer le centre
+                // Pour du champ pleine lumière, il faudrait ajouter (Champ * (F-Dist)/F).
+                // Ici on fait le minimum géométrique (obstruction minimale).
+                D2_val = (D * ((D/2) + B)) / F;
+            } else {
+                D2_val = 0;
+            }
+            if(D2_val<=0) D2_val=10; // Fallback
+
+            VizSep = Math.max(0, F - (D/2 + B));
         } 
         else {
             // Logique de calcul selon le mode
             if(calculationMode === 'free') {
-                // Mode Manuel : F1 et Sep sont maîtres, F est esclave
                 F1 = parseFloat(document.getElementById('arch-F1').value)||0;
                 Sep = parseFloat(document.getElementById('arch-Sep').value)||0;
+                VizSep = Sep;
                 
-                // Contrôle de cohérence simple
                 if(F1 > 0 && Sep >= F1) {
                     alert("ERREUR GÉOMÉTRIQUE : La séparation ne peut pas être plus grande que la focale primaire (F1).");
                     return;
@@ -602,20 +682,12 @@
                 document.getElementById('arch-F').value = F.toFixed(2);
             }
             else {
-                // Modes contraints : F est maître (input)
                 F = parseFloat(document.getElementById('arch-F').value) || 0;
                 
                 if(calculationMode === 'auto') {
-                    // MODE AUTO: On impose un F/D primaire de 3.5 (standard équilibré)
-                    // F1 = D * 3.5
                     F1 = D * 3.5;
                     document.getElementById('arch-F1').value = F1.toFixed(2);
-                    
-                    // Calcul du grandissement nécessaire
                     M = (F1 > 0) ? F / F1 : 0;
-                    
-                    // Calcul de la séparation idéale pour ce grandissement et ce BackFocus
-                    // Sep = (M*F1 - B) / (M+1)
                     Sep = (M * F1 - B) / (M + 1);
                     document.getElementById('arch-Sep').value = Sep.toFixed(2);
                 }
@@ -632,15 +704,20 @@
                     F1 = F/M; 
                     document.getElementById('arch-F1').value = F1.toFixed(2); 
                 }
+                VizSep = Sep;
             }
         }
 
-        var R1=2*F1, K1=0, R2=0, K2=0, s1="-", s2="-", D2=0, hD=0;
-        if(type==='newton') { K1=-1; R2=0; K2=0; s1="Parabole"; s2="Plan"; D2=D/4; hD=0; } 
+        R1=2*F1; 
+        
+        if(type==='newton') { 
+            K1=-1; R2=0; K2=0; s1="Parabole"; s2="Plan"; 
+            hD=0; 
+        } 
         else if(F1 > 0) {
             if(M === 1) { R2 = 0; } else { R2 = (2*Sep*M)/(M-1); }
-            D2 = (D*(F1-Sep))/F1; 
-            hD = D2*(B/(Sep+B));
+            D2_val = (D*(F1-Sep))/F1; 
+            hD = D2_val*(B/(Sep+B));
 
             if(type==='cassegrain') { K1=-1; s1="Parabole"; var t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
             else if(type==='dk') { K2=0; s2="Sphère"; var p=Sep+B; var t=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t*(p/F1); s1="Ellipse Prolate"; }
@@ -648,15 +725,18 @@
             else { K1=0; K2=0; s1="Sphère"; s2="Sphère"; }
         }
 
-        var D_obs = (type==='newton') ? 0 : Math.abs(D2); 
+        var D_obs = Math.abs(D2_val); 
         var Deff = Math.sqrt(Math.max(0, Math.pow(D, 2) - Math.pow(D_obs, 2))).toFixed(1);
 
-        currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2), Deff: Deff };
+        currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff };
 
         document.getElementById('res-fd').innerText = (D>0 && F>0) ? "f/" + (F/D).toFixed(1) : "-";
         document.getElementById('res-mag').innerText = isFinite(M) ? M.toFixed(2) + "x" : "Err";
-        document.getElementById('res-obst').innerText = (D>0) ? (Math.abs(D2)/D*100).toFixed(1) + "%" : "-";
+        document.getElementById('res-obst').innerText = (D>0) ? (Math.abs(D2_val)/D*100).toFixed(1) + "%" : "-";
         document.getElementById('res-d-eff').innerText = Deff + " mm";
+        var resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-";
+        document.getElementById('res-resol').innerText = resArc;
+
         document.getElementById('res-r1').innerText = R1.toFixed(2);
         document.getElementById('res-f1-out').innerText = F1.toFixed(2);
         document.getElementById('res-k1').innerText = K1.toFixed(4);
@@ -667,12 +747,12 @@
             document.getElementById('res-r2').innerText = isFinite(R2) ? Math.abs(R2).toFixed(2) : "-";
             document.getElementById('res-sep-out').innerText = Sep.toFixed(2);
             document.getElementById('res-k2').innerText = isFinite(K2) ? K2.toFixed(4) : "-";
-            document.getElementById('res-d2').innerText = Math.abs(D2).toFixed(1);
+            document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1);
         } else {
             document.getElementById('res-r2').innerText = "-";
             document.getElementById('res-sep-out').innerText = "-";
             document.getElementById('res-k2').innerText = "-";
-            document.getElementById('res-d2').innerText = "-";
+            document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1);
         }
         if(vizModeArch === '2d') window.redrawCurrentBlueprint(); else updateArch3D();
     }
@@ -695,7 +775,7 @@
         var ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.fillRect(0,0,2000,1000);
         
         var oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0};
-        drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'print');
+        drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'print');
         viewState = oldState;
 
         doc.addImage(cvs.toDataURL("image/png"), 'PNG', 10, 40, 190, 95);
@@ -801,141 +881,138 @@
     function updateArch3D() {
         if(!scenes.arch) init3D('arch'); var sc = scenes.arch;
         if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
+        if(meshes.arch_cam) sc.remove(meshes.arch_cam);
+
         if(!currentData.type) return;
 
         // Visual Clamping
-        var visualSep = currentData.Sep;
+        var visualSep = currentData.VizSep || currentData.Sep;
         if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
 
-        // MIROIR PRIMAIRE : Placé à l'origine (Z=0), creux face à Z+
+        // MIROIR PRIMAIRE
         var R1 = currentData.D/2; var H1 = currentData.Hole/2; var thick1 = currentData.D/6;
         var pts1 = [];
-        // Dos plat
-        pts1.push(new THREE.Vector2(H1, 0)); 
-        pts1.push(new THREE.Vector2(R1, 0));
-        pts1.push(new THREE.Vector2(R1, thick1)); // Bord
-        // Face concave
+        pts1.push(new THREE.Vector2(H1, 0)); pts1.push(new THREE.Vector2(R1, 0)); pts1.push(new THREE.Vector2(R1, thick1)); 
         for(let i=0; i<=40; i++){ 
             let r = R1 - (i/40)*(R1-H1); 
-            // Sagitta s = r^2 / 2R. Approx F1=R/2 -> s = r^2 / 4F
             let sag = (r*r)/(4*currentData.F1); 
-            // Surface démarre en haut du bord (thick1) et descend
-            // Au bord r=R1 -> y = thick1. Au centre r=0 -> y = thick1 - sag_max
-            // Formule locale: y = thick1 - (sag_max - sag_local). 
-            // Simplification visuelle : on creuse depuis le plan thick1
-            // z(r) = thick1 - sag_local (si on suppose sag=0 au centre, mais non, on veut bord fixe)
-            // Visuel : y = thick1 - sag_of_r ? Non.
-            // On veut que le BORD soit à thick1.
-            // sag(R1) = R1^2/4F. sag(r) = r^2/4F.
-            // Profondeur = sag(R1) - sag(r).
-            // y = thick1 - (sag(R1) - sag(r)) ? Non, ça ferait une bosse.
-            // On veut concave. y = thick1 - (sag(R1) - sag(r)) ferait que le centre est plus bas.
-            // Correct: y = thick1 - ( (R1*R1)/(4*currentData.F1) - (r*r)/(4*currentData.F1) )
             pts1.push(new THREE.Vector2(r, thick1 - ( (R1*R1)/(4*currentData.F1) - sag )));
         }
-        pts1.push(new THREE.Vector2(H1, 0)); // Fermeture pour le trou
-
+        pts1.push(new THREE.Vector2(H1, 0)); 
         var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1, side:THREE.DoubleSide }));
-        m1.rotation.x = Math.PI/2; // Axe Y devient Z.
-        // Le dos est à Y=0 -> Z=0. La face est à Z=thick.
-        // La lumière vient de +Z. Donc la face concave doit regarder +Z. C'est le cas.
-        sc.add(m1); meshes.arch_m1 = m1;
+        m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
 
         if(currentData.type !== 'NEWTON') {
+            // ... (CODE EXISTANT POUR CASSEGRAIN/RC/DK) ...
             var R2 = currentData.D2/2; var Sep = visualSep; var thick2 = R2/3;
-            
-            // MIROIR SECONDAIRE : Placé à Z = Sep. Doit regarder vers M1 (vers -Z).
-            // Donc face bombée vers -Z.
             var pts2 = [];
-            pts2.push(new THREE.Vector2(0, 0)); // Centre dos
-            pts2.push(new THREE.Vector2(R2, 0)); // Bord dos
-            pts2.push(new THREE.Vector2(R2, thick2)); // Bord face
-            // Face convexe
+            pts2.push(new THREE.Vector2(0, 0)); pts2.push(new THREE.Vector2(R2, 0)); pts2.push(new THREE.Vector2(R2, thick2)); 
             for(let i=0; i<=20; i++){ 
-                let r = R2 - (i/20)*R2; 
-                let sag = (r*r)/(1000); // Courbure visuelle
-                pts2.push(new THREE.Vector2(r, thick2 + sag)); // Monte vers le centre
+                let r = R2 - (i/20)*R2; let sag = (r*r)/(1000); 
+                pts2.push(new THREE.Vector2(r, thick2 + sag)); 
             }
-            
             var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1, side:THREE.DoubleSide }));
-            
-            // Rotation: -PI/2 pour regarder vers -Z
-            m2.rotation.x = -Math.PI/2;
-            m2.position.z = Sep; 
-            sc.add(m2); meshes.arch_m2 = m2;
+            m2.rotation.x = -Math.PI/2; m2.position.z = Sep; sc.add(m2); meshes.arch_m2 = m2;
 
             // RAYONS
             var numRays = 16; var ptsAll = [];
-            // Origine Z = Sep + 500 (Loin devant)
-            var Z_start = Sep + 500;
-            // Impact M1 = Surface optique (approx Z = thick1)
-            var Z_m1 = thick1;
-            // Impact M2 = Surface optique (approx Z = Sep - thick2)
-            var Z_m2 = Sep - thick2;
-            // Foyer = Z = -BackFocus (Derrière M1)
-            var Z_foc = -currentData.B;
-
+            var Z_start = Sep + 500; var Z_m1 = thick1; var Z_m2 = Sep - thick2; var Z_foc = -currentData.B;
             for(let i=0; i<numRays; i++) {
                 var angle = (i/numRays) * Math.PI * 2;
                 var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
                 var x2 = Math.cos(angle) * (currentData.D2/2); var y2 = Math.sin(angle) * (currentData.D2/2);
-                
-                // Entrée -> M1
-                ptsAll.push(new THREE.Vector3(x, y, Z_start));
-                ptsAll.push(new THREE.Vector3(x, y, Z_m1));
-                // M1 -> M2
-                ptsAll.push(new THREE.Vector3(x, y, Z_m1));
-                ptsAll.push(new THREE.Vector3(x2, y2, Z_m2));
-                // M2 -> Focus
-                ptsAll.push(new THREE.Vector3(x2, y2, Z_m2));
-                ptsAll.push(new THREE.Vector3(0, 0, Z_foc));
+                ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
+                ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(x2, y2, Z_m2));
+                ptsAll.push(new THREE.Vector3(x2, y2, Z_m2)); ptsAll.push(new THREE.Vector3(0, 0, Z_foc));
             }
             var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
             sc.add(lRays); meshes.arch_rays = lRays;
             
-            // STRUCTURE SERRURIER
+            // CAMERA
+            var camRad = 35; var camLen = 40; 
+            var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
+            var camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
+            var cam = new THREE.Mesh(camGeo, camMat);
+            cam.rotation.x = Math.PI/2;
+            cam.position.z = Z_foc - (camLen/2);
+            sc.add(cam); meshes.arch_cam = cam;
+
+            // STRUCTURE
             var trussGroup = new THREE.Group(); 
             var boxR = R1*1.2; 
-            var trussLen = Sep; 
             var matTruss = new THREE.MeshStandardMaterial({color: 0x222222, roughness:0.9});
-            
-            // Tubes partent du niveau M1 (Z=0 approx) vers Cage (Z=Sep)
             for(let i=0; i<8; i++) {
                 var a1 = (Math.floor(i/2)*90)*(Math.PI/180); var a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
-                // Base (Autour de M1)
                 var v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0);
-                // Top (Autour de M2)
                 var v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, Sep);
-                
                 var dist = v1.distanceTo(v2);
                 var tube = new THREE.Mesh(new THREE.CylinderGeometry(5,5,dist,8), matTruss);
-                // Position mid-point
                 tube.position.copy(new THREE.Vector3().addVectors(v1,v2).multiplyScalar(0.5));
-                tube.lookAt(v2); 
-                tube.rotateX(Math.PI/2); 
-                trussGroup.add(tube);
+                tube.lookAt(v2); tube.rotateX(Math.PI/2); trussGroup.add(tube);
             }
-            
-            // Araignée (Z = Sep + un peu devant)
             var spiderMat = new THREE.MeshBasicMaterial({color: 0x111111});
-            var spiderV = new THREE.Mesh(new THREE.BoxGeometry(4, boxR*2, 20), spiderMat); 
-            spiderV.position.z = Sep + 20; 
-            trussGroup.add(spiderV);
-            var spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 4, 20), spiderMat); 
-            spiderH.position.z = Sep + 20; 
-            trussGroup.add(spiderH);
-            
-            // Anneaux
-            var cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshStandardMaterial({color:0x111111})); 
-            cell.rotation.x = Math.PI/2; 
-            cell.position.z = -10; // Sous M1
-            trussGroup.add(cell);
-            
-            var cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); 
-            cage.position.z = Sep; 
-            trussGroup.add(cage);
-            
+            var spiderV = new THREE.Mesh(new THREE.BoxGeometry(4, boxR*2, 20), spiderMat); spiderV.position.z = Sep + 20; trussGroup.add(spiderV);
+            var spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 4, 20), spiderMat); spiderH.position.z = Sep + 20; trussGroup.add(spiderH);
+            var cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshStandardMaterial({color:0x111111})); cell.rotation.x = Math.PI/2; cell.position.z = -10; trussGroup.add(cell);
+            var cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = Sep; trussGroup.add(cage);
             sc.add(trussGroup); meshes.arch_struct = trussGroup;
+
+        } else {
+            // --- LOGIQUE SPÉCIFIQUE NEWTON 3D ---
+            var Sep = visualSep; // Utilisation de la séparation calculée
+            var D2 = currentData.D2; // Petit axe
+            
+            // Miroir Secondaire (Plan 45°)
+            var m2Geo = new THREE.CylinderGeometry(D2/2, D2/2, 5, 32);
+            var m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1 });
+            var m2 = new THREE.Mesh(m2Geo, m2Mat);
+            m2.position.z = Sep;
+            m2.rotation.x = Math.PI/4; // 45 deg
+            sc.add(m2); meshes.arch_m2 = m2;
+
+            // Rayons Newton (Entrée -> M1 -> M2 -> Sortie Latérale)
+            var numRays = 16; var ptsAll = [];
+            var Z_start = Sep + 500; var Z_m1 = thick1; var Z_m2 = Sep; 
+            var tubeR = R1*1.1; // Rayon approx du tube
+            var Y_exit = tubeR + currentData.B; // Sortie sur axe Y
+
+            for(let i=0; i<numRays; i++) {
+                var angle = (i/numRays) * Math.PI * 2;
+                var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
+                // Entrée -> M1
+                ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
+                // M1 -> M2 (On triche un peu, on fait converger tout au centre de M2 pour simplification visuelle,
+                // ou vers un cercle sur M2. Le Newton est complexe à tracer parfaitement sans raytracing)
+                // Simplification : M1 -> Centre M2 -> Sortie
+                ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(0, 0, Z_m2));
+                // M2 -> Sortie (+Y)
+                ptsAll.push(new THREE.Vector3(0, 0, Z_m2)); ptsAll.push(new THREE.Vector3(0, Y_exit, Z_m2));
+            }
+            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
+            sc.add(lRays); meshes.arch_rays = lRays;
+
+            // Tube Plein
+            var tubeGeo = new THREE.CylinderGeometry(tubeR, tubeR, Sep + 100, 32, 1, true);
+            var tubeMat = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity:0.3, transparent:true});
+            var tube = new THREE.Mesh(tubeGeo, tubeMat);
+            tube.rotation.x = Math.PI/2;
+            tube.position.z = Sep/2;
+            sc.add(tube); meshes.arch_struct = tube;
+
+            // Porte Oculaire + Camera
+            var focGeo = new THREE.CylinderGeometry(25, 25, currentData.B, 16); // Porte oculaire
+            var focMat = new THREE.MeshStandardMaterial({color: 0x111111});
+            var foc = new THREE.Mesh(focGeo, focMat);
+            foc.position.set(0, tubeR + currentData.B/2, Sep);
+            sc.add(foc);
+
+            var camRad = 35; var camLen = 40; 
+            var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
+            var camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
+            var cam = new THREE.Mesh(camGeo, camMat);
+            // La caméra est posée sur le porte oculaire, axe Y
+            cam.position.set(0, tubeR + currentData.B + camLen/2, Sep);
+            sc.add(cam); meshes.arch_cam = cam;
         }
     }
 
