@@ -141,7 +141,7 @@
     <!-- ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v64</span></div>
+            <div class="brand">CAUSTIQUE <span>v65</span></div>
             <div class="input-group"><label>Type</label><select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()"><option value="parabola" selected>Parabole</option><option value="hyperbola">Hyperbole</option><option value="sphere">Sphère</option><option value="ellipse">Ellipse</option><option value="custom">Perso</option></select></div>
             <div class="input-group"><label>Diamètre (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
             <div class="input-group"><label>Épaisseur (mm)</label><input type="number" id="an-thickness" value="35" oninput="runAnalyzer()"></div>
@@ -271,7 +271,7 @@
             </div>
         </div>
     </div>
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v64</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v65</div>
 </div>
 
 <script>
@@ -408,9 +408,8 @@
             
             // --- NASMYTH M3 & RAYS ---
             if (nasmyth) {
-                // M3 Position: 200mm from M1 (if possible) otherwise limited
-                var m3_z_pos_val = Math.min(200, Sep * 0.4);
-                var m3_dist_from_m1 = m3_z_pos_val; 
+                // M3 Position: 25% of Sep (Proportional height) - REMOVED HARD CAP
+                var m3_dist_from_m1 = Sep * 0.25; 
                 var m3X = m1X - (m3_dist_from_m1 * scale); 
                 
                 // Draw M3 (45 deg tilt) - FIXED ORIENTATION /
@@ -1174,7 +1173,8 @@
 
             // --- NASMYTH SPECIFICS ---
             var nasmyth = (currentData.type === 'NASMYTH');
-            var m3_z_pos = Math.min(200, currentData.Sep * 0.4); // Fixed Z pos for M3 above M1 (safe limit)
+            // M3 Position: 25% of Sep (Proportional height) - REMOVED HARD CAP
+            var m3_z_pos = currentData.Sep * 0.25; 
 
             if (nasmyth) {
                 // --- M3 SUPPORT ---
@@ -1385,7 +1385,6 @@
             sc.add(cam); meshes.arch_cam = cam;
         }
     }
-    window.updateArch3D = updateArch3D;
 
     // INIT
     window.addEventListener('DOMContentLoaded', () => {
