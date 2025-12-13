@@ -141,7 +141,7 @@
     <!-- ANALYZER -->
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v63</span></div>
+            <div class="brand">CAUSTIQUE <span>v64</span></div>
             <div class="input-group"><label>Type</label><select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()"><option value="parabola" selected>Parabole</option><option value="hyperbola">Hyperbole</option><option value="sphere">Sphère</option><option value="ellipse">Ellipse</option><option value="custom">Perso</option></select></div>
             <div class="input-group"><label>Diamètre (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
             <div class="input-group"><label>Épaisseur (mm)</label><input type="number" id="an-thickness" value="35" oninput="runAnalyzer()"></div>
@@ -271,7 +271,7 @@
             </div>
         </div>
     </div>
-    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v63</div>
+    <div class="footer-brand">LAVAL SOFTWARE // OPTICAL SUITE v64</div>
 </div>
 
 <script>
@@ -286,7 +286,7 @@
     var renderers = { an: null, arch: null };
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
-    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_m3: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null, arch_baffles: null };
+    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_m3: null, arch_m3_support: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null, arch_baffles: null };
 
     // --- 2D DRAWING SAFE ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
@@ -408,8 +408,9 @@
             
             // --- NASMYTH M3 & RAYS ---
             if (nasmyth) {
-                // M3 Position: 200mm from M1
-                var m3_dist_from_m1 = 200; 
+                // M3 Position: 200mm from M1 (if possible) otherwise limited
+                var m3_z_pos_val = Math.min(200, Sep * 0.4);
+                var m3_dist_from_m1 = m3_z_pos_val; 
                 var m3X = m1X - (m3_dist_from_m1 * scale); 
                 
                 // Draw M3 (45 deg tilt) - FIXED ORIENTATION /
@@ -438,24 +439,12 @@
                 // Rayon Haut (y < 0)
                 var slope = m2Rad / L; // pente positive vers l'axe
                 
-                // Top Ray Intersection with M3 (Line y = -(x-m3X) => x = m3X - y) 
-                // Mirror line goes (m3X-w, axisY+h) to (m3X+w, axisY-h). 
-                // Slope in canvas is -1. Equation: Y - axisY = -1 * (X - m3X). -> Y = axisY - X + m3X.
-                // Top Ray: Y = (axisY - m2Rad) + slope * (X - m2X).
-                // axisY - X + m3X = axisY - m2Rad + slope*X - slope*m2X
-                // -X + m3X = -m2Rad + slope*X - slope*m2X
-                // X(1 + slope) = m3X + m2Rad + slope*m2X
-                
                 var top_num = m3X + m2Rad + (slope*m2X);
                 var top_den = 1 + slope;
                 var x_int_top = top_num / top_den;
                 var y_int_top = axisY - x_int_top + m3X;
 
                 // Bottom Ray (y > 0)
-                // Y = (axisY + m2Rad) - slope * (X - m2X)
-                // axisY - X + m3X = axisY + m2Rad - slope*X + slope*m2X
-                // X(slope - 1) = m2Rad + slope*m2X - m3X
-                
                 var bot_num = m2Rad + (slope*m2X) - m3X;
                 var bot_den = slope - 1;
                 var x_int_bot = bot_num / bot_den;
@@ -1086,7 +1075,8 @@
 
     function updateArch3D() {
         if(!scenes.arch) window.init3D('arch'); var sc = scenes.arch;
-        if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_m3) sc.remove(meshes.arch_m3); if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
+        if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_m3) sc.remove(meshes.arch_m3); if(meshes.arch_m3_support) sc.remove(meshes.arch_m3_support);
+        if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
         if(meshes.arch_cam) sc.remove(meshes.arch_cam);
         if(meshes.arch_foc) sc.remove(meshes.arch_foc); 
         if(meshes.arch_baffles) sc.remove(meshes.arch_baffles); // Cleanup baffles
@@ -1184,11 +1174,33 @@
 
             // --- NASMYTH SPECIFICS ---
             var nasmyth = (currentData.type === 'NASMYTH');
-            var m3_z_pos = 200; // Fixed Z pos for M3 above M1
+            var m3_z_pos = Math.min(200, currentData.Sep * 0.4); // Fixed Z pos for M3 above M1 (safe limit)
 
             if (nasmyth) {
+                // --- M3 SUPPORT ---
+                // Support needs to go from behind M1 through the hole to hold M3.
+                // Diameter: Fits in physical hole with clearance.
+                var supportRad = physicalHoleR - 2; 
+                if (supportRad < 5) supportRad = 5; // Minimum size
+
+                // Length: From behind M1 (let's say Z = -50) to M3 (Z = m3_z_pos)
+                // Support goes up to slightly before the mirror center
+                var supportStart = -50; 
+                var supportEnd = m3_z_pos - 2; 
+                var supportLen = supportEnd - supportStart;
+                
+                var suppGeo = new THREE.CylinderGeometry(supportRad, supportRad, supportLen, 32);
+                var suppMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+                var supp = new THREE.Mesh(suppGeo, suppMat);
+                
+                supp.rotation.x = Math.PI/2; 
+                supp.position.z = (supportStart + supportEnd) / 2;
+                
+                sc.add(supp); meshes.arch_m3_support = supp;
+
+                // --- M3 MIRROR ---
                 // Draw M3 (Mirror Plan at 45 deg) - CORRECTED ORIENTATION
-                // Make it look like a mirror slice (thin BOX) - Easier orientation
+                // Make it look like a mirror slice (thin Cylinder) - Easier orientation
                 var m3_minor_axis = currentData.D2 * 0.8;
                 // No need to calculate major axis manually for geometry args, we scale.
                 
