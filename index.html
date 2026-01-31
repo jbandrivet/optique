@@ -3,905 +3,823 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OPTICAL SUITE // JB. ANDRIVET</title>
+    <title>OPTICAL SUITE // J.B. ANDRIVET</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
-    
     <style>
         :root {
-            --bg-dark: #0f1218;
-            --panel-bg: rgba(20, 25, 35, 0.95);
-            --border: rgba(255, 255, 255, 0.15);
-            --accent: #00bcd4; /* Cyan ingénieur */
-            --accent-sec: #ff9800; /* Orange alerte */
-            --text-main: #e0e0e0;
-            --text-dim: #909090;
+            --bg-dark: #020205;
+            --glass: rgba(15, 20, 30, 0.95);
+            --glass-border: rgba(100, 200, 255, 0.15);
+            --neon-blue: #00d9ff;
+            --neon-purple: #9d00ff;
+            --neon-green: #00ff9d;
+            --neon-red: #ff3366;
+            --text-main: #f0f0f0;
+            --text-dim: #7ca8c4;
         }
 
         body {
             background-color: var(--bg-dark);
             background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 20px 20px;
+                radial-gradient(circle at 50% 50%, rgba(0, 217, 255, 0.05) 0%, transparent 50%),
+                linear-gradient(rgba(0, 217, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 217, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 50px 50px, 50px 50px;
             color: var(--text-main);
             font-family: 'Rajdhani', sans-serif;
-            margin: 0; padding: 20px;
-            height: 100vh; overflow: hidden;
-            display: flex; flex-direction: column;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
         }
 
-        /* HEADER */
-        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-        .brand { font-family: 'Orbitron'; font-size: 1.8rem; letter-spacing: 2px; }
-        .brand span { color: var(--accent); font-weight: bold; }
-        
-        .nav { display: flex; gap: 5px; }
-        .nav-btn {
-            background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-dim);
-            padding: 10px 20px; font-family: 'Orbitron'; cursor: pointer; transition: 0.2s;
+        .main-wrapper { width: 100%; max-width: 1400px; display: flex; flex-direction: column; gap: 20px; }
+        .nav-tabs { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .tab-btn {
+            background: rgba(0,0,0,0.7); border: 1px solid var(--glass-border); color: var(--text-dim);
+            padding: 12px 30px; font-family: 'Orbitron'; font-size: 0.9rem; cursor: pointer; transition: 0.3s;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            text-align: center; letter-spacing: 1px;
         }
-        .nav-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
+        .tab-btn:hover { background: rgba(0, 217, 255, 0.1); color: #fff; }
+        .tab-btn.active { background: var(--neon-blue); color: #000; font-weight: bold; box-shadow: 0 0 25px rgba(0, 217, 255, 0.4); border-color: var(--neon-blue); }
 
-        /* MAIN LAYOUT */
-        .container { display: none; height: 100%; gap: 20px; grid-template-columns: 320px 1fr; }
-        .container.active { display: grid; }
-        #course.container.active { display: block; overflow-y: auto; max-width: 900px; margin: 0 auto; }
-
-        /* SIDEBAR CONTROLS */
-        .sidebar { background: var(--panel-bg); border: 1px solid var(--border); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        
-        .group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-        .group label { font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; }
-        
-        input, select {
-            background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fff;
-            padding: 8px; font-family: 'Orbitron'; font-size: 0.9rem; width: 100%;
+        .interface-container {
+            background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
+            border-radius: 2px; box-shadow: 0 0 60px rgba(0, 0, 0, 0.8); display: none;
+            grid-template-columns: 360px 1fr; overflow: hidden; min-height: 850px;
+            position: relative;
         }
-        input:focus { border-color: var(--accent); outline: none; }
-        input:disabled { opacity: 0.5; cursor: not-allowed; }
+        .interface-container::before { content: ''; position: absolute; top:0; left:0; width:100%; height:2px; background: linear-gradient(90deg, transparent, var(--neon-blue), transparent); }
+        .interface-container.active { display: grid; }
+        #course.interface-container.active { display: block; padding: 40px; overflow-y: auto; }
 
-        /* MODE SWITCHER (ex: Fix F1, Auto...) */
-        .mode-switch { display: flex; background: rgba(0,0,0,0.5); padding: 3px; border-radius: 4px; margin-bottom: 10px; }
-        .mode-opt { flex: 1; text-align: center; padding: 6px; font-size: 0.65rem; cursor: pointer; color: var(--text-dim); font-family: 'Orbitron'; transition:0.2s; }
-        .mode-opt.active { background: var(--accent); color: #000; font-weight: bold; }
-
-        .btn-main { background: var(--accent); color: #000; font-weight: bold; padding: 12px; border: none; font-family: 'Orbitron'; cursor: pointer; margin-top: auto; text-transform: uppercase; }
-        .btn-main:hover { box-shadow: 0 0 15px var(--accent); }
-        .btn-sec { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 8px; cursor: pointer; font-family: 'Orbitron'; font-size: 0.8rem; margin-top: 10px; }
-        .btn-sec:hover { background: rgba(0, 188, 212, 0.1); }
-
-        /* VIEWPORT */
-        .viewport { display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px; }
+        .controls { padding: 30px; border-right: 1px solid var(--glass-border); background: rgba(5, 10, 20, 0.6); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; z-index: 2; }
+        .brand { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: #fff; border-bottom: 2px solid var(--glass-border); padding-bottom: 20px; margin-bottom: 10px; letter-spacing: 2px; }
+        .brand span { color: var(--neon-blue); font-weight: bold; }
+        .brand small { display: block; font-size: 0.6rem; color: var(--text-dim); font-family: 'Rajdhani'; letter-spacing: 4px; margin-top: 5px; }
         
-        .viz-window {
-            height: 500px; background: #fff; border: 1px solid var(--border); position: relative;
-            display: flex; flex-direction: column;
-        }
-        .viz-window canvas { width: 100%; height: 100%; display: block; }
+        .input-group label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; align-items: center; letter-spacing: 1px; font-weight: bold;}
+        .input-group input, .input-group select { width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); color: #fff; padding: 12px; font-family: 'Orbitron'; font-size: 1rem; transition: 0.2s; }
+        .input-group input:focus, .input-group select:focus { border-color: var(--neon-blue); outline: none; box-shadow: 0 0 10px rgba(0, 217, 255, 0.2); }
+        .input-group input:disabled { background: rgba(255,255,255,0.05); color: #555; cursor: not-allowed; border-color: transparent;}
         
-        .viz-tools {
-            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 5px; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 4px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        .mode-switch-mini { display: flex; font-size: 0.7rem; gap: 5px; cursor: pointer; }
+        .mode-switch-mini span { color: var(--text-dim); padding: 2px 6px; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
+        .mode-switch-mini span.active { color: #000; background: var(--neon-blue); border-color: var(--neon-blue); font-weight: bold; }
+        
+        .btn-action { background: linear-gradient(135deg, var(--neon-blue), #0066ff); color: #fff; border: none; padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: auto; text-transform: uppercase; letter-spacing: 2px; }
+        .btn-action:hover { box-shadow: 0 0 30px rgba(0, 100, 255, 0.5); transform: translateY(-2px); }
+        
+        .btn-pdf { background: transparent; color: var(--text-dim); border: 1px solid var(--text-dim); padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; font-size: 0.8rem; transition: 0.3s; }
+        .btn-pdf:hover { border-color: #fff; color: #fff; background: rgba(255,255,255,0.05); }
+        
+        .btn-auto { background: rgba(0,0,0,0.3); border: 1px solid var(--neon-purple); color: var(--neon-purple); padding: 10px; font-family: 'Orbitron'; font-size: 0.7rem; cursor: pointer; width: 100%; transition: 0.3s; }
+        .btn-auto:hover { background: var(--neon-purple); color: #fff; box-shadow: 0 0 15px var(--neon-purple); }
+        .auto-group { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px; }
+        .input-small { width: 80px !important; text-align: center; }
+
+        .results-panel { padding: 40px; position: relative; background: radial-gradient(circle at top right, rgba(0,50,100,0.1), transparent); overflow-y: auto; display: flex; flex-direction: column; }
+        
+        .course-content { max-width: 900px; margin: 0 auto; color: #e0e0e0; line-height: 1.6; }
+        .course-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--neon-blue); padding-bottom: 20px; margin-bottom: 40px; }
+        .course-title { font-family: 'Orbitron'; font-size: 2.5rem; color: #fff; line-height: 1.1; }
+        .course-author { color: var(--neon-blue); font-family: 'Rajdhani'; font-size: 1.2rem; margin-top: 5px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;}
+        .chapter { margin-bottom: 50px; background: rgba(255,255,255,0.02); padding: 30px; border: 1px solid var(--glass-border); border-left: 4px solid var(--neon-blue); }
+        .chapter h2 { font-family: 'Orbitron'; color: var(--neon-blue); margin-top: 0; }
+        .chapter h3 { color: var(--text-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;}
+        .formula-box { background: rgba(0,0,0,0.4); padding: 20px; border: 1px solid var(--glass-border); font-family: 'Courier New', monospace; margin: 20px 0; text-align: center; font-size: 1rem; color: var(--neon-green); }
+        .example-box { background: rgba(255, 51, 102, 0.05); border: 1px dashed var(--neon-red); padding: 20px; }
+
+        .blueprint-wrapper, .viz-wrapper { position: relative; width: 100%; background: #0b0e14; border: 1px solid var(--glass-border); margin-bottom: 20px; overflow: hidden; }
+        .blueprint-wrapper { height: 450px; }
+        .viz-wrapper { height: 350px; } 
+        canvas { display: block; cursor: grab; width: 100%; height: 100%; }
+        canvas:active { cursor: grabbing; }
+        
+        .cam-controls { 
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); 
+            display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; 
+            border: 1px solid var(--glass-border); z-index: 5;
         }
-        .tool-btn { border: 1px solid #ccc; background: #fff; color: #333; padding: 5px 10px; font-size: 0.7rem; font-family: 'Orbitron'; cursor: pointer; }
-        .tool-btn:hover { background: var(--accent); border-color: var(--accent); }
+        .cam-btn {
+            background: transparent; border: 1px solid #555; color: #aaa; 
+            font-family: 'Orbitron'; font-size: 0.6rem; padding: 5px 10px; cursor: pointer; transition: 0.2s;
+        }
+        .cam-btn:hover { border-color: var(--neon-blue); color: var(--neon-blue); }
+        
         .zoom-controls { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 5px; }
-        .zoom-btn { width: 30px; height: 30px; background: rgba(0,0,0,0.1); color: #000; border: 1px solid #000; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .zoom-btn:hover { background: #000; color: #fff; }
-
-        .viz-tabs { display: flex; gap: 5px; position: absolute; top: 10px; right: 10px; }
-        .viz-tab { padding: 5px 15px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; font-family: 'Orbitron'; font-size: 0.8rem; }
-        .viz-tab.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
-
-        /* DATA TABLES */
-        .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-        .info-card { background: var(--panel-bg); border: 1px solid var(--border); padding: 15px; text-align: center; }
-        .info-label { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; }
-        .info-val { font-family: 'Orbitron'; font-size: 1.2rem; color: #fff; }
-
-        .specs-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        .specs-table th { text-align: left; color: var(--accent); padding: 10px; border-bottom: 1px solid var(--border); }
-        .specs-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-        /* COURSE */
-        .course-wrapper h1 { color: var(--accent); font-family: 'Orbitron'; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-        .course-wrapper h2 { color: var(--accent-sec); margin-top: 40px; font-family: 'Orbitron'; }
-        .formula { background: rgba(0,0,0,0.3); border-left: 3px solid var(--accent); padding: 15px; font-family: monospace; color: #fff; margin: 20px 0; }
+        .zoom-btn { width: 30px; height: 30px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--glass-border); font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .zoom-btn:hover { background: var(--neon-blue); color: #000; }
         
-        /* FOOTER */
-        .footer { position: fixed; bottom: 5px; right: 20px; font-size: 0.7rem; color: rgba(255,255,255,0.2); font-family: 'Orbitron'; }
+        .view-tabs { display: flex; gap: 10px; margin-bottom: 10px; }
+        .view-tab { padding: 5px 15px; background: rgba(255,255,255,0.05); cursor: pointer; font-family: 'Orbitron'; font-size: 0.7rem; color: var(--text-dim); border: 1px solid transparent; letter-spacing: 1px; }
+        .view-tab.active { background: rgba(0, 217, 255, 0.1); color: var(--neon-blue); border-color: var(--neon-blue); }
+
+        .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .mirror-card { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 25px; position: relative;}
+        .mirror-card::after { content:''; position: absolute; top:0; right:0; width: 10px; height: 10px; border-top: 1px solid var(--neon-blue); border-right: 1px solid var(--neon-blue); }
+        .mirror-card h3 { margin: 0 0 20px 0; font-family: 'Orbitron'; font-size: 0.9rem; color: var(--neon-blue); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;}
+        .res-val { font-family: 'Orbitron'; color: #fff; font-size: 1.1rem; text-align: right; }
+        .result-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 5px; font-size: 0.9rem; color: var(--text-dim);}
+        
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        .data-table th { text-align: left; color: var(--neon-blue); padding: 10px; border-bottom: 1px solid var(--glass-border); font-family: 'Orbitron'; font-size: 0.8rem; }
+        .data-table th:last-child, .data-table td:last-child { text-align: right; }
+        .data-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ccc; }
+        
+        .footer-brand { position: fixed; bottom: 10px; right: 20px; font-family: 'Orbitron'; font-size: 0.7rem; color: rgba(255,255,255,0.2); letter-spacing: 2px;}
+        
+        #an-info { margin-bottom: 20px; display: flex; gap: 20px; font-size: 0.9rem; color: var(--text-dim); align-items: center; background: rgba(0,0,0,0.2); padding: 15px; border: 1px solid var(--glass-border); }
+        #an-info span { color: #fff; font-family: 'Orbitron'; margin-left: 5px; margin-right: 15px;}
+        
+        .mode-switch { display: flex; background: rgba(0,0,0,0.5); padding: 4px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
+        .mode-option { flex: 1; text-align: center; padding: 8px 4px; font-size: 0.7rem; cursor: pointer; color: var(--text-dim); font-family: 'Orbitron'; white-space: nowrap; transition: 0.3s;}
+        .mode-option.active { background: var(--neon-blue); color: #000; font-weight: bold; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050510; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-blue); }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="brand">JEAN-BAPTISTE <span>ANDRIVET</span></div>
-        <div class="nav">
-            <div class="nav-btn active" onclick="app.tab('analyzer')">ANALYSEUR CAUSTIQUE</div>
-            <div class="nav-btn" onclick="app.tab('architect')">ARCHITECTE OPTIQUE</div>
-            <div class="nav-btn" onclick="app.tab('course')">COURS</div>
+<div class="main-wrapper">
+    <div class="nav-tabs">
+        <div class="tab-btn active" onclick="switchTab('analyzer')">ANALYSEUR CAUSTIQUE</div>
+        <div class="tab-btn" onclick="switchTab('architect')">ARCHITECTE OPTIQUE</div>
+        <div class="tab-btn" onclick="switchTab('course')">COURS & THÉORIE</div>
+    </div>
+
+    <div id="analyzer" class="interface-container active">
+        <div class="controls">
+            <div class="brand">J.B. ANDRIVET <span>v66</span><small>OPTICAL ENGINEERING SUITE</small></div>
+            <div class="input-group"><label>Type de Surface</label><select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()"><option value="parabola" selected>Parabole (K=-1)</option><option value="hyperbola">Hyperbole (K&lt;-1)</option><option value="sphere">Sphère (K=0)</option><option value="ellipse">Ellipse (-1&lt;K&lt;0)</option><option value="custom">Personnalisé</option></select></div>
+            <div class="input-group"><label>Diamètre (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
+            <div class="input-group"><label>Épaisseur (mm)</label><input type="number" id="an-thickness" value="35" oninput="runAnalyzer()"></div>
+            <div class="input-group"><label>Trou Central (mm)</label><input type="number" id="an-hole" value="0" placeholder="0" oninput="runAnalyzer()"></div>
+            <div class="input-group"><label>COURBURE <div class="mode-switch-mini"><span id="mode-an-R" class="active" onclick="setAnMode('R')">RAYON (R)</span><span id="mode-an-F" onclick="setAnMode('F')">FOCALE (F)</span></div></label><input type="number" id="an-curvature-val" value="3000" step="0.1" oninput="runAnalyzer()"></div>
+            <div class="input-group"><label>Constante (K)</label><input type="number" id="an-kfactor" value="-1" step="0.0001" disabled oninput="runAnalyzer()"></div>
+            <label style="color:var(--text-dim); font-size:0.7rem; margin-top:10px; display:block; letter-spacing:1px;">GÉNÉRATEUR DE MASQUE</label>
+            <div class="auto-group"><div style="flex:1"><label style="font-size:0.6rem">NB. ZONES</label><input type="number" id="an-nb-zones" class="input-small" placeholder="Auto"></div><button class="btn-auto" onclick="autoCalcZones()">CALCULER ZONES (COUDER)</button></div>
+            <div class="input-group"><label>Centres des zones (mm)</label><input type="text" id="an-zones" value="60, 95, 120, 140" onchange="runAnalyzer()"></div>
+        </div>
+        <div class="results-panel">
+            <div id="an-info"><div>F/D: <span id="an-fd" style="color:#fff">-</span></div><div>Zone Max: <span id="an-maxw" style="color:var(--neon-purple)">-</span></div><div style="margin-left:auto;">POIDS (Zerodur): <span id="an-weight" style="color:var(--neon-green); font-size:1.2rem;">- kg</span></div></div>
+            <div class="view-tabs"><div class="view-tab active" onclick="setVizMode('an','2d')" id="tab-an-2d">VUE 2D (FOUCAULT)</div><div class="view-tab" onclick="setVizMode('an','3d')" id="tab-an-3d">VUE 3D</div></div>
+            <div class="viz-wrapper">
+                <canvas id="visualizer"></canvas>
+                <div id="container3d_an" style="width:100%; height:100%; display:none;"></div>
+                <div class="cam-controls" id="cam-an" style="display:none;">
+                    <button class="cam-btn" onclick="resetCamera('an', 'default')">RESET</button>
+                    <button class="cam-btn" onclick="resetCamera('an', 'front')">FACE</button>
+                    <button class="cam-btn" onclick="resetCamera('an', 'side')">PROFIL</button>
+                    <button class="cam-btn" onclick="resetCamera('an', 'back')">DOS</button>
+                </div>
+            </div>
+            <table class="data-table"><thead><tr><th>ZONE</th><th>RAYON (hm)</th><th>SAGITTA (z)</th><th>ABER. LONG. (LA)</th><th>LECTURE (mm)</th></tr></thead><tbody id="an-results"></tbody></table>
+            <div style="margin-top:10px; font-size:0.8rem; color:var(--text-dim); text-align:right;">* Calcul pour source mobile (Gaviola/Foucault). LA = S²/R</div>
         </div>
     </div>
 
-    <div id="analyzer" class="container active">
-        <div class="sidebar">
-            <div class="group">
-                <label>TYPE SURFACE</label>
-                <select id="an-type" onchange="analyzer.updateK()">
-                    <option value="parabola">Parabole (K=-1)</option>
-                    <option value="sphere">Sphère (K=0)</option>
-                    <option value="hyperbola">Hyperbole</option>
-                    <option value="custom">Personnalisé</option>
-                </select>
-            </div>
-            <div class="group"><label>DIAMÈTRE (mm)</label><input type="number" id="an-D" value="300" oninput="analyzer.calc()"></div>
-            <div class="group"><label>ÉPAISSEUR (mm)</label><input type="number" id="an-thick" value="35" oninput="analyzer.calc()"></div>
-            <div class="group"><label>TROU CENTRAL (mm)</label><input type="number" id="an-hole" value="0" oninput="analyzer.calc()"></div>
+    <div id="architect" class="interface-container">
+        <div class="controls">
+            <div class="brand">ARCHITECT <span>PRO</span><small>SYSTEM DESIGNER</small></div>
+            <div class="input-group"><label>Architecture</label><select id="arch-type" onchange="updateArchUI()"><option value="newton">Newton</option><option value="cassegrain">Cassegrain Classique</option><option value="dk">Dall-Kirkham</option><option value="rc" selected>Ritchey-Chrétien (RC)</option><option value="nasmyth">Nasmyth</option></select></div>
+            <div class="input-group"><label>Diamètre Primaire (D)</label><input type="number" id="arch-D" value="400"></div>
+            <div class="input-group"><label>Focale Système (F)</label><input type="number" id="arch-F" value="3200" title="Calculé automatiquement en mode manuel"></div>
+            <div class="input-group"><label>Back Focus (B)</label><input type="number" id="arch-B" value="250"></div>
             
-            <div class="group">
-                <label>COURBURE 
-                    <div class="mode-switch" style="margin:0; width:100px;">
-                        <div class="mode-opt active" id="mode-R" onclick="analyzer.setMode('R')">RAYON</div>
-                        <div class="mode-opt" id="mode-F" onclick="analyzer.setMode('F')">FOCALE</div>
-                    </div>
-                </label>
-                <input type="number" id="an-curv" value="6000" oninput="analyzer.calc()">
+            <div id="calc-mode-container">
+                <div class="mode-switch">
+                    <div class="mode-option active" id="mode-f1" onclick="setCalcMode('f1')">FIXER F1</div>
+                    <div class="mode-option" id="mode-sep" onclick="setCalcMode('sep')">FIXER SEP</div>
+                    <div class="mode-option" id="mode-auto" onclick="setCalcMode('auto')">AUTO</div>
+                    <div class="mode-option" id="mode-free" onclick="setCalcMode('free')">MANUEL</div>
+                </div>
             </div>
             
-            <div class="group"><label>CONSTANTE (K)</label><input type="number" id="an-K" value="-1" disabled oninput="analyzer.calc()"></div>
-
-            <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:10px;">
-                <label style="color:var(--text-dim); margin-bottom:5px;">MASQUE DE COUDER</label>
-                <div class="group"><label>LISTE RAYONS (mm)</label><input type="text" id="an-zones" value="50, 100, 140" onchange="analyzer.calc()"></div>
-                <button class="btn-sec" onclick="analyzer.autoZones()">CALCUL AUTO ZONES</button>
+            <div class="input-group"><label>Focale Primaire (F1) <span id="lock-f1">🔒</span></label><input type="number" id="arch-F1" value="1200"></div>
+            <div class="input-group"><label>Séparation (d) <span id="lock-sep" style="display:none">🔒</span></label><input type="number" id="arch-Sep" value="800" disabled></div>
+            <button class="btn-action" onclick="runArchitect()">CALCULER & GÉNÉRER</button>
+            <div class="pdf-group" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;"><div class="input-group"><label>Nom du Projet</label><input type="text" id="project-name" placeholder="Ex: Astrograph 400"></div><button class="btn-pdf" onclick="downloadPDF()">RAPPORT PDF</button></div>
+        </div>
+        <div class="results-panel">
+            <div class="view-tabs"><div class="view-tab active" onclick="setVizMode('arch','2d')" id="tab-arch-2d">PLAN TECHNIQUE (2D)</div><div class="view-tab" onclick="setVizMode('arch','3d')" id="tab-arch-3d">MAQUETTE 3D</div></div>
+            <div class="blueprint-wrapper">
+                <canvas id="blueprint-canvas"></canvas>
+                <div id="container3d_arch" style="width:100%; height:100%; display:none;"></div>
+                <div class="zoom-controls" id="zoom-controls-2d"><div class="zoom-btn" onclick="zoomBlueprint(0.1)">+</div><div class="zoom-btn" onclick="zoomBlueprint(-0.1)">-</div><div class="zoom-btn" onclick="resetZoom()">R</div></div>
+                <div class="cam-controls" id="cam-arch" style="display:none;">
+                    <button class="cam-btn" onclick="resetCamera('arch', 'default')">RESET</button>
+                    <button class="cam-btn" onclick="resetCamera('arch', 'front')">AVANT</button>
+                    <button class="cam-btn" onclick="resetCamera('arch', 'side')">COTÉ</button>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid var(--glass-border); padding-bottom:10px;">
+                <div><div style="font-size:0.7rem; color:var(--text-dim)">OUVERTURE</div><div style="font-family:'Orbitron'; font-size:1.1rem; color:#fff" id="res-fd">-</div></div>
+                <div><div style="font-size:0.7rem; color:var(--text-dim)">GRANDISSEMENT</div><div style="font-family:'Orbitron'; font-size:1.1rem; color:#fff" id="res-mag">-</div></div>
+                <div><div style="font-size:0.7rem; color:var(--text-dim)">OBSTRUCTION</div><div style="font-family:'Orbitron'; font-size:1.1rem; color:#fff" id="res-obst">-</div></div>
+                <div><div style="font-size:0.7rem; color:var(--text-dim)">DIAMÈTRE PUR</div><div style="font-family:'Orbitron'; font-size:1.1rem; color:var(--neon-blue)" id="res-d-eff">-</div></div>
+                <div><div style="font-size:0.7rem; color:var(--text-dim)">RÉSOLUTION</div><div style="font-family:'Orbitron'; font-size:1.1rem; color:var(--neon-purple)" id="res-resol">-</div></div>
+            </div>
+            <div class="arch-grid">
+                <div class="mirror-card"><h3 style="color:var(--neon-blue)">MIROIR PRIMAIRE (M1)</h3><div class="result-row"><span>Rayon R1</span><div class="res-val" id="res-r1">-</div></div><div class="result-row"><span>Focale F1</span><div class="res-val" id="res-f1-out">-</div></div><div class="result-row"><span>Constante K1</span><div class="res-val" id="res-k1">-</div></div><div class="result-row"><span>Forme</span><div class="res-val" id="res-shape1" style="font-size:0.8rem">-</div></div><div class="result-row"><span>Trou Central (Min)</span><div class="res-val" id="res-hole" style="color:var(--neon-red)">-</div></div></div>
+                <div class="mirror-card" id="sec-card"><h3 style="color:var(--neon-green)">MIROIR SECONDAIRE (M2)</h3><div class="result-row"><span>Rayon R2</span><div class="res-val" id="res-r2">-</div></div><div class="result-row"><span>Séparation d</span><div class="res-val" id="res-sep-out">-</div></div><div class="result-row"><span>Constante K2</span><div class="res-val" id="res-k2">-</div></div><div class="result-row"><span>Forme</span><div class="res-val" id="res-shape2" style="font-size:0.8rem">-</div></div><div class="result-row"><span>Diamètre Optique</span><div class="res-val" id="res-d2">-</div></div></div>
             </div>
         </div>
+    </div>
 
-        <div class="viewport">
-            <div class="info-grid">
-                <div class="info-card"><div class="info-label">OUVERTURE</div><div class="info-val" id="an-res-fd">-</div></div>
-                <div class="info-card"><div class="info-label">FLÈCHE MAX</div><div class="info-val" id="an-res-sag">-</div></div>
-                <div class="info-card"><div class="info-label">POIDS (Zér.)</div><div class="info-val" id="an-res-weight">-</div></div>
-                <div class="info-card"><div class="info-label">FOCUS LONG.</div><div class="info-val" id="an-res-ylong">-</div></div>
-            </div>
-
-            <div class="viz-window">
-                <div class="viz-tabs">
-                    <div class="viz-tab active" id="vt-an-2d" onclick="analyzer.setViz('2d')">2D TECH</div>
-                    <div class="viz-tab" id="vt-an-3d" onclick="analyzer.setViz('3d')">3D MODEL</div>
-                </div>
+    <div id="course" class="interface-container">
+        <div class="course-content" id="course-text">
+            <div class="course-header"><div><div class="course-title">OPTIQUE APPLIQUÉE</div><div class="course-author">Rédigé par Jean Baptiste Andrivet</div></div><button class="btn-pdf" style="width:auto; margin:0;" onclick="downloadCoursePDF()">PDF DU COURS</button></div>
+            <div class="chapter">
+                <h2>1. LE TEST DE FOUCAULT (GAVIOLA)</h2>
+                <h3>Principe du tirage longitudinal</h3>
+                <p>Lorsqu'on teste un miroir asphérique (parabole ou hyperbole) depuis son centre de courbure, les rayons des zones extérieures focalisent plus loin que ceux du centre (ou l'inverse selon la conique). Cette différence de distance est <strong>l'Aberration Longitudinale (LA)</strong>.</p>
+                <p>Pour polir un miroir parfait, on mesure cette différence zone par zone. Ce logiciel utilise la méthode de la <strong>Source Mobile</strong> (Source et Couteau bougent ensemble sur le chariot).</p>
                 
-                <canvas id="cvs-an-2d"></canvas>
-                <div id="cvs-an-3d" style="display:none; width:100%; height:100%;"></div>
+                <div class="formula-box">Données : R (Rayon), K (Constante), hm (Zone)</div>
+            </div>
 
-                <div class="viz-tools" id="tools-an-3d" style="display:none;">
-                    <div class="tool-btn" onclick="analyzer.cam('default')">RECADRER</div>
-                    <div class="tool-btn" onclick="analyzer.cam('front')">FACE</div>
-                    <div class="tool-btn" onclick="analyzer.cam('side')">PROFIL</div>
+            <div class="chapter">
+                <h2>2. LES FORMULES MATHÉMATIQUES</h2>
+                <p>Les équations utilisées ici sont celles standardisées par <strong>Jean Texereau</strong> et <strong>A.G. Ingalls</strong> pour la fabrication de précision.</p>
+
+                <h3>Étape 1 : Le Rayon de Courbure (R)</h3>
+                <p>R est le double de la focale (2 * F).</p>
+
+                <h3>Étape 2 : La Flèche (Sagitta z)</h3>
+                <p>Profondeur géométrique du verre à la hauteur hm.</p>
+                <div class="formula-box">z = hm² / (2 * R)</div>
+
+                <h3>Étape 3 : Aberration Longitudinale (LA)</h3>
+                <p>C'est la valeur fondamentale. C'est le déplacement du chariot nécessaire pour voir la zone s'éteindre uniformément (teinte plate).</p>
+                <p>Pour une source mobile (Configuration classique) :</p>
+                <div class="formula-box">LA = (hm² / R) + (1 + K) * (hm^4 / (2*R^3))</div>
+                <p>Pour une parabole (K = -1), le second terme s'annule :</p>
+                <div class="formula-box" style="color:var(--neon-blue); border-color:var(--neon-blue)">LA (Parabole) = hm² / R</div>
+            </div>
+            
+            <div class="chapter">
+                <h2>3. EXEMPLE DE CALCUL</h2>
+                <div class="example-box">
+                    <p>Miroir standard : <strong>R = 3000 mm (F=1500), K = -1, Zone hm = 100 mm</strong></p>
+                    <p><strong>1. Calcul de z :</strong> z = 100² / 6000 = <strong>1.667 mm</strong></p>
+                    <p><strong>2. Calcul du Tirage (LA) :</strong> LA = 100² / 3000 = <strong>3.333 mm</strong></p>
+                    <p>Note : Si la source était fixe, le tirage serait divisé par deux (1.667 mm).</p>
                 </div>
             </div>
 
-            <table class="specs-table">
-                <thead><tr><th>ZONE</th><th>RAYON (Hm)</th><th>LONGITUDINAL (Y)</th><th>TRANSVERSAL (X)</th></tr></thead>
-                <tbody id="an-table"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="architect" class="container">
-        <div class="sidebar">
-            <div class="group">
-                <label>ARCHITECTURE</label>
-                <select id="arch-type" onchange="architect.updateUI()">
-                    <option value="newton">Newton</option>
-                    <option value="cassegrain">Cassegrain</option>
-                    <option value="dk">Dall-Kirkham</option>
-                    <option value="rc" selected>Ritchey-Chrétien</option>
-                    <option value="nasmyth">Nasmyth</option>
-                    <option value="sct">Schmidt-Cassegrain</option>
-                </select>
-            </div>
-            <div class="group"><label>DIAMÈTRE (mm)</label><input type="number" id="arch-D" value="400"></div>
-            <div class="group"><label>BACK FOCUS (mm)</label><input type="number" id="arch-B" value="250"></div>
-            <div class="group"><label>FOCALE SYSTÈME (mm)</label><input type="number" id="arch-F" value="3200"></div>
-
-            <label style="margin-top:15px;">MODE DE CALCUL</label>
-            <div class="mode-switch">
-                <div class="mode-opt active" id="am-f1" onclick="architect.setMode('f1')">FIGER F1</div>
-                <div class="mode-opt" id="am-sep" onclick="architect.setMode('sep')">FIGER SEP</div>
-                <div class="mode-opt" id="am-auto" onclick="architect.setMode('auto')">AUTO</div>
-                <div class="mode-opt" id="am-man" onclick="architect.setMode('man')">MANUEL</div>
-            </div>
-
-            <div class="group"><label>FOCALE PRIMAIRE (F1) <span id="lock-f1">🔒</span></label><input type="number" id="arch-F1" value="1400"></div>
-            <div class="group"><label>SÉPARATION (d) <span id="lock-sep" style="display:none">🔒</span></label><input type="number" id="arch-Sep" value="1000" disabled></div>
-
-            <button class="btn-main" onclick="architect.calc()">CALCULER</button>
-            <button class="btn-sec" onclick="architect.pdf()">EXPORTER PDF</button>
-        </div>
-
-        <div class="viewport">
-            <div class="info-grid">
-                <div class="info-card"><div class="info-label">OUVERTURE</div><div class="info-val" id="ar-res-fd">-</div></div>
-                <div class="info-card"><div class="info-label">OBSTRUCTION</div><div class="info-val" id="ar-res-obs">-</div></div>
-                <div class="info-card"><div class="info-label">GR. (M)</div><div class="info-val" id="ar-res-mag">-</div></div>
-                <div class="info-card"><div class="info-label">RÉSOLUTION</div><div class="info-val" id="ar-res-res">-</div></div>
-            </div>
-
-            <div class="viz-window">
-                <div class="viz-tabs">
-                    <div class="viz-tab active" id="vt-ar-2d" onclick="architect.setViz('2d')">PLAN 2D</div>
-                    <div class="viz-tab" id="vt-ar-3d" onclick="architect.setViz('3d')">SYSTÈME 3D</div>
-                </div>
-                <canvas id="cvs-ar-2d"></canvas>
-                <div id="cvs-ar-3d" style="display:none; width:100%; height:100%;"></div>
-                
-                <div class="zoom-controls" id="zoom-controls-2d" style="display:flex;">
-                    <div class="zoom-btn" onclick="architect.zoom(0.1)">+</div>
-                    <div class="zoom-btn" onclick="architect.zoom(-0.1)">-</div>
-                    <div class="zoom-btn" onclick="architect.zoomReset()">R</div>
-                </div>
-
-                <div class="viz-tools" id="tools-ar-3d" style="display:none;">
-                    <div class="tool-btn" onclick="architect.cam('default')">VUE D'ENSEMBLE</div>
-                    <div class="tool-btn" onclick="architect.cam('side')">COUPE</div>
-                    <div class="tool-btn" onclick="architect.cam('front')">FACE</div>
-                </div>
-            </div>
-
-            <div style="display:flex; gap:20px;">
-                <div style="flex:1; background:rgba(255,255,255,0.05); padding:15px; border:1px solid var(--border);">
-                    <h4 style="margin:0 0 10px 0; color:var(--accent);">MIROIR PRIMAIRE</h4>
-                    <table class="specs-table" style="font-size:0.8rem;">
-                        <tr><td>Rayon (R1)</td><td id="t-r1">-</td></tr>
-                        <tr><td>Constante (K1)</td><td id="t-k1">-</td></tr>
-                        <tr><td>Forme</td><td id="t-s1">-</td></tr>
-                    </table>
-                </div>
-                <div style="flex:1; background:rgba(255,255,255,0.05); padding:15px; border:1px solid var(--border);">
-                    <h4 style="margin:0 0 10px 0; color:var(--accent-sec);">MIROIR SECONDAIRE</h4>
-                    <table class="specs-table" style="font-size:0.8rem;">
-                        <tr><td>Rayon (R2)</td><td id="t-r2">-</td></tr>
-                        <tr><td>Constante (K2)</td><td id="t-k2">-</td></tr>
-                        <tr><td>Diamètre Utile</td><td id="t-d2">-</td></tr>
-                    </table>
-                </div>
+            <div class="chapter">
+                <h2>4. MODULE ARCHITECTE (Systèmes à 2 miroirs)</h2>
+                <p>Les formules de Schwarzschild (3ème ordre) permettent d'annuler l'aberration sphérique et la coma.</p>
+                <h3>Ritchey-Chrétien (RC)</h3>
+                <p>Le RC utilise deux miroirs hyperboliques pour obtenir un champ large sans coma.</p>
+                <div class="formula-box">K1 = -1 - (2 * (F - B)) / (M³ * d)</div>
             </div>
         </div>
     </div>
-
-    <div id="course" class="container course-wrapper">
-        <h1>MANUEL OPTIQUE AVANCÉ</h1>
-        <p>Développé par Jean-Baptiste Andrivet, ce module intègre les équations corrigées pour la fabrication et le design.</p>
-
-        <h2>1. ANALYSE CAUSTIQUE (PLATZECK-GAVIOLA)</h2>
-        <p>Lorsqu'un miroir asphérique est testé au centre de courbure, les rayons ne convergent pas en un point unique. Ils forment une caustique.  Pour le test de Foucault, nous devons déplacer la source et le couteau selon les coordonnées X (Transversal) et Y (Longitudinal).</p>
-        <div class="formula">
-            Y = -K * z * [3 + c*z*(K+1)*(c*z*(K+1)-3)]<br>
-            X = -S * c * K * z * [2 + ... ] / (1 - ...)
-        </div>
-        <p><i>Note : Le logiciel utilise les équations exactes de Cornejo & Malacara (1978), plus précises que l'approximation de Texereau pour les miroirs très ouverts (f/3).</i></p>
-
-        <h2>2. ARCHITECTURE & CONSTANTES CONIQUES</h2>
-        <p>Le module Architecte résout les équations de Schwarzschild du 3ème ordre pour annuler l'aberration sphérique et la coma.</p>
-        
-        <h3>Ritchey-Chrétien (RC)</h3>
-        <p>Standard professionnel. Deux miroirs hyperboliques. Le système est aplanétique (pas de coma).</p>
-        
-        <div class="formula">
-            K1 = -1 - (2 * (F1 * M - Sep)) / (M^3 * (F1 - Sep))<br>
-            K2 = -((M+1)/(M-1))^2 ...
-        </div>
-
-        <h3>Dall-Kirkham (DK)</h3>
-        <p>Secondaire sphérique (K2=0). Le primaire est une ellipse prolate. Excellent sur l'axe, mais coma importante hors axe.</p>
-
-        <h3>Nasmyth</h3>
-        <p>Identique optiquement au Cassegrain ou RC, mais avec un miroir plan tertiaire (M3) renvoyant le faisceau latéralement travers l'axe de déclinaison.</p>
-    </div>
-
-    <div class="footer">JB. ANDRIVET ENGINEERING // V.7.2.1</div>
+    <div class="footer-brand">J.B. ANDRIVET // OPTICAL SUITE v66</div>
+</div>
 
 <script>
-// === CORE SYSTEM ===
-const app = {
-    tab: (id) => {
-        document.querySelectorAll('.container').forEach(e => e.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
-        event.target.classList.add('active');
-        if(id === 'analyzer') analyzer.calc();
-        if(id === 'architect') architect.calc();
-    }
-};
+    // VARS
+    var currentData = {};
+    var viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
+    var calculationMode = 'f1';
+    var anMode = 'R'; 
+    var vizModeAn = '2d';
+    var vizModeArch = '2d';
+    var scenes = { an: null, arch: null };
+    var renderers = { an: null, arch: null };
+    var cameras = { an: null, arch: null };
+    var controlsList = { an: null, arch: null };
+    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_m3: null, arch_m3_support: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null, arch_baffles: null };
 
-// === ANALYZER MODULE ===
-const analyzer = {
-    mode: 'R', // R or F
-    vizMode: '2d',
-    scene: null,
-
-    setMode: (m) => {
-        analyzer.mode = m;
-        document.querySelectorAll('#analyzer .mode-opt').forEach(e => e.classList.remove('active'));
-        document.getElementById('mode-'+m).classList.add('active');
-        const inp = document.getElementById('an-curv');
-        const val = parseFloat(inp.value);
-        inp.value = (m === 'F') ? val/2 : val*2;
-        analyzer.calc();
-    },
-
-    setViz: (v) => {
-        analyzer.vizMode = v;
-        document.getElementById('vt-an-2d').classList.toggle('active', v==='2d');
-        document.getElementById('vt-an-3d').classList.toggle('active', v==='3d');
-        document.getElementById('cvs-an-2d').style.display = v==='2d'?'block':'none';
-        document.getElementById('cvs-an-3d').style.display = v==='3d'?'block':'none';
-        document.getElementById('tools-an-3d').style.display = v==='3d'?'flex':'none';
-        if(v==='2d') analyzer.draw2D(); else analyzer.draw3D();
-    },
-
-    updateK: () => {
-        const t = document.getElementById('an-type').value;
-        const k = document.getElementById('an-K');
-        k.disabled = (t !== 'custom');
-        if(t==='parabola') k.value = -1;
-        if(t==='sphere') k.value = 0;
-        if(t==='hyperbola') k.value = -1.1;
-        analyzer.calc();
-    },
-
-    autoZones: () => {
-        const D = parseFloat(document.getElementById('an-D').value);
-        if(!D) return;
-        // Couder logic approx
-        let zs = [];
-        const n = 4; // 4 zones standard demo
-        const Rmax = D/2;
-        for(let i=1; i<=n; i++) {
-            let rOuter = Rmax * Math.sqrt(i/n);
-            let rInner = Rmax * Math.sqrt((i-1)/n);
-            zs.push( ((rOuter+rInner)/2).toFixed(1) );
+    // --- 2D DRAWING SAFE ---
+    function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
+        D = Math.abs(D)||1; F1=F1||1; Sep=Math.abs(Sep)||0; B=Math.abs(B)||0; D2=Math.abs(D2)||1; holeDiam=Math.abs(holeDiam)||0;
+        ctx.clearRect(0,0, width, height); ctx.save();
+        if(theme === 'screen') { 
+            var dpr = window.devicePixelRatio || 1;
+            ctx.translate(viewState.offsetX, viewState.offsetY); 
+            ctx.translate(width/2, height/2); 
+            ctx.scale(viewState.scale, viewState.scale); 
+            ctx.translate(-width/2, -height/2); 
         }
-        document.getElementById('an-zones').value = zs.join(', ');
-        analyzer.calc();
-    },
-
-    calc: () => {
-        const D = parseFloat(document.getElementById('an-D').value);
-        const thick = parseFloat(document.getElementById('an-thick').value);
-        const hole = parseFloat(document.getElementById('an-hole').value) || 0;
-        const cVal = parseFloat(document.getElementById('an-curv').value);
-        const K = parseFloat(document.getElementById('an-K').value);
+        var C_AXIS="#333344"; var C_DIM="#00d9ff"; var C_TEXT= theme==='screen' ? "#7ca8c4" : "#000"; var C_M1="#0088ff"; var C_M2="#00ff9d"; var C_RAY="rgba(157, 0, 255, 0.15)";
         
-        if(!D || !cVal) return;
+        var totalLen = (type==='newton') ? Math.abs(F1)*1.3 : (Math.abs(Sep)+Math.abs(B))*1.2;
+        if(totalLen<=0) totalLen=500;
+        var scale = (width-120)/totalLen; if(scale<=0) scale=0.1;
+        var startX=60; var axisY=height/2;
+        ctx.beginPath(); ctx.moveTo(-10000, axisY); ctx.lineTo(width+10000, axisY); ctx.setLineDash([10,10]); ctx.strokeStyle=C_AXIS; ctx.stroke(); ctx.setLineDash([]);
+        function dDim(l,x1,x2,y){ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.moveTo(x1,y-5); ctx.lineTo(x1,y+5); ctx.moveTo(x2,y-5); ctx.lineTo(x2,y+5); ctx.strokeStyle=C_DIM; ctx.lineWidth=1/viewState.scale; ctx.stroke(); ctx.fillStyle=C_TEXT; ctx.font=theme==='screen'?"10px Orbitron":"10px Helvetica"; ctx.textAlign="center"; ctx.fillText(l,x1+(x2-x1)/2,y-5);}
 
-        const R = (analyzer.mode === 'F') ? cVal * 2 : cVal;
-        const F = R/2;
-        const zones = document.getElementById('an-zones').value.split(',').map(Number).filter(n => n>0);
-
-        // Physics
-        const sag = (D*D)/(8*R); // Approx
-        const vol = (Math.PI * (D/2)**2 * thick) - (Math.PI * (hole/2)**2 * thick); 
-        const weight = (vol / 1000) * 0.00253; // Zerodur density
-
-        // UI Updates
-        document.getElementById('an-res-fd').innerText = "f/" + (F/D).toFixed(1);
-        document.getElementById('an-res-sag').innerText = sag.toFixed(2) + " mm";
-        document.getElementById('an-res-weight').innerText = weight.toFixed(2) + " kg";
-
-        // Caustic Math (Cornejo & Malacara)
-        const tbody = document.getElementById('an-table');
-        tbody.innerHTML = "";
-        let maxY = 0;
-
-        zones.forEach((S, i) => {
-            if(S > D/2) return;
-            const c = 1/R;
-            const term = 1 - (K+1)*c*c*S*S;
-            if(term < 0) return; // Err
+        if(type==='newton') {
+            var m1X = startX+F1*scale; var m1Rad = (D*scale)/2;
+            ctx.beginPath(); ctx.arc(m1X-m1Rad*2, axisY, Math.max(0, m1Rad*2), -0.25, 0.25); ctx.strokeStyle=C_M1; ctx.lineWidth=2; ctx.stroke();
+            var tubeR = (D/2)*scale * 1.15;
+            var intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); var m2X = m1X - intercept;
+            var m2Size = (D2*scale); 
+            ctx.beginPath(); ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); ctx.strokeStyle=C_M2; ctx.lineWidth=2; ctx.stroke();
+            var m2Rad_ray = (D2*scale)/2; 
+            ctx.strokeStyle=C_RAY; ctx.beginPath(); 
+            ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad); ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
+            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(m2X, axisY - m2Rad_ray); ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(m2X, axisY + m2Rad_ray);
+            var focH = tubeR + B*scale; var focusY = axisY - focH;
+            ctx.moveTo(m2X, axisY - m2Rad_ray); ctx.lineTo(m2X, focusY); ctx.moveTo(m2X, axisY + m2Rad_ray); ctx.lineTo(m2X, focusY);
+            ctx.stroke();
+            dDim("F1", m2X, m1X, axisY+m1Rad+30); dDim("BACK FOCUS", m2X, m2X, focusY - 10);
             
-            const z = (c*S*S) / (1 + Math.sqrt(term)); 
-            const A = c*z*(K+1);
-            const Y = -K*z*(3 + A*(A-3));
-            const X = Math.abs( (-S*c*K*z*(2 + A*(A-3))) / (1-A) );
+        } else {
+            var m2X=startX; var m1X=startX+Sep*scale; 
+            var fX=m1X+B*scale;
+            var m1Rad=(D*scale)/2; var m2Rad=(D2*scale)/2; 
+            var margin_hole = 5 * scale; var baffle_wall = 2 * scale; 
+            var opticalHoleRad = (holeDiam*scale)/2; var physicalHoleRad = opticalHoleRad + margin_hole; 
             
-            if(Math.abs(Y) > maxY) maxY = Math.abs(Y);
+            // Baffles
+            var b1_len = (Sep * 0.4) * scale;
+            if (type === 'nasmyth') b1_len = (Sep * 0.25) * scale;
+            var r_beam_at_baffle_tip = (D2/2) * ( (B + (b1_len/scale)) / (B + Sep) );
+            var b1Rad = (r_beam_at_baffle_tip + 2) * scale; 
+            if(b1Rad < holeDiam/2 * scale) b1Rad = (holeDiam/2 + 1) * scale;
+            ctx.fillStyle = "rgba(30,30,40,0.8)"; ctx.fillRect(m1X - b1_len, axisY - b1Rad, b1_len, b1Rad*2); ctx.strokeStyle = "#445"; ctx.strokeRect(m1X - b1_len, axisY - b1Rad, b1_len, b1Rad*2);
 
-            tbody.innerHTML += `<tr>
-                <td style="color:var(--accent)">Zone ${i+1}</td>
-                <td>${S}</td>
-                <td>${Y.toFixed(3)}</td>
-                <td style="font-weight:bold">${X.toFixed(3)}</td>
-            </tr>`;
-        });
-        document.getElementById('an-res-ylong').innerText = maxY.toFixed(2) + " mm";
-        
-        analyzer.data = { D, R, thick, hole, zones, K };
-        if(analyzer.vizMode === '2d') analyzer.draw2D(); else analyzer.draw3D();
-    },
-
-    draw2D: () => {
-        const cvs = document.getElementById('cvs-an-2d');
-        const ctx = cvs.getContext('2d');
-        const w = cvs.width = cvs.parentElement.offsetWidth;
-        const h = cvs.height = cvs.parentElement.offsetHeight;
-        const d = analyzer.data;
-        
-        ctx.fillStyle = "#fff"; ctx.fillRect(0,0,w,h);
-        
-        // Split view: Left = Face, Right = Profile (Coupe)
-        const cx1 = w*0.3; const cy = h/2;
-        const cx2 = w*0.75; 
-        const scale = (h*0.8) / d.D;
-
-        // FACE
-        ctx.beginPath(); ctx.arc(cx1, cy, (d.D/2)*scale, 0, Math.PI*2);
-        ctx.fillStyle = "#eee"; ctx.fill(); ctx.strokeStyle="#333"; ctx.lineWidth=2; ctx.stroke();
-        if(d.hole>0) {
-            ctx.beginPath(); ctx.arc(cx1, cy, (d.hole/2)*scale, 0, Math.PI*2);
-            ctx.fillStyle = "#fff"; ctx.fill(); ctx.stroke();
-        }
-        d.zones.forEach(z => {
-            ctx.beginPath(); ctx.arc(cx1, cy, z*scale, 0, Math.PI*2);
-            ctx.strokeStyle = "rgba(0,188,212,0.5)"; ctx.lineWidth=1; ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
-        });
-        ctx.fillStyle="#000"; ctx.fillText("VUE DE FACE", cx1-30, h-20);
-
-        // PROFILE (Coupe)
-        // Draw wedge shape
-        const sagScale = 10; // Exaggerate curve
-        ctx.beginPath();
-        // Back flat
-        ctx.moveTo(cx2, cy - (d.D/2)*scale);
-        ctx.lineTo(cx2 + d.thick*scale, cy - (d.D/2)*scale);
-        ctx.lineTo(cx2 + d.thick*scale, cy + (d.D/2)*scale);
-        ctx.lineTo(cx2, cy + (d.D/2)*scale);
-        // Curve
-        for(let i=0; i<=20; i++) {
-            let r = (d.D/2) * (1 - i/20) * (i<10 ? -1:1); // Top to bottom? No, simpler
-        }
-        ctx.closePath(); 
-        
-        // Simple rectangular representation with curve cutout
-        ctx.fillStyle = "#ddd"; ctx.strokeStyle = "#333";
-        ctx.fillRect(cx2, cy - (d.D/2)*scale, d.thick*scale, d.D*scale);
-        
-        // Draw curve overlay
-        ctx.beginPath();
-        ctx.moveTo(cx2, cy - (d.D/2)*scale);
-        for(let y = -(d.D/2); y <= (d.D/2); y+= (d.D/20)) {
-            let r = Math.abs(y);
-            let z = (r*r)/(2*d.R); // Parabolic approx
-            ctx.lineTo(cx2 + z*scale*sagScale, cy + y*scale);
-        }
-        ctx.strokeStyle = "var(--accent-sec)"; ctx.lineWidth=2; ctx.stroke();
-        ctx.fillStyle="#000"; ctx.fillText("PROFIL (Sag x10)", cx2, h-20);
-    },
-
-    draw3D: () => {
-        const cont = document.getElementById('cvs-an-3d');
-        if(!analyzer.scene) {
-            analyzer.scene = new THREE.Scene(); analyzer.scene.background = new THREE.Color(0x222222);
-            analyzer.camObj = new THREE.PerspectiveCamera(45, cont.offsetWidth/cont.offsetHeight, 1, 10000);
-            analyzer.camObj.position.set(0, 500, 800);
-            analyzer.renderer = new THREE.WebGLRenderer({antialias:true});
-            analyzer.renderer.setSize(cont.offsetWidth, cont.offsetHeight);
-            cont.innerHTML = ""; cont.appendChild(analyzer.renderer.domElement);
-            analyzer.controls = new THREE.OrbitControls(analyzer.camObj, analyzer.renderer.domElement);
-            analyzer.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-            const dl = new THREE.DirectionalLight(0xffffff, 1); dl.position.set(500,500,500); analyzer.scene.add(dl);
-        }
-
-        while(analyzer.scene.children.length > 2) analyzer.scene.remove(analyzer.scene.children[2]);
-
-        const d = analyzer.data;
-        const pts = [];
-        const seg = 60;
-        // Profile
-        pts.push(new THREE.Vector2(d.hole/2, 0));
-        pts.push(new THREE.Vector2(d.D/2, 0));
-        pts.push(new THREE.Vector2(d.D/2, d.thick));
-        for(let i=seg; i>=0; i--) {
-            let r = (d.hole/2) + (i/seg)*((d.D/2)-(d.hole/2));
-            let s = (r*r)/(2*d.R); // approx
-            let edgeS = ((d.D/2)**2)/(2*d.R);
-            pts.push(new THREE.Vector2(r, d.thick - (edgeS - s)));
-        }
-        const geo = new THREE.LatheGeometry(pts, 64);
-        const mat = new THREE.MeshStandardMaterial({color:0xaaaaaa, roughness:0.2, metalness:0.6});
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.rotation.x = -Math.PI/2;
-        analyzer.scene.add(mesh);
-        
-        analyzer.renderer.render(analyzer.scene, analyzer.camObj);
-    },
-
-    cam: (view) => {
-        const c = analyzer.camObj;
-        const ctr = analyzer.controls;
-        ctr.reset();
-        if(view === 'default') c.position.set(0, 500, 800);
-        if(view === 'front') c.position.set(0, 1000, 0);
-        if(view === 'side') c.position.set(1000, 0, 0);
-        c.lookAt(0,0,0);
-        analyzer.renderer.render(analyzer.scene, analyzer.camObj);
-    }
-};
-
-// === ARCHITECT MODULE ===
-const architect = {
-    mode: 'f1', // f1, sep, auto, man
-    viz: '2d',
-    viewState: { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 },
-    
-    setMode: (m) => {
-        architect.mode = m;
-        document.querySelectorAll('#architect .mode-opt').forEach(e => e.classList.remove('active'));
-        document.getElementById('am-'+m).classList.add('active');
-        
-        const f1 = document.getElementById('arch-F1');
-        const sep = document.getElementById('arch-Sep');
-        const f = document.getElementById('arch-F');
-
-        // Reset
-        f1.disabled = false; sep.disabled = false; f.disabled = false;
-        document.getElementById('lock-f1').style.display='none';
-        document.getElementById('lock-sep').style.display='none';
-
-        if(m === 'f1') {
-            sep.disabled = true; document.getElementById('lock-f1').style.display='inline';
-        } else if (m === 'sep') {
-            f1.disabled = true; document.getElementById('lock-sep').style.display='inline';
-        } else if (m === 'auto') {
-            f1.disabled = true; sep.disabled = true;
-        } else if (m === 'man') {
-            f.disabled = true; // Manual overrides F_sys result
-        }
-        architect.calc();
-    },
-
-    setViz: (v) => {
-        architect.viz = v;
-        document.getElementById('vt-ar-2d').classList.toggle('active', v==='2d');
-        document.getElementById('vt-ar-3d').classList.toggle('active', v==='3d');
-        document.getElementById('cvs-ar-2d').style.display = v==='2d'?'block':'none';
-        document.getElementById('cvs-ar-3d').style.display = v==='3d'?'block':'none';
-        document.getElementById('tools-ar-3d').style.display = v==='3d'?'flex':'none';
-        document.getElementById('zoom-controls-2d').style.display = v==='2d'?'flex':'none';
-        if(v==='2d') architect.draw2D(); else architect.draw3D();
-    },
-    
-    zoom: (delta) => {
-        architect.viewState.scale += delta;
-        if(architect.viewState.scale < 0.1) architect.viewState.scale = 0.1;
-        architect.draw2D();
-    },
-    
-    zoomReset: () => {
-        architect.viewState.scale = 1; architect.viewState.offsetX = 0; architect.viewState.offsetY = 0;
-        architect.draw2D();
-    },
-
-    updateUI: () => {
-        // Newton handling
-        const t = document.getElementById('arch-type').value;
-        const isN = (t === 'newton');
-        // If Newton, disable mode switch, enforce logic
-        architect.calc();
-    },
-
-    calc: () => {
-        const type = document.getElementById('arch-type').value;
-        const D = parseFloat(document.getElementById('arch-D').value);
-        const B = parseFloat(document.getElementById('arch-B').value);
-        let F = parseFloat(document.getElementById('arch-F').value);
-        
-        // Mode handling inputs
-        let F1 = parseFloat(document.getElementById('arch-F1').value);
-        let Sep = parseFloat(document.getElementById('arch-Sep').value);
-
-        if(type === 'newton') {
-            // Newton Logic: F1 = F. Sep determined by tube radius + B.
-            F1 = F; 
-            document.getElementById('arch-F1').value = F;
-            const tubeR = D/2 + 30; // approx
-            Sep = F - (tubeR + B);
-        } else {
-            // Cassegrain types logic based on Mode
-            if(architect.mode === 'auto') {
-                F1 = D * 3; // Approx start
-                document.getElementById('arch-F1').value = F1;
-                const M = F/F1;
-                Sep = (F1*M - B)/(M+1);
-            } else if (architect.mode === 'f1') {
-                const M = F/F1;
-                Sep = (F1*M - B)/(M+1);
-            } else if (architect.mode === 'sep') {
-                // (F1 * (F/F1) - B) / ((F/F1)+1) = Sep  => complex to solve for F1
-                // Easier: M = (Sep+B)/(F1-Sep). And F = F1*M.
-                // Iterative or geometric solve.
-                // Let's assume M is driven by geometry.
-                // Actually if Sep is fixed and F is fixed:
-                // F = F1 * (Sep+B)/(F1-Sep). Quadratic for F1.
-                // F(F1 - Sep) = F1(Sep+B) => F*F1 - F*Sep = F1*Sep + F1*B
-                // F1(F - Sep - B) = F*Sep => F1 = (F*Sep)/(F - Sep - B)
-                F1 = (F*Sep)/(F - Sep - B);
-                document.getElementById('arch-F1').value = F1.toFixed(1);
-            } else if (architect.mode === 'man') {
-                // Free F1 and Sep. Calculate F result.
-                const M = (Sep+B)/(F1-Sep);
-                F = F1 * M;
-                document.getElementById('arch-F').value = F.toFixed(1);
-            }
-        }
-        
-        // Output Update for dependent values
-        if(type !== 'newton' && architect.mode !== 'sep' && architect.mode !== 'man') {
-             document.getElementById('arch-Sep').value = Sep.toFixed(1);
-        }
-
-        // --- MATHS (Schwarzschild & Co) ---
-        const M = (type==='newton') ? 1 : F/F1;
-        const R1 = F1 * 2;
-        let K1 = -1; let R2 = 0; let K2 = 0;
-        let s1 = "Parabole"; let s2 = "Plan";
-        
-        // Secondary Diameter (Geometric)
-        let D2 = (type==='newton') ? (D * (F1-Sep)/F1) : (D*(F1-Sep)/F1);
-
-        if(type === 'rc' || type === 'nasmyth') {
-            // Ritchey Chretien
-            // K1 = -1 - (2(Sep+B))/(M^3(F1-Sep))  (Approx)
-            // Using correct code from previous iteration
-            K1 = -1 - (2*(Sep+B))/(Math.pow(M,3)*Sep); // Simplified formula often used in code
-            K2 = -Math.pow((M+1)/(M-1),2) - (4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep);
-            s1="Hyperbole"; s2="Hyperbole";
-            R2 = (2*Sep*M)/(M-1);
-        } else if (type === 'dk') {
-            K2 = 0; s2="Sphère";
-            const p = Sep + B;
-            K1 = -1 + ((M*M-1)/(M*M*M))*(p/F1);
-            s1="Ellipse";
-            R2 = (2*Sep*M)/(M-1);
-        } else if (type === 'cassegrain') {
-            K1 = -1; s1="Parabole";
-            K2 = -Math.pow((M+1)/(M-1),2); s2="Hyperbole";
-            R2 = (2*Sep*M)/(M-1);
-        } else if (type === 'sct') {
-            K1 = 0; s1="Sphère"; // Actually handled by corrector
-            K2 = 0; s2="Sphère";
-            R2 = (2*Sep*M)/(M-1);
-            // SCT usually M ~ 5.
-        }
-
-        // Save data
-        architect.data = { type, D, F, F1, Sep, B, R1, K1, R2, K2, D2, s1, s2, M };
-
-        // DOM Update
-        document.getElementById('ar-res-fd').innerText = "f/" + (F/D).toFixed(1);
-        document.getElementById('ar-res-mag').innerText = M.toFixed(2) + "x";
-        document.getElementById('ar-res-obs').innerText = ((D2/D)*100).toFixed(1) + "%";
-        document.getElementById('ar-res-res').innerText = (120/D).toFixed(2) + '"';
-
-        document.getElementById('t-r1').innerText = R1.toFixed(1);
-        document.getElementById('t-k1').innerText = K1.toFixed(3);
-        document.getElementById('t-s1').innerText = s1;
-        
-        document.getElementById('t-r2').innerText = (type==='newton') ? "Inf" : R2.toFixed(1);
-        document.getElementById('t-k2').innerText = K2.toFixed(3);
-        document.getElementById('t-d2').innerText = D2.toFixed(1) + " mm";
-
-        if(architect.viz === '2d') architect.draw2D(); else architect.draw3D();
-    },
-
-    draw2D: () => {
-        const c = document.getElementById('cvs-ar-2d');
-        const ctx = c.getContext('2d');
-        c.width = c.parentElement.offsetWidth; c.height = c.parentElement.offsetHeight;
-        const d = architect.data;
-        const w = c.width; const h = c.height;
-
-        ctx.clearRect(0,0,w,h);
-        ctx.save();
-        
-        // Transform logic for Zoom/Pan
-        ctx.translate(architect.viewState.offsetX, architect.viewState.offsetY);
-        ctx.translate(w/2, h/2);
-        ctx.scale(architect.viewState.scale, architect.viewState.scale);
-        ctx.translate(-w/2, -h/2);
-
-        // Scale
-        const totalLen = Math.max(d.F1, d.Sep+d.B) * 1.2;
-        const sc = (w-100) / totalLen;
-        const x0 = 50; const y0 = h/2;
-
-        // Axis
-        ctx.strokeStyle = "#ddd"; ctx.setLineDash([5,5]);
-        ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke(); ctx.setLineDash([]);
-
-        // M1
-        ctx.strokeStyle = "#00bcd4"; ctx.lineWidth = 3;
-        ctx.beginPath();
-        // Simple curve draw
-        const r1px = (d.D/2)*sc;
-        const sag1 = 10; // Visual
-        ctx.moveTo(x0, y0-r1px); 
-        ctx.quadraticCurveTo(x0-sag1, y0, x0, y0+r1px);
-        ctx.stroke();
-
-        // M2 position
-        const x2 = x0 + d.Sep*sc;
-        const r2px = (d.D2/2)*sc;
-        
-        // M2 Draw
-        ctx.strokeStyle = "#ff9800";
-        ctx.beginPath();
-        if(d.type === 'newton') {
-            ctx.moveTo(x2-r2px, y0-r2px); ctx.lineTo(x2+r2px, y0+r2px);
-        } else {
-            ctx.moveTo(x2, y0-r2px); 
-            ctx.quadraticCurveTo(x2+3, y0, x2, y0+r2px);
-        }
-        ctx.stroke();
-
-        // Rays & Baffles
-        ctx.strokeStyle = "rgba(0,0,0,0.1)"; ctx.lineWidth = 1;
-        // Incoming
-        ctx.beginPath(); ctx.moveTo(w, y0-r1px); ctx.lineTo(x0, y0-r1px); ctx.stroke();
-        
-        // M1 -> M2
-        // Intercept height at M2
-        const hM2 = r1px * ((d.F1 - d.Sep)/d.F1); 
-        ctx.beginPath(); ctx.moveTo(x0, y0-r1px); ctx.lineTo(x2, y0-hM2); ctx.stroke();
-
-        // M2 -> Focus
-        if(d.type === 'newton') {
-             // Out top
-             const fY = y0 - (d.B*sc + r1px + 20); // Outside tube
-             ctx.beginPath(); ctx.moveTo(x2, y0-hM2); ctx.lineTo(x2, fY); ctx.stroke();
-        } else if (d.type === 'nasmyth') {
-             // M3
-             const x3 = x0 + (d.Sep * 0.25)*sc;
-             ctx.beginPath(); ctx.moveTo(x2, y0-hM2); ctx.lineTo(x3, y0); ctx.stroke(); // to M3
-             // M3 visual
-             ctx.strokeStyle = "#000"; ctx.lineWidth=2;
-             ctx.beginPath(); ctx.moveTo(x3-10, y0+10); ctx.lineTo(x3+10, y0-10); ctx.stroke();
-             // Out
-             ctx.strokeStyle = "rgba(0,0,0,0.1)"; ctx.lineWidth=1;
-             ctx.beginPath(); ctx.moveTo(x3, y0); ctx.lineTo(x3, y0 - (d.B*sc + r1px)); ctx.stroke();
-        } else {
-             // Standard back
-             const xF = x0 - d.B*sc;
-             ctx.beginPath(); ctx.moveTo(x2, y0-hM2); ctx.lineTo(xF, y0); ctx.stroke();
+            // Miroirs
+            var R_draw=m1Rad*4; if(R_draw===0) R_draw=10; var Rcx=m1X-R_draw; 
+            if(physicalHoleRad < b1Rad + 2*scale) physicalHoleRad = b1Rad + 2*scale;
+            var aO=Math.asin(Math.min(1,m1Rad/R_draw)); var aI=Math.asin(Math.min(1,physicalHoleRad/R_draw));
+            ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, -aI); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
+            ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, aI, aO); ctx.stroke();
+            var R2d=m2Rad*4; if(R2d===0) R2d=10; var R2cx=m2X-R2d; var aM2=Math.asin(Math.min(1,m2Rad/R2d));
+            ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
+            
+            // Rayons
+            ctx.strokeStyle=C_RAY; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(startX-30,axisY-m1Rad); ctx.lineTo(m1X,axisY-m1Rad); ctx.lineTo(m2X,axisY-m2Rad); ctx.lineTo(fX,axisY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(startX-30,axisY+m1Rad); ctx.lineTo(m1X,axisY+m1Rad); ctx.lineTo(m2X,axisY+m2Rad); ctx.lineTo(fX,axisY); ctx.stroke();
+            dDim("BACK FOCUS",m1X,fX,axisY+m1Rad+30); dDim("SÉPARATION",m2X,m1X,axisY-m1Rad-30); 
         }
         ctx.restore();
-    },
-
-    draw3D: () => {
-        const cont = document.getElementById('cvs-ar-3d');
-        if(!architect.scene) {
-            architect.scene = new THREE.Scene(); architect.scene.background = new THREE.Color(0xdddddd);
-            architect.camObj = new THREE.PerspectiveCamera(45, cont.offsetWidth/cont.offsetHeight, 1, 10000);
-            architect.camObj.position.set(500, 500, 1000);
-            architect.renderer = new THREE.WebGLRenderer({antialias:true});
-            architect.renderer.setSize(cont.offsetWidth, cont.offsetHeight);
-            cont.innerHTML = ""; cont.appendChild(architect.renderer.domElement);
-            architect.controls = new THREE.OrbitControls(architect.camObj, architect.renderer.domElement);
-            architect.scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        }
-
-        while(architect.scene.children.length > 1) architect.scene.remove(architect.scene.children[1]);
-
-        const d = architect.data;
-        const mat = new THREE.MeshStandardMaterial({color:0x88ccff, metalness:0.9, roughness:0.1, side:THREE.DoubleSide});
-
-        // M1
-        const g1 = new THREE.CylinderGeometry(d.D/2, d.D/2, 20, 64);
-        const m1 = new THREE.Mesh(g1, mat);
-        m1.rotation.x = Math.PI/2;
-        architect.scene.add(m1);
-
-        // M2
-        const g2 = new THREE.CylinderGeometry(d.D2/2, d.D2/2, 5, 32);
-        const m2 = new THREE.Mesh(g2, mat);
-        if(d.type==='newton') {
-            m2.position.z = d.Sep;
-            m2.rotation.x = -Math.PI/4;
-            m2.scale.z = 1.414; 
-        } else {
-            m2.position.z = d.Sep;
-            m2.rotation.x = Math.PI/2;
-        }
-        architect.scene.add(m2);
-        
-        // M3 (Nasmyth)
-        if(d.type === 'nasmyth') {
-            const m3pos = d.Sep * 0.25;
-            const g3 = new THREE.CylinderGeometry(d.D2/2.5, d.D2/2.5, 5, 32);
-            const m3 = new THREE.Mesh(g3, mat);
-            m3.position.z = m3pos;
-            // 45 deg tilt to reflect X
-            m3.rotation.z = -Math.PI/2;
-            m3.rotation.y = -Math.PI/4;
-            m3.scale.z = 1.414;
-            architect.scene.add(m3);
-            
-            // Camera/Focuser side
-            const camGeo = new THREE.CylinderGeometry(20, 20, 50, 32);
-            const cam = new THREE.Mesh(camGeo, new THREE.MeshStandardMaterial({color:0x333}));
-            const exitX = d.B + m3pos;
-            cam.position.set(exitX, 0, m3pos);
-            cam.rotation.z = -Math.PI/2;
-            architect.scene.add(cam);
-        }
-
-        // Structure (Truss)
-        const trMat = new THREE.MeshBasicMaterial({color:0x333333, wireframe:true});
-        const len = (d.type==='newton') ? d.F1 : d.Sep;
-        const truss = new THREE.Mesh(new THREE.CylinderGeometry(d.D/2+20, d.D/2+20, len, 8, 1, true), trMat);
-        truss.rotation.x = Math.PI/2;
-        truss.position.z = len/2;
-        architect.scene.add(truss);
-
-        architect.renderer.render(architect.scene, architect.camObj);
-    },
-
-    cam: (v) => {
-        const c = architect.camObj;
-        architect.controls.reset();
-        if(v==='default') c.position.set(500,500,1000);
-        if(v==='side') c.position.set(1000,0,500); // 3/4 view
-        if(v==='front') c.position.set(0,0,1500);
-        c.lookAt(0,0,0);
-        architect.renderer.render(architect.scene, c);
-    },
-
-    pdf: () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const d = architect.data;
-        doc.setFontSize(20); doc.text("RAPPORT OPTIQUE // JB. ANDRIVET", 20, 20);
-        doc.setFontSize(12);
-        let y = 40;
-        doc.text(`Type: ${d.type.toUpperCase()}`, 20, y); y+=10;
-        doc.text(`Diamètre: ${d.D} mm`, 20, y); y+=10;
-        doc.text(`Focale: ${d.F.toFixed(1)} mm (f/${(d.F/d.D).toFixed(1)})`, 20, y); y+=10;
-        doc.text(`Grandissement: ${d.M.toFixed(2)}x`, 20, y); y+=20;
-        
-        doc.text("Primaire:", 20, y); y+=10;
-        doc.text(`R1: ${d.R1.toFixed(2)}  K1: ${d.K1.toFixed(4)}`, 30, y); y+=20;
-
-        doc.text("Secondaire:", 20, y); y+=10;
-        doc.text(`R2: ${d.R2.toFixed(2)}  K2: ${d.K2.toFixed(4)}`, 30, y); y+=10;
-        doc.text(`Séparation: ${d.Sep.toFixed(2)} mm`, 30, y);
-
-        doc.save("Design_Optique.pdf");
     }
-};
 
-// Init
-window.onload = () => { 
-    app.tab('analyzer');
-    // Zoom handler
-    const cvs = document.getElementById('cvs-ar-2d');
-    cvs.addEventListener('mousedown', (e) => { architect.viewState.isDragging = true; architect.viewState.lastX = e.clientX; architect.viewState.lastY = e.clientY; });
-    window.addEventListener('mouseup', () => { architect.viewState.isDragging = false; });
-    cvs.addEventListener('mousemove', (e) => {
-        if (!architect.viewState.isDragging) return;
-        architect.viewState.offsetX += e.clientX - architect.viewState.lastX; 
-        architect.viewState.offsetY += e.clientY - architect.viewState.lastY;
-        architect.viewState.lastX = e.clientX; architect.viewState.lastY = e.clientY; 
-        architect.draw2D();
+    function redrawCurrentBlueprint() {
+        if(!currentData.type) return;
+        var canvas = document.getElementById('blueprint-canvas');
+        if (!canvas) return; 
+        var rect = canvas.parentElement.getBoundingClientRect();
+        if(rect.width === 0 || rect.height === 0) return;
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        drawBlueprintGeneric(ctx, rect.width, rect.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
+    }
+    window.redrawCurrentBlueprint = redrawCurrentBlueprint;
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.interface-container').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        var btns = document.querySelectorAll('.tab-btn');
+        btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
+        if(tabId === 'architect') setTimeout(window.runArchitect, 100);
+    }
+    window.switchTab = switchTab;
+
+    function setAnMode(mode) {
+        if(mode === anMode) return;
+        var input = document.getElementById('an-curvature-val');
+        var val = parseFloat(input.value);
+        if(mode === 'F') { input.value = (val / 2).toFixed(2); document.getElementById('mode-an-R').classList.remove('active'); document.getElementById('mode-an-F').classList.add('active'); } 
+        else { input.value = (val * 2).toFixed(2); document.getElementById('mode-an-F').classList.remove('active'); document.getElementById('mode-an-R').classList.add('active'); }
+        anMode = mode; window.runAnalyzer();
+    }
+    window.setAnMode = setAnMode;
+
+    function setVizMode(ctx, mode) {
+        if(ctx === 'an') {
+            vizModeAn = mode;
+            document.getElementById('tab-an-2d').classList.toggle('active', mode==='2d');
+            document.getElementById('tab-an-3d').classList.toggle('active', mode==='3d');
+            document.getElementById('visualizer').style.display = mode==='2d'?'block':'none';
+            document.getElementById('container3d_an').style.display = mode==='3d'?'block':'none';
+            document.getElementById('cam-an').style.display = mode==='3d'?'flex':'none';
+            if(mode==='2d') window.runAnalyzer(); else window.updateAn3D();
+        } else {
+            vizModeArch = mode;
+            document.getElementById('tab-arch-2d').classList.toggle('active', mode==='2d');
+            document.getElementById('tab-arch-3d').classList.toggle('active', mode==='3d');
+            document.getElementById('blueprint-canvas').style.display = mode==='2d'?'block':'none';
+            document.getElementById('zoom-controls-2d').style.display = mode==='2d'?'flex':'none';
+            document.getElementById('container3d_arch').style.display = mode==='3d'?'block':'none';
+            document.getElementById('cam-arch').style.display = mode==='3d'?'flex':'none';
+            if(mode==='2d') window.redrawCurrentBlueprint(); else window.updateArch3D();
+        }
+    }
+    window.setVizMode = setVizMode;
+
+    function resetCamera(ctx, view) {
+        if(!cameras[ctx] || !controlsList[ctx]) return;
+        var cam = cameras[ctx]; var ctr = controlsList[ctx];
+        ctr.reset();
+        if (ctx === 'an') {
+            if(view === 'front') { cam.position.set(0, 500, 0); } 
+            else if(view === 'back') { cam.position.set(0, -500, 0); } 
+            else if(view === 'side') { cam.position.set(0, 50, 500); } 
+            else { cam.position.set(0, 300, 500); } 
+        } else {
+            if(view === 'front') { cam.position.set(0, 0, 1500); } 
+            else if(view === 'side') { cam.position.set(1500, 0, -500); } 
+            else { cam.position.set(800, 500, 1000); } 
+        }
+        cam.lookAt(0,0,0); ctr.update();
+    }
+    window.resetCamera = resetCamera;
+
+    // --- ANALYZER LOGIC UPDATED (ANDRIVET / TEXEREAU FORMULAS) ---
+    function runAnalyzer() {
+        var D = parseFloat(document.getElementById('an-diameter').value)||0; var holeD = parseFloat(document.getElementById('an-hole').value)||0; var thick = parseFloat(document.getElementById('an-thickness').value)||0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
+        var R = (anMode === 'F') ? R_val * 2 : R_val;
+        var K = parseFloat(document.getElementById('an-kfactor').value);
+        var zonesStr = document.getElementById('an-zones').value;
+        var zones = zonesStr.split(',').map(Number).filter(n=>n);
+        var tbody = document.getElementById('an-results'); tbody.innerHTML="";
+        
+        var r_cm=(D/2)/10; var h_cm=thick/10; var rh_cm=(holeD/2)/10; var zmax_cm=(R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
+        var vol = (Math.PI*r_cm*r_cm*h_cm) - (Math.PI*rh_cm*rh_cm*h_cm) - (0.5*Math.PI*r_cm*r_cm*zmax_cm);
+        document.getElementById('an-weight').innerText = (vol*2.53/1000).toFixed(2)+" kg";
+        document.getElementById('an-fd').innerText = (D>0 && R>0) ? "f/" + (R/(2*D)).toFixed(1) : "-";
+
+        if (vizModeAn === '2d') {
+            var cvs = document.getElementById('visualizer'); 
+            var dpr = window.devicePixelRatio || 1;
+            var rect = cvs.parentElement.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
+            var ctx = cvs.getContext('2d'); ctx.scale(dpr, dpr);
+            ctx.clearRect(0,0,rect.width,rect.height);
+            
+            var W = rect.width; var H = rect.height; var midX = W/2;
+            var pad = 20; 
+            var maxR_face = Math.max(0, Math.min(midX, H)/2 - pad);
+            var scFace = (D>0) ? maxR_face/(D/2) : 1; var cxF = midX/2; var cyF = H/2;
+            
+            // 1. Vue de Face
+            var grad = ctx.createRadialGradient(cxF,cyF,0,cxF,cyF, (D/2)*scFace);
+            grad.addColorStop(0,"#444"); grad.addColorStop(1,"#111");
+            ctx.beginPath(); ctx.arc(cxF, cyF, Math.max(0, (D/2)*scFace), 0, Math.PI*2);
+            ctx.fillStyle=grad; ctx.fill(); ctx.strokeStyle="#00d9ff"; ctx.lineWidth=2; ctx.stroke();
+            if(holeD>0) { ctx.beginPath(); ctx.arc(cxF, cyF, Math.max(0, (holeD/2)*scFace), 0, Math.PI*2); ctx.fillStyle="#000"; ctx.fill(); ctx.strokeStyle="#333"; ctx.lineWidth=1; ctx.stroke(); }
+            zones.forEach(z=>{
+                ctx.beginPath(); ctx.arc(cxF, cyF, Math.max(0, z*scFace), 0, Math.PI*2);
+                ctx.strokeStyle="rgba(157, 0, 255, 0.5)"; ctx.lineWidth=1; ctx.stroke();
+            });
+            ctx.fillStyle="#aaa"; ctx.font="10px Orbitron"; ctx.textAlign="center"; ctx.fillText("VUE DE FACE", cxF, H - 10);
+
+            // 2. Vue de Coupe
+            var cxC = midX + midX/2; var cyC = H/2; var scCoupe = scFace * 0.8; 
+            ctx.beginPath(); ctx.moveTo(cxC-maxR_face, cyC); ctx.lineTo(cxC+maxR_face, cyC); ctx.setLineDash([5,5]); ctx.strokeStyle="#333"; ctx.stroke(); ctx.setLineDash([]);
+            var rad = D/2; var hRad = holeD/2;
+            ctx.beginPath();
+            var z_edge = (rad*rad)/(2*R);
+            ctx.moveTo(cxC + rad*scCoupe, cyC - z_edge*scCoupe);
+            for(let x=rad; x>=hRad; x-=1) { let z = (x*x)/(2*R); ctx.lineTo(cxC + x*scCoupe, cyC - z*scCoupe); }
+            ctx.lineTo(cxC + hRad*scCoupe, cyC + thick*scCoupe); ctx.lineTo(cxC + rad*scCoupe, cyC + thick*scCoupe); ctx.closePath();
+            ctx.fillStyle="#223"; ctx.fill(); ctx.strokeStyle="#00d9ff"; ctx.stroke();
+            
+            ctx.beginPath(); ctx.moveTo(cxC - rad*scCoupe, cyC - z_edge*scCoupe);
+            for(let x=rad; x>=hRad; x-=1) { let z = (x*x)/(2*R); ctx.lineTo(cxC - x*scCoupe, cyC - z*scCoupe); }
+            ctx.lineTo(cxC - hRad*scCoupe, cyC + thick*scCoupe); ctx.lineTo(cxC - rad*scCoupe, cyC + thick*scCoupe); ctx.closePath();
+            ctx.fillStyle="#223"; ctx.fill(); ctx.strokeStyle="#00d9ff"; ctx.stroke();
+            ctx.fillStyle="#aaa"; ctx.fillText("PROFIL (Z x1)", cxC, H - 10);
+        } else { window.updateAn3D(); }
+
+        zones.forEach((S,i)=>{
+            var err = ""; if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU";
+            if(err) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:#ff3366">${err}</td></tr>`;
+            else {
+                // CALCUL CORRECT POUR FOUCAULT / GAVIOLA (Source Mobile)
+                // Sagitta z
+                var z = (S*S)/(2*R); 
+                // Aberration Longitudinale Exacte (Source Mobile)
+                // LA = S^2/R + (1+K)*S^4/(2*R^3)
+                // Pour K=-1 (Parabole), le terme en S^4 s'annule => LA = S^2/R.
+                // C'est ce que l'utilisateur doit mesurer sur le banc.
+                var LA = (S*S)/R + (1+K)*(Math.pow(S,4)/(2*Math.pow(R,3)));
+                
+                tbody.innerHTML+=`<tr><td style="color:#00d9ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td style="color:#9d00ff;">${LA.toFixed(3)}</td><td style="font-weight:bold; color:#00ff9d">${LA.toFixed(3)}</td></tr>`;
+            }
+        });
+    }
+    window.runAnalyzer = runAnalyzer;
+
+    function updateAnalyzerK() {
+        var type = document.getElementById('an-type').value;
+        var kInput = document.getElementById('an-kfactor');
+        if(type === 'custom') { kInput.disabled = false; kInput.style.backgroundColor = 'rgba(255,255,255,0.15)'; } 
+        else { kInput.disabled = true; kInput.style.backgroundColor = 'rgba(0,0,0,0.3)';
+            if(type === 'parabola') kInput.value = -1; else if(type === 'sphere') kInput.value = 0;
+            else if(type === 'hyperbola') kInput.value = -1.1; else if(type === 'ellipse') kInput.value = -0.5; }
+    }
+    window.updateAnalyzerK = updateAnalyzerK;
+    
+    function setCalcMode(mode) {
+        calculationMode = mode;
+        var f1=document.getElementById('arch-F1'); var sep=document.getElementById('arch-Sep'); var fSys=document.getElementById('arch-F');
+        document.querySelectorAll('.mode-option').forEach(el=>el.classList.remove('active'));
+        document.getElementById('mode-'+mode).classList.add('active');
+        f1.disabled = (mode !== 'f1' && mode !== 'free');
+        sep.disabled = (mode !== 'sep' && mode !== 'free');
+        fSys.disabled = (mode === 'free');
+        document.getElementById('lock-f1').style.display = (mode==='f1')?'inline':'none';
+        document.getElementById('lock-sep').style.display = (mode==='sep')?'inline':'none';
+        fSys.style.opacity = (mode === 'free') ? '0.5' : '1';
+    }
+    window.setCalcMode = setCalcMode;
+
+    function updateArchUI() {
+        var type = document.getElementById('arch-type').value;
+        if(type === 'newton') { 
+            document.getElementById('calc-mode-container').style.opacity='0.3'; 
+            document.getElementById('calc-mode-container').style.pointerEvents='none'; 
+            window.setCalcMode('f1'); 
+            document.getElementById('sec-card').style.opacity='0.3'; 
+        } else { 
+            document.getElementById('calc-mode-container').style.opacity='1'; 
+            document.getElementById('calc-mode-container').style.pointerEvents='all'; 
+            document.getElementById('sec-card').style.opacity='1'; 
+        }
+        window.runArchitect();
+    }
+    window.updateArchUI = updateArchUI;
+
+    function runArchitect() {
+        var type = document.getElementById('arch-type').value;
+        var D = parseFloat(document.getElementById('arch-D').value) || 0;
+        var B = parseFloat(document.getElementById('arch-B').value) || 0;
+        var F=0, F1=0, Sep=0, M=0, VizSep = 0, R1=0, K1=0, R2=0, K2=0, s1="-", s2="-", D2_val=0, hD=0;
+
+        if(type === 'newton') {
+            F = parseFloat(document.getElementById('arch-F').value) || 0;
+            if(currentData.type === 'NEWTON' && document.getElementById('arch-F1').value != currentData.F1) F = parseFloat(document.getElementById('arch-F1').value);
+            F1 = F; document.getElementById('arch-F').value = F.toFixed(2); document.getElementById('arch-F1').value = F1.toFixed(2);
+            Sep = 0; M = 1; 
+            if (F > 0) D2_val = (D * ((D/2) + B)) / F; else D2_val = 0;
+            if(D2_val<=0) D2_val=10;
+            VizSep = Math.max(0, F - (D/2 + B));
+        } else {
+            if(calculationMode === 'free') {
+                F1 = parseFloat(document.getElementById('arch-F1').value)||0; Sep = parseFloat(document.getElementById('arch-Sep').value)||0; VizSep = Sep;
+                M = (F1 - Sep !== 0) ? (Sep + B) / (F1 - Sep) : 0;
+                F = F1 * M; document.getElementById('arch-F').value = F.toFixed(2);
+            } else {
+                F = parseFloat(document.getElementById('arch-F').value) || 0;
+                if(calculationMode === 'auto') {
+                    F1 = D * 3.0; document.getElementById('arch-F1').value = F1.toFixed(2);
+                    M = (F1 > 0) ? F / F1 : 0; Sep = (M * F1 - B) / (M + 1); document.getElementById('arch-Sep').value = Sep.toFixed(2);
+                } else if(calculationMode === 'f1') { 
+                    F1 = parseFloat(document.getElementById('arch-F1').value)||0; 
+                    M = (F1>0) ? F/F1 : 0; Sep = (M*F1 - B)/(M+1); document.getElementById('arch-Sep').value = Sep.toFixed(2); 
+                } else { 
+                    Sep = parseFloat(document.getElementById('arch-Sep').value)||0; 
+                    M = (Sep>0) ? (F-B-Sep)/Sep : 0; F1 = F/M; document.getElementById('arch-F1').value = F1.toFixed(2); 
+                }
+                VizSep = Sep;
+            }
+        }
+
+        R1=2*F1; 
+        if(type==='newton') { K1=-1; R2=0; K2=0; s1="Parabole"; s2="Plan"; hD=0; } 
+        else if(F1 > 0) {
+            if(M === 1) { R2 = 0; } else { R2 = (2*Sep*M)/(M-1); }
+            D2_val = (D*(F1-Sep))/F1; hD = D2_val*(B/(Sep+B));
+            if(type==='cassegrain') { K1=-1; s1="Parabole"; var t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
+            else if(type==='dk') { K2=0; s2="Sphère"; var p=Sep+B; var t=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t*(p/F1); s1="Ellipsoïde"; }
+            else if(type==='rc' || type==='nasmyth') { 
+                K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); 
+                K2=-Math.pow((M+1)/(M-1),2)-(4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep); 
+                s1="Hyperbole"; s2="Hyperbole"; 
+            } else { K1=0; K2=0; s1="Sphère"; s2="Sphère"; }
+        }
+
+        var D_obs = (type === 'newton') ? Math.abs(D2_val) + 4 : (Math.abs(D2_val)/2 + 2)*2;
+        var Deff = Math.sqrt(Math.max(0, Math.pow(D, 2) - Math.pow(D_obs, 2))).toFixed(1);
+        currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff };
+
+        document.getElementById('res-fd').innerText = (D>0 && F>0) ? "f/" + (F/D).toFixed(1) : "-";
+        document.getElementById('res-mag').innerText = isFinite(M) ? M.toFixed(2) + "x" : "Err";
+        document.getElementById('res-obst').innerText = (D>0) ? (D_obs/D*100).toFixed(1) + "%" : "-";
+        document.getElementById('res-d-eff').innerText = Deff + " mm";
+        document.getElementById('res-resol').innerText = (D>0) ? (116/D).toFixed(2) + '"' : "-";
+        document.getElementById('res-r1').innerText = R1.toFixed(2);
+        document.getElementById('res-f1-out').innerText = F1.toFixed(2);
+        document.getElementById('res-k1').innerText = K1.toFixed(4);
+        document.getElementById('res-shape1').innerText = s1;
+        document.getElementById('res-hole').innerText = hD>0 ? hD.toFixed(1)+" mm" : "N/A";
+        document.getElementById('res-shape2').innerText = s2;
+        if(type !== 'newton') {
+            document.getElementById('res-r2').innerText = isFinite(R2) ? Math.abs(R2).toFixed(2) : "-";
+            document.getElementById('res-sep-out').innerText = Sep.toFixed(2);
+            document.getElementById('res-k2').innerText = isFinite(K2) ? K2.toFixed(4) : "-";
+            document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1);
+        } else {
+            document.getElementById('res-r2').innerText = "-"; document.getElementById('res-sep-out').innerText = "-"; document.getElementById('res-k2').innerText = "-"; document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1);
+        }
+        if(vizModeArch === '2d') window.redrawCurrentBlueprint(); else window.updateArch3D();
+    }
+    window.runArchitect = runArchitect;
+
+    function zoomBlueprint(delta) { viewState.scale += delta; if(viewState.scale < 0.1) viewState.scale = 0.1; if(viewState.scale > 5) viewState.scale = 5; window.redrawCurrentBlueprint(); }
+    window.zoomBlueprint = zoomBlueprint;
+    function resetZoom() { viewState.scale = 1; viewState.offsetX = 0; viewState.offsetY = 0; window.redrawCurrentBlueprint(); }
+    window.resetZoom = resetZoom;
+    
+    function downloadPDF() {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF();
+        var pName = document.getElementById('project-name').value || "Projet Optique";
+        doc.setFontSize(22); doc.text("RAPPORT TECHNIQUE // ANDRIVET", 20, 20);
+        doc.setFontSize(16); doc.setTextColor(0, 100, 200); doc.text(pName, 20, 30);
+        doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text("Généré le: "+new Date().toLocaleDateString(), 150, 20);
+        var cvs = document.createElement('canvas'); cvs.width=2000; cvs.height=1000;
+        var ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.fillRect(0,0,2000,1000);
+        var oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0};
+        drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'print');
+        viewState = oldState;
+        doc.addImage(cvs.toDataURL("image/png"), 'PNG', 10, 40, 190, 95);
+        var y=150; doc.line(10,y,200,y); doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.text("SPÉCIFICATIONS", 10, y-5);
+        doc.setFontSize(10); doc.setFont("helvetica","normal");
+        doc.text(`Diamètre: ${currentData.D} mm`, 15, y+10);
+        doc.text(`Focale: ${currentData.F} mm (f/${(currentData.F/currentData.D).toFixed(1)})`, 15, y+20);
+        doc.text(`PRIMAIRE: R=${currentData.R1.toFixed(2)} mm (K=${currentData.K1.toFixed(4)})`, 80, y+10);
+        if(currentData.type!=='NEWTON'){
+            doc.text(`SECONDAIRE: R=${currentData.R2.toFixed(2)} mm (K=${currentData.K2.toFixed(4)})`, 80, y+20);
+            doc.text(`Séparation: ${currentData.Sep.toFixed(2)} mm`, 80, y+30);
+        }
+        doc.save("Rapport_Andrivet.pdf");
+    }
+    window.downloadPDF = downloadPDF;
+
+    function downloadCoursePDF() {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF();
+        doc.setFontSize(22); doc.setTextColor(0,0,0); doc.text("J.B. ANDRIVET // COURS", 20, 20);
+        doc.setFontSize(16); doc.setTextColor(0, 100, 200); doc.text("MÉTHODES DE CONTRÔLE OPTIQUE", 20, 35);
+        doc.save("Cours_Optique_Andrivet.pdf");
+    }
+    window.downloadCoursePDF = downloadCoursePDF;
+
+    function autoCalcZones() {
+        var D = parseFloat(document.getElementById('an-diameter').value)||0; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
+        var R = (anMode === 'F') ? R_val * 2 : R_val;
+        if(!D || !R) return;
+        var numZones = parseInt(document.getElementById('an-nb-zones').value);
+        if(!numZones || numZones <= 0) numZones = 4;
+        var zones = [];
+        var rMin = holeD/2; var rMax = D/2;
+        // Couder zones area balancing
+        for(let i=1; i<=numZones; i++) {
+            var rExt = Math.sqrt( ((rMax*rMax - rMin*rMin)/numZones)*i + rMin*rMin );
+            var rInt = Math.sqrt( ((rMax*rMax - rMin*rMin)/numZones)*(i-1) + rMin*rMin );
+            var hm = (rInt + rExt)/2; 
+            zones.push(hm.toFixed(1));
+        }
+        document.getElementById('an-zones').value = zones.join(', ');
+        document.getElementById('an-nb-zones').value = numZones;
+        window.runAnalyzer();
+    }
+    window.autoCalcZones = autoCalcZones;
+
+    function init3D(type) {
+        var container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
+        var w = container.offsetWidth; var h = container.offsetHeight;
+        var sc = new THREE.Scene(); sc.background = new THREE.Color(0x050510); 
+        var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
+        if(type==='an') cam.position.set(0, 300, 500); else cam.position.set(500, 500, 1000);
+        var ren = new THREE.WebGLRenderer({ antialias: true, alpha: true }); ren.setSize(w, h); ren.setPixelRatio(window.devicePixelRatio);
+        container.innerHTML = ""; container.appendChild(ren.domElement);
+        var ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
+        
+        sc.add(new THREE.AmbientLight(0xffffff, 0.4));
+        var dl = new THREE.DirectionalLight(0x00d9ff, 0.8); dl.position.set(500,1000,500); sc.add(dl);
+        var pl = new THREE.PointLight(0x9d00ff, 0.5); pl.position.set(-200, 200, 200); sc.add(pl);
+
+        scenes[type] = sc; cameras[type] = cam; renderers[type] = ren; controlsList[type] = ctr;
+        var animate = function() { requestAnimationFrame(animate); ctr.update(); ren.render(sc, cam); };
+        animate();
+    }
+    window.init3D = init3D;
+
+    function updateAn3D() {
+        if(!scenes.an) window.init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
+        var D = parseFloat(document.getElementById('an-diameter').value) || 0; 
+        var thick = parseFloat(document.getElementById('an-thickness').value) || 0; 
+        var holeD = parseFloat(document.getElementById('an-hole').value) || 0;
+        var R_val = parseFloat(document.getElementById('an-curvature-val').value) || 0; 
+        if (D <= 0 || R_val === 0) return;
+        var R = (anMode === 'F') ? R_val * 2 : R_val;
+        
+        var points = []; var segments = 60; var radius = D/2; var holeR = holeD/2;
+        var sagEdge = (radius*radius)/(2*R);
+        points.push(new THREE.Vector2(holeR, 0)); points.push(new THREE.Vector2(radius, 0)); points.push(new THREE.Vector2(radius, thick));
+        for(let i=0; i<=segments; i++) { 
+            let r = radius - (i/segments)*(radius-holeR); 
+            let sagLocal = (r*r)/(2*R);
+            let y = thick - (sagEdge - sagLocal);
+            points.push(new THREE.Vector2(r, y)); 
+        }
+        points.push(new THREE.Vector2(holeR, 0));
+        var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
+        var mat = new THREE.MeshStandardMaterial({ color: 0x00d9ff, metalness:0.8, roughness:0.2, transparent:true, opacity:0.9 });
+        meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
+    }
+    window.updateAn3D = updateAn3D;
+
+    function updateArch3D() {
+        if(!scenes.arch) window.init3D('arch'); var sc = scenes.arch;
+        if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_m3) sc.remove(meshes.arch_m3); if(meshes.arch_m3_support) sc.remove(meshes.arch_m3_support);
+        if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct); if(meshes.arch_cam) sc.remove(meshes.arch_cam); if(meshes.arch_foc) sc.remove(meshes.arch_foc); if(meshes.arch_baffles) sc.remove(meshes.arch_baffles);
+
+        if(!currentData.type) return;
+        var visualSep = currentData.VizSep || currentData.Sep;
+        if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
+        var opticalHoleR = currentData.Hole / 2;
+        
+        // 1. Primary Mirror
+        var R1 = currentData.D/2; var H1 = (opticalHoleR > 0) ? opticalHoleR + 5 : 5; var thick1 = currentData.D/6;
+        var pts1 = []; pts1.push(new THREE.Vector2(H1, 0)); pts1.push(new THREE.Vector2(R1, 0)); pts1.push(new THREE.Vector2(R1, thick1)); 
+        for(let i=0; i<=40; i++){ 
+            let r = R1 - (i/40)*(R1-H1); let sag = (r*r)/(4*currentData.F1); 
+            pts1.push(new THREE.Vector2(r, thick1 - ( (R1*R1)/(4*currentData.F1) - sag )));
+        }
+        pts1.push(new THREE.Vector2(H1, 0)); 
+        var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), new THREE.MeshStandardMaterial({ color: 0x0088ff, metalness:0.9, roughness:0.1 }));
+        m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
+
+        // 2. Secondary & Structure
+        if(currentData.type !== 'NEWTON') {
+            var R2 = currentData.D2/2; var Sep = visualSep; var thick2 = R2/3;
+            var pts2 = []; pts2.push(new THREE.Vector2(0, 0)); pts2.push(new THREE.Vector2(R2, 0)); pts2.push(new THREE.Vector2(R2, thick2)); 
+            for(let i=0; i<=20; i++){ let r = R2 - (i/20)*R2; let sag = (r*r)/(1000); pts2.push(new THREE.Vector2(r, thick2 + sag)); }
+            var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), new THREE.MeshStandardMaterial({ color: 0x00ff9d, metalness:0.9, roughness:0.1 }));
+            m2.rotation.x = -Math.PI/2; m2.position.z = Sep; sc.add(m2); meshes.arch_m2 = m2;
+
+            // Baffles
+            var b1_len = (currentData.type==='NASMYTH') ? Sep*0.25 : Sep*0.4;
+            var b1R = (currentData.D2/2)*0.6 + 2; 
+            var baffleGroup = new THREE.Group();
+            var b1 = new THREE.Mesh(new THREE.CylinderGeometry(b1R,b1R,b1_len,32,1,true), new THREE.MeshStandardMaterial({color:0x111, side:THREE.DoubleSide}));
+            b1.rotation.x=Math.PI/2; b1.position.z=b1_len/2; baffleGroup.add(b1);
+            sc.add(baffleGroup); meshes.arch_baffles=baffleGroup;
+
+            // Structure (Truss)
+            var trussGroup = new THREE.Group(); var boxR = R1*1.15;
+            for(let i=0; i<8; i++) {
+                var a1 = (Math.floor(i/2)*90)*(Math.PI/180); var a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
+                var v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0); var v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, Sep);
+                var tube = new THREE.Mesh(new THREE.CylinderGeometry(4,4,v1.distanceTo(v2),8), new THREE.MeshStandardMaterial({color:0x333, metalness:0.5}));
+                tube.position.copy(new THREE.Vector3().addVectors(v1,v2).multiplyScalar(0.5)); tube.lookAt(v2); tube.rotateX(Math.PI/2); trussGroup.add(tube);
+            }
+            sc.add(trussGroup); meshes.arch_struct = trussGroup;
+        } else {
+            // Newton Structure
+            var Sep = visualSep; var D2 = currentData.D2; 
+            var m2 = new THREE.Mesh(new THREE.CylinderGeometry(D2/2, D2/2, 2, 32), new THREE.MeshStandardMaterial({ color: 0x00ff9d, metalness:0.9 }));
+            m2.position.z = Sep; m2.rotation.x = -Math.PI/4; m2.scale.z = 1.414; sc.add(m2); meshes.arch_m2 = m2;
+        }
+    }
+
+    // INIT
+    window.addEventListener('DOMContentLoaded', () => {
+        var cvs = document.getElementById('blueprint-canvas');
+        if(cvs) {
+            cvs.addEventListener('mousedown', (e) => { viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY; });
+            window.addEventListener('mouseup', () => { viewState.isDragging = false; });
+            cvs.addEventListener('mousemove', (e) => {
+                if (!viewState.isDragging) return;
+                viewState.offsetX += e.clientX - viewState.lastX; viewState.offsetY += e.clientY - viewState.lastY;
+                viewState.lastX = e.clientX; viewState.lastY = e.clientY; window.redrawCurrentBlueprint();
+            });
+            cvs.addEventListener('wheel', (e) => { e.preventDefault(); window.zoomBlueprint(e.deltaY > 0 ? -0.1 : 0.1); });
+        }
+        if (typeof window.autoCalcZones === 'function') window.autoCalcZones();
+        setTimeout(window.runArchitect, 200); 
     });
-};
 </script>
 </body>
 </html>
