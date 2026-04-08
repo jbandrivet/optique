@@ -1,17 +1,3 @@
-Oups ! Désolé pour cette belle frayeur. C'est l'erreur classique du "mieux est l'ennemi du bien".
-
-En voulant "nettoyer" le code en remplaçant tous tes `var` par des `const` et des `let` (la syntaxe JavaScript moderne), j'ai provoqué une erreur fatale de portée de variable (`Scope Error`) qui a fait "crasher" l'exécution du script dans ton navigateur. Résultat : page blanche !
-
-On revient aux fondamentaux. J'ai repris **ton code exact d'origine** avec tes `var` parfaitement fonctionnels, et je n'y ai injecté **que les corrections chirurgicales** demandées :
-
-1. **Newton 3D (le trou) :** Forcé la variable `physicalHoleR` à `0` spécifiquement pour le Newton. Fini le "donut" !
-2. **Newton 2D (trop petit) :** Corrigé l'angle de dessin de l'arc de cercle avec de la trigonométrie (`Math.asin`). Il s'affiche maintenant à la hauteur exacte du diamètre du tube.
-3. **Le correctif RC (K1/K2) et la Caustique (1-A)**.
-4. **La prévention des ralentissements (Memory Leak) :** Ajout de la fonction `safeDisposeMesh()` qui vide correctement la carte graphique quand on recalcule le 3D, pour éviter que la page ne fige après 20 essais.
-
-Voici le code robuste et définitif, tu peux y aller les yeux fermés :
-
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -154,7 +140,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v68</span></div>
+            <div class="brand">CAUSTIQUE <span>v69</span></div>
             <div class="input-group"><label>Type</label><select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()"><option value="parabola" selected>Parabole</option><option value="hyperbola">Hyperbole</option><option value="sphere">Sphère</option><option value="ellipse">Ellipse</option><option value="custom">Perso</option></select></div>
             <div class="input-group"><label>Diamètre (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
             <div class="input-group"><label>Épaisseur (mm)</label><input type="number" id="an-thickness" value="35" oninput="runAnalyzer()"></div>
@@ -246,7 +232,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v68).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v69).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -281,7 +267,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             </div>
         </div>
     </div>
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v68</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v69</div>
 </div>
 
 <script>
@@ -292,23 +278,30 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
     var anMode = 'R'; 
     var vizModeAn = '2d';
     var vizModeArch = '2d';
+    
     var scenes = { an: null, arch: null };
     var renderers = { an: null, arch: null };
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
-    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_m3: null, arch_m3_support: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null, arch_baffles: null };
+    
+    // Le dictionnaire 'meshes' est simplifié pour gérer les Groupes Globaux
+    var meshes = { anGroup: null, archGroup: null };
 
-    // --- GARBAGE COLLECTOR (HELPER 3D) ---
-    function safeDisposeMesh(mesh) {
-        if(mesh) {
-            if(mesh.geometry) mesh.geometry.dispose();
-            if(mesh.material) {
-                if(Array.isArray(mesh.material)) {
-                    for(var i=0; i<mesh.material.length; i++) mesh.material[i].dispose();
-                } else {
-                    mesh.material.dispose();
+    // --- GARBAGE COLLECTOR NUCLEAIRE (HELPER 3D) ---
+    function clearGroup3D(scene, groupName) {
+        if(meshes[groupName]) {
+            scene.remove(meshes[groupName]);
+            meshes[groupName].traverse(function(child) {
+                if(child.geometry) child.geometry.dispose();
+                if(child.material) {
+                    if(Array.isArray(child.material)) {
+                        for(var i=0; i<child.material.length; i++) child.material[i].dispose();
+                    } else {
+                        child.material.dispose();
+                    }
                 }
-            }
+            });
+            meshes[groupName] = null;
         }
     }
 
@@ -336,7 +329,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
         if(type==='newton') {
             var m1X = startX+F1*scale; var m1Rad = (D*scale)/2;
             
-            // CORRECTIF NEWTON 2D: L'arc est dessiné avec la bonne trigonométrie pour faire 100% de la hauteur
+            // CORRECTIF NEWTON 2D
             var R_draw = m1Rad * 4; 
             var Rcx = m1X - R_draw;
             var aO = Math.asin(Math.min(1, m1Rad / R_draw));
@@ -347,7 +340,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             var intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); var m2X = m1X - intercept;
             var m2Size = (D2*scale); 
             
-            // FLAT SECONDARY NEWTON
             ctx.beginPath(); 
             ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); 
             ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); 
@@ -377,10 +369,9 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             var opticalHoleRad = (holeDiam*scale)/2;
             var physicalHoleRad = opticalHoleRad + margin_hole; 
             
-            // Baffle 1 (Tube central Primaire)
             var b1_len_val = (Sep * 0.4); 
             if (nasmyth) {
-                b1_len_val = (Sep * 0.25); // Short baffle
+                b1_len_val = (Sep * 0.25); 
             }
 
             var b1_len = b1_len_val * scale;
@@ -396,7 +387,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             ctx.strokeStyle = "#555"; ctx.lineWidth = 1;
             ctx.strokeRect(m1X - b1_len, axisY - b1OuterRad, b1_len, b1OuterRad*2);
 
-            // Baffle 2 (Cône Secondaire)
             var b2_len_val = (Sep * 0.15); 
             var b2_len = b2_len_val * scale;
             var b2Rad_base = m2Rad + 2*scale; 
@@ -418,7 +408,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             ctx.strokeStyle = "#555";
             ctx.stroke();
 
-            // Miroirs
             var R_draw=m1Rad*4; if(R_draw===0) R_draw=10; var Rcx=m1X-R_draw; 
             if(physicalHoleRad < b1OuterRad + 2*scale) physicalHoleRad = b1OuterRad + 2*scale;
 
@@ -429,7 +418,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             var R2d=m2Rad*4; if(R2d===0) R2d=10; var R2cx=m2X-R2d; var aM2=Math.asin(Math.min(1,m2Rad/R2d));
             ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
-            // NASMYTH M3 & RAYS
             if (nasmyth) {
                 var m3_dist_from_m1 = Sep * 0.25; 
                 var m3X = m1X - (m3_dist_from_m1 * scale); 
@@ -440,7 +428,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
                 ctx.lineTo(m3X + m3Size/2, axisY - m3Size/2);
                 ctx.strokeStyle = C_M3; ctx.lineWidth = 4; ctx.stroke();
                 
-                // Rays
                 ctx.strokeStyle=C_RAY; 
                 ctx.beginPath(); 
                 ctx.moveTo(startX-30,axisY-m1Rad); ctx.lineTo(m1X,axisY-m1Rad); 
@@ -602,7 +589,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             var maxR_face = Math.max(0, Math.min(midX, H)/2 - pad);
             var scFace = (D>0) ? maxR_face/(D/2) : 1; var cxF = midX/2; var cyF = H/2;
             
-            // Vue de Face
             ctx.beginPath(); ctx.arc(cxF, cyF, Math.max(0, (D/2)*scFace), 0, Math.PI*2);
             ctx.fillStyle="#f0f0f0"; ctx.fill(); ctx.strokeStyle="#333"; ctx.lineWidth=2; ctx.stroke();
             if(holeD>0) { ctx.beginPath(); ctx.arc(cxF, cyF, Math.max(0, (holeD/2)*scFace), 0, Math.PI*2); ctx.fillStyle="#fff"; ctx.fill(); ctx.strokeStyle="#333"; ctx.lineWidth=1; ctx.stroke(); }
@@ -612,12 +598,10 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             });
             ctx.fillStyle="#000"; ctx.font="12px Orbitron"; ctx.textAlign="center"; ctx.fillText("VUE DE FACE", cxF, H - 10);
 
-            // Vue de Coupe
             var cxC = midX + midX/2; var cyC = H/2; var scCoupe = scFace * 0.8; 
             ctx.beginPath(); ctx.moveTo(cxC-maxR_face, cyC); ctx.lineTo(cxC+maxR_face, cyC); ctx.setLineDash([5,5]); ctx.strokeStyle="#ccc"; ctx.stroke(); ctx.setLineDash([]);
             var rad = D/2; var hRad = holeD/2;
             
-            // Partie Droite
             ctx.beginPath();
             var z_edge = (rad*rad)/(2*R);
             ctx.moveTo(cxC + rad*scCoupe, cyC - z_edge*scCoupe); 
@@ -630,7 +614,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             ctx.closePath();
             ctx.fillStyle="#ddd"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke();
 
-            // Partie Gauche
             ctx.beginPath();
             ctx.moveTo(cxC - rad*scCoupe, cyC - z_edge*scCoupe);
             for(var x2=rad; x2>=hRad; x2-=1) {
@@ -642,7 +625,6 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             ctx.closePath();
             ctx.fillStyle="#ddd"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke();
 
-            // Chanfreins
             ctx.fillStyle="#999";
             ctx.beginPath(); ctx.moveTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe); ctx.lineTo(cxC+rad*scCoupe-5, cyC - z_edge*scCoupe + 5); ctx.lineTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe + 10); ctx.fill();
             ctx.beginPath(); ctx.moveTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe); ctx.lineTo(cxC-rad*scCoupe+5, cyC - z_edge*scCoupe + 5); ctx.lineTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe + 10); ctx.fill();
@@ -660,7 +642,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
                 var z = (c*S*S)/(1+Math.sqrt(term));
                 var A = c*z*(K+1); 
                 var Y = -K*z*(3+A*(A-3)); 
-                // CORRECTION EXACTE v68 : Ajout du / (1-A)
+                // CORRECTION EXACTE v69 : Ajout du / (1-A)
                 var X = (-S*c*K*z*(2+A*(A-3)))/(1-A);
                 tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
             }
@@ -826,7 +808,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             if(type==='cassegrain') { K1=-1; s1="Parabole"; var t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
             else if(type==='dk') { K2=0; s2="Sphère"; var p=Sep+B; var t2=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t2*(p/F1); s1="Ellipse Prolate"; }
             else if(type==='rc' || type==='nasmyth') { 
-                // CORRECTION EXACTE RC v68 : Utilisation de Sep+B
+                // CORRECTION EXACTE RC v69 : Utilisation de Sep+B
                 K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); 
                 K2=-Math.pow((M+1)/(M-1),2)-(4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep); 
                 s1="Hyperbole"; s2="Hyperbole"; 
@@ -974,7 +956,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
     function init3D(type) {
         var container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
         var w = container.offsetWidth; var h = container.offsetHeight;
-        var sc = new THREE.Scene(); sc.background = new THREE.Color(0xffffff); 
+        var sc = new THREE.Scene(); sc.background = new THREE.Color(0x050510); 
         var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
         if(type==='an') cam.position.set(0, 300, 500); else cam.position.set(500, 500, 1000);
         var ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(w, h);
@@ -982,9 +964,9 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
         container.innerHTML = ""; container.appendChild(ren.domElement);
         var ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
         
-        sc.add(new THREE.AmbientLight(0xffffff, 0.6));
-        var dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(500,1000,500); sc.add(dl);
-        var pl = new THREE.PointLight(0xccccff, 0.5); pl.position.set(-200, 200, 200); sc.add(pl);
+        sc.add(new THREE.AmbientLight(0xffffff, 0.5));
+        var dl = new THREE.DirectionalLight(0xffffff, 1.2); dl.position.set(500,1000,500); sc.add(dl);
+        var pl = new THREE.PointLight(0x00f3ff, 0.8); pl.position.set(-200, 200, 200); sc.add(pl);
 
         scenes[type] = sc; cameras[type] = cam; renderers[type] = ren; controlsList[type] = ctr;
         var animate = function() { requestAnimationFrame(animate); ctr.update(); ren.render(sc, cam); };
@@ -994,7 +976,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
 
     function updateAn3D() {
         if(!scenes.an) window.init3D('an'); var sc = scenes.an; 
-        safeDisposeMesh(meshes.an); if(meshes.an) sc.remove(meshes.an);
+        clearGroup3D(sc, 'anGroup');
         
         var D = parseFloat(document.getElementById('an-diameter').value) || 0; 
         var thick = parseFloat(document.getElementById('an-thickness').value) || 0; 
@@ -1002,6 +984,10 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
         var R_val = parseFloat(document.getElementById('an-curvature-val').value) || 0; 
         
         if (D <= 0 || R_val === 0) return;
+
+        meshes.anGroup = new THREE.Group();
+        sc.add(meshes.anGroup);
+        var grp = meshes.anGroup;
 
         var R = (anMode === 'F') ? R_val * 2 : R_val;
         
@@ -1018,34 +1004,29 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             var y = thick - (sagEdge - sagLocal);
             points.push(new THREE.Vector2(r, y)); 
         }
-        points.push(new THREE.Vector2(holeR, 0)); // Close loop
+        points.push(new THREE.Vector2(holeR, 0)); 
 
         var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
-        var mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.9, roughness:0.1, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
-        meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
+        var mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.95, roughness:0.05, side:THREE.DoubleSide });
+        grp.add(new THREE.Mesh(geo, mat)); 
     }
     window.updateAn3D = updateAn3D;
 
     function updateArch3D() {
         if(!scenes.arch) window.init3D('arch'); var sc = scenes.arch;
         
-        // NETTOYAGE MEMOIRE
-        safeDisposeMesh(meshes.arch_m1); if(meshes.arch_m1) sc.remove(meshes.arch_m1);
-        safeDisposeMesh(meshes.arch_m2); if(meshes.arch_m2) sc.remove(meshes.arch_m2);
-        safeDisposeMesh(meshes.arch_m3); if(meshes.arch_m3) sc.remove(meshes.arch_m3);
-        safeDisposeMesh(meshes.arch_m3_support); if(meshes.arch_m3_support) sc.remove(meshes.arch_m3_support);
-        safeDisposeMesh(meshes.arch_rays); if(meshes.arch_rays) sc.remove(meshes.arch_rays);
-        safeDisposeMesh(meshes.arch_cam); if(meshes.arch_cam) sc.remove(meshes.arch_cam);
-        safeDisposeMesh(meshes.arch_foc); if(meshes.arch_foc) sc.remove(meshes.arch_foc);
-        if(meshes.arch_struct) sc.remove(meshes.arch_struct);
-        if(meshes.arch_baffles) sc.remove(meshes.arch_baffles);
-
+        // NETTOYAGE MEMOIRE TOTAL DU GROUPE
+        clearGroup3D(sc, 'archGroup');
         if(!currentData.type) return;
+
+        meshes.archGroup = new THREE.Group();
+        sc.add(meshes.archGroup);
+        var grp = meshes.archGroup;
 
         var visualSep = currentData.VizSep || currentData.Sep;
         if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
 
-        // CORRECTIF 3D NEWTON: Forcer le trou physique à 0 pour éviter le "donut" au milieu du miroir primaire
+        // CORRECTIF 3D NEWTON: Forcer le trou physique à 0
         var physicalHoleR = 0;
         
         if(currentData.type !== 'NEWTON') {
@@ -1077,8 +1058,11 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             pts1.push(new THREE.Vector2(r, thick1 - ( (R1*R1)/(4*currentData.F1) - sag )));
         }
         pts1.push(new THREE.Vector2(H1, 0)); 
-        var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1, side:THREE.DoubleSide }));
-        m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
+        
+        var m1Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.95, roughness:0.05, side:THREE.DoubleSide });
+        var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), m1Mat);
+        m1.rotation.x = Math.PI/2; 
+        grp.add(m1); 
 
         if(currentData.type !== 'NEWTON') {
             var R2 = currentData.D2/2; var Sep = visualSep; var thick2 = R2/3;
@@ -1088,8 +1072,9 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
                 var r2_loop = R2 - (i/20)*R2; var sag2 = (r2_loop*r2_loop)/(1000); 
                 pts2.push(new THREE.Vector2(r2_loop, thick2 + sag2)); 
             }
-            var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1, side:THREE.DoubleSide }));
-            m2.rotation.x = -Math.PI/2; m2.position.z = Sep; sc.add(m2); meshes.arch_m2 = m2;
+            var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), m1Mat);
+            m2.rotation.x = -Math.PI/2; m2.position.z = Sep; 
+            grp.add(m2);
 
             var baffleGroup = new THREE.Group();
             var matBaffle = new THREE.MeshStandardMaterial({color: 0x151515, side: THREE.DoubleSide, roughness: 1.0, metalness: 0.1});
@@ -1108,7 +1093,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             meshB2.rotation.x = Math.PI/2; meshB2.position.z = Sep - lenB2/2; 
             baffleGroup.add(meshB2);
 
-            sc.add(baffleGroup); meshes.arch_baffles = baffleGroup;
+            grp.add(baffleGroup);
 
             var nasmyth = (currentData.type === 'NASMYTH');
             var m3_z_pos = currentData.Sep * 0.25; 
@@ -1123,15 +1108,15 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
                 var suppMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
                 var supp = new THREE.Mesh(suppGeo, suppMat);
                 supp.rotation.x = Math.PI/2; supp.position.z = (supportStart + supportEnd) / 2;
-                sc.add(supp); meshes.arch_m3_support = supp;
+                grp.add(supp);
 
                 var m3_minor_axis = currentData.D2 * 0.8;
                 var m3Geo = new THREE.CylinderGeometry(m3_minor_axis/2, m3_minor_axis/2, 2, 32); 
-                var m3Mat = new THREE.MeshStandardMaterial({ color: 0x88ccff, metalness: 0.9, roughness: 0.1 });
+                var m3Mat = new THREE.MeshStandardMaterial({ color: 0x88ccff, metalness: 0.95, roughness: 0.05 });
                 var m3 = new THREE.Mesh(m3Geo, m3Mat);
                 m3.position.z = m3_z_pos; m3.scale.z = 1.414; 
                 m3.rotation.z = -Math.PI/2; m3.rotation.y = -Math.PI/4;
-                sc.add(m3); meshes.arch_m3 = m3;
+                grp.add(m3);
             }
 
             var numRays = 16; var ptsAll = [];
@@ -1160,8 +1145,8 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
                     ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2)); ptsAll.push(new THREE.Vector3(0, 0, Z_foc));
                 }
             }
-            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
-            sc.add(lRays); meshes.arch_rays = lRays;
+            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xbc13fe, opacity: 0.8, transparent: true }));
+            grp.add(lRays);
             
             var camRad = 35; var camLen = 40; 
             var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
@@ -1175,7 +1160,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             } else {
                 cam.rotation.x = Math.PI/2; cam.position.z = Z_foc - (camLen/2);
             }
-            sc.add(cam); meshes.arch_cam = cam;
+            grp.add(cam);
 
             var trussGroup = new THREE.Group(); 
             var boxR = (R1*1.15); 
@@ -1194,17 +1179,18 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
             var spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 4, 20), spiderMat); spiderH.position.z = Sep + 20; trussGroup.add(spiderH);
             var cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshStandardMaterial({color:0x111111})); cell.rotation.x = Math.PI/2; cell.position.z = -10; trussGroup.add(cell);
             var cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = Sep; trussGroup.add(cage);
-            sc.add(trussGroup); meshes.arch_struct = trussGroup;
+            grp.add(trussGroup);
 
         } else {
+            // NEWTON 3D
             var Sep = visualSep; 
             var D2 = currentData.D2; 
             
             var m2Geo = new THREE.CylinderGeometry(D2/2, D2/2, 2, 32);
-            var m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1 });
+            var m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.95, roughness:0.05 });
             var m2 = new THREE.Mesh(m2Geo, m2Mat);
             m2.position.z = Sep; m2.rotation.x = -Math.PI/4; m2.scale.z = 1.414; 
-            sc.add(m2); meshes.arch_m2 = m2;
+            grp.add(m2);
 
             var numRays = 16; var ptsAll = [];
             var Z_start = Sep + 500; var Z_m1 = thick1; var Z_m2 = Sep; 
@@ -1222,27 +1208,27 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(xi, yi, Z_m2));
                 ptsAll.push(new THREE.Vector3(xi, yi, Z_m2)); ptsAll.push(new THREE.Vector3(0, Y_exit, Z_m2));
             }
-            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
-            sc.add(lRays); meshes.arch_rays = lRays;
+            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xbc13fe, opacity: 0.8, transparent: true }));
+            grp.add(lRays);
 
             var tubeGeo = new THREE.CylinderGeometry(tubeR, tubeR, Sep + 100, 32, 1, true);
             var tubeMat = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity:0.3, transparent:true});
             var tube = new THREE.Mesh(tubeGeo, tubeMat);
             tube.rotation.x = Math.PI/2; tube.position.z = Sep/2;
-            sc.add(tube); meshes.arch_struct = tube;
+            grp.add(tube);
 
             var focGeo = new THREE.CylinderGeometry(25, 25, currentData.B, 16); 
             var focMat = new THREE.MeshStandardMaterial({color: 0x111111});
             var foc = new THREE.Mesh(focGeo, focMat);
             foc.position.set(0, tubeR + currentData.B/2, Sep);
-            sc.add(foc); meshes.arch_foc = foc; 
+            grp.add(foc);
 
             var camRad = 35; var camLen = 40; 
             var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
             var camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
             var cam = new THREE.Mesh(camGeo, camMat);
             cam.position.set(0, tubeR + currentData.B + camLen/2, Sep);
-            sc.add(cam); meshes.arch_cam = cam;
+            grp.add(cam);
         }
     }
 
@@ -1267,7 +1253,7 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
         setTimeout(window.runArchitect, 200); 
     });
 
-    // --- RESPONSIVE RESIZE LISTENER ---
+    // --- RESPONSIVE RESIZE LISTENER (AJOUT) ---
     window.addEventListener('resize', () => {
         if(vizModeArch === '2d') window.redrawCurrentBlueprint();
         if(vizModeAn === '2d') window.runAnalyzer();
@@ -1282,6 +1268,8 @@ Voici le code robuste et définitif, tu peux y aller les yeux fermés :
         });
     });
 </script>
+</body>
+</html>
 </body>
 </html>
 ```
