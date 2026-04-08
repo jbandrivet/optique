@@ -1,16 +1,3 @@
-C'est parti. Voici la version ultime de ton **OPTICAL SUITE (v67)**. 
-
-J'ai respecté ta consigne à la lettre : **absolument rien n'a été supprimé**. La logique métier, les calculs de baffles, la structure mécanique, le raytracing et la génération PDF sont tous là. 
-
-Voici les optimisations invisibles et visuelles que j'ai ajoutées "sous le capot" :
-* **Modernisation ES6 :** Remplacement de tous les `var` obsolètes par `const` et `let` pour sécuriser la mémoire et éviter les bugs de variables globales.
-* **Responsivité (Resize Listener) :** J'ai ajouté un écouteur d'événement (`window.addEventListener('resize')`). Désormais, si tu redimensionnes la fenêtre de ton navigateur, les plans 2D et les scènes 3D s'ajustent automatiquement sans être déformés.
-* **Rendu 3D Réaliste :** J'ai affiné les lumières (`AmbientLight` + `DirectionalLight` + `PointLight`) et poussé les paramètres `metalness` à 0.95 et `roughness` à 0.05 sur les matériaux Three.js. Tes miroirs ressemblent maintenant à du vrai verre aluminé.
-* **Nettoyage de la mémoire GPU (Garbage Collection) :** Ajout de la méthode `.dispose()` lors de la destruction des anciens maillages 3D pour éviter que le navigateur ne finisse par ramer si tu fais des dizaines de simulations à la suite.
-
-Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` :
-
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -267,7 +254,7 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
                     <p><strong>2. Calcul de z :</strong> Pour K = -1, formule simplifiée : z = c * S² / 2 = 250² / (2 * 6200) ≈ <strong>5.0403 mm</strong></p>
                     <p><strong>3. Calcul de A :</strong> Comme K+1 = 0, alors <strong>A = 0</strong>.</p>
                     <p><strong>4. Calcul de Y :</strong> Y = -(-1) * 5.0403 * [3 + 0] = <strong>15.1209 mm</strong></p>
-                    <p><strong>5. Calcul de X :</strong> X = 500 * (1/6200) * 5.0403 * 2 / 2 (correction) ≈ <strong>0.4064 mm</strong></p>
+                    <p><strong>5. Calcul de X :</strong> X = 500 * (1/6200) * 5.0403 * 2 / 2 ≈ <strong>0.4064 mm</strong></p>
                 </div>
             </div>
 
@@ -334,7 +321,14 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
 
         if(type==='newton') {
             const m1X = startX+F1*scale; const m1Rad = (D*scale)/2;
-            ctx.beginPath(); ctx.arc(m1X-m1Rad*2, axisY, Math.max(0, m1Rad*2), -0.25, 0.25); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
+            
+            // CORRECTIF NEWTON 2D: Rendu précis du diamètre via arc asin
+            const R_draw = m1Rad * 4; 
+            const Rcx = m1X - R_draw;
+            const aO = Math.asin(Math.min(1, m1Rad / R_draw));
+            ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, aO); 
+            ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
+
             const tubeR = (D/2)*scale * 1.15; 
             const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); const m2X = m1X - intercept;
             const m2Size = (D2*scale); 
@@ -625,7 +619,7 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
                 const z = (c*S*S)/(1+Math.sqrt(term));
                 const A = c*z*(K+1); 
                 const Y = -K*z*(3+A*(A-3)); 
-                const X = (-S*c*K*z*(2+A*(A-3)))/(1-A); // Formule Platzeck-Gaviola exacte
+                const X = (-S*c*K*z*(2+A*(A-3)))/(1-A); 
                 tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
             }
         });
@@ -784,7 +778,6 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
             D2_val = (D*(F1-Sep))/F1; 
             hD = D2_val*(B/(Sep+B));
 
-            // FORMULES EXACTES DE SCHWARZSCHILD
             if(type==='cassegrain') { K1=-1; s1="Parabole"; const t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
             else if(type==='dk') { K2=0; s2="Sphère"; const p=Sep+B; const t=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t*(p/F1); s1="Ellipse Prolate"; }
             else if(type==='rc' || type==='nasmyth') { 
@@ -934,7 +927,7 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
     function init3D(type) {
         const container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
         const w = container.offsetWidth; const h = container.offsetHeight;
-        const sc = new THREE.Scene(); sc.background = new THREE.Color(0x050510); // Fond sombre immersif
+        const sc = new THREE.Scene(); sc.background = new THREE.Color(0x050510); 
         const cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
         if(type==='an') cam.position.set(0, 300, 500); else cam.position.set(500, 500, 1000);
         const ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(w, h);
@@ -942,7 +935,6 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
         container.innerHTML = ""; container.appendChild(ren.domElement);
         const ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
         
-        // OPTIMISATION DES LUMIÈRES 3D
         sc.add(new THREE.AmbientLight(0xffffff, 0.5)); 
         const dl = new THREE.DirectionalLight(0xffffff, 1.2); dl.position.set(500,1000,500); sc.add(dl);
         const pl = new THREE.PointLight(0x00f3ff, 0.8); pl.position.set(-200, 200, 200); sc.add(pl); 
@@ -981,7 +973,6 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
         points.push(new THREE.Vector2(holeR, 0));
 
         const geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
-        // OPTIMISATION MATERIAUX
         const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.95, roughness: 0.05, side:THREE.DoubleSide });
         meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
     }
@@ -990,7 +981,6 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
     function updateArch3D() {
         if(!scenes.arch) window.init3D('arch'); const sc = scenes.arch;
         
-        // NETTOYAGE MEMOIRE (Garbage Collection)
         safeDisposeMesh(meshes.arch_m1); safeDisposeMesh(meshes.arch_m2); safeDisposeMesh(meshes.arch_m3); 
         safeDisposeMesh(meshes.arch_m3_support); safeDisposeMesh(meshes.arch_rays); 
         safeDisposeMesh(meshes.arch_cam); safeDisposeMesh(meshes.arch_foc);
@@ -1002,21 +992,23 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
         let visualSep = currentData.VizSep || currentData.Sep;
         if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
 
-        const opticalHoleR = currentData.Hole / 2;
-        let b1_len_val = (currentData.Sep * 0.4); 
-        
-        if (currentData.type === 'NASMYTH') { b1_len_val = (currentData.Sep * 0.25); }
-
-        const dist_focus_to_tip = currentData.B + b1_len_val;
-        const dist_focus_to_m2 = currentData.B + currentData.Sep;
-        const r_beam_at_tip = (currentData.D2/2) * (dist_focus_to_tip / dist_focus_to_m2);
-        
-        let b1_innerR = r_beam_at_tip + 2; 
-        if(b1_innerR < opticalHoleR) b1_innerR = opticalHoleR + 1;
-        
-        const b1_thick = 2;
-        const b1_outerR = b1_innerR + b1_thick;
-        const physicalHoleR = b1_outerR + 2; 
+        // CORRECTIF 3D NEWTON: Forcer le trou physique à 0 pour éviter le "donut"
+        let physicalHoleR = 0;
+        if(currentData.type !== 'NEWTON') {
+            const opticalHoleR = currentData.Hole / 2;
+            let b1_len_val = (currentData.Sep * 0.4); 
+            if (currentData.type === 'NASMYTH') { b1_len_val = (currentData.Sep * 0.25); }
+            const dist_focus_to_tip = currentData.B + b1_len_val;
+            const dist_focus_to_m2 = currentData.B + currentData.Sep;
+            const r_beam_at_tip = (currentData.D2/2) * (dist_focus_to_tip / dist_focus_to_m2);
+            
+            let b1_innerR = r_beam_at_tip + 2; 
+            if(b1_innerR < opticalHoleR) b1_innerR = opticalHoleR + 1;
+            
+            const b1_thick = 2;
+            const b1_outerR = b1_innerR + b1_thick;
+            physicalHoleR = b1_outerR + 2; 
+        }
 
         const R1 = currentData.D/2; const H1 = physicalHoleR; const thick1 = currentData.D/6;
         const pts1 = [];
@@ -1027,6 +1019,7 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
             pts1.push(new THREE.Vector2(r, thick1 - ( (R1*R1)/(4*currentData.F1) - sag )));
         }
         pts1.push(new THREE.Vector2(H1, 0)); 
+        
         const m1Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.95, roughness:0.05, side:THREE.DoubleSide });
         const m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), m1Mat);
         m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
@@ -1045,8 +1038,8 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
             const baffleGroup = new THREE.Group();
             const matBaffle = new THREE.MeshStandardMaterial({color: 0x151515, side: THREE.DoubleSide, roughness: 1.0, metalness: 0.1});
             
-            const lenB1 = b1_len_val; 
-            const geoB1 = new THREE.CylinderGeometry(b1_outerR, b1_outerR, lenB1, 32, 1, true);
+            const lenB1 = (currentData.type === 'NASMYTH') ? (Sep * 0.25) : (Sep * 0.4); 
+            const geoB1 = new THREE.CylinderGeometry(physicalHoleR-2, physicalHoleR-2, lenB1, 32, 1, true);
             const meshB1 = new THREE.Mesh(geoB1, matBaffle);
             meshB1.rotation.x = Math.PI/2; meshB1.position.z = lenB1/2; 
             baffleGroup.add(meshB1);
@@ -1235,4 +1228,3 @@ Voici le code complet, prêt à être sauvegardé dans ton fichier `index.html` 
 </script>
 </body>
 </html>
-```
