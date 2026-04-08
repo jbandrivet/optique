@@ -140,7 +140,7 @@
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v74</span></div>
+            <div class="brand">CAUSTIQUE <span>v75</span></div>
             <div class="input-group">
                 <label>Type</label>
                 <select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()">
@@ -354,7 +354,7 @@
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v74).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v75).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -390,7 +390,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v74</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v75</div>
 </div>
 
 <script>
@@ -407,6 +407,7 @@
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
     
+    // Le dictionnaire pour stocker les groupes globaux de maillages
     var meshes = { anGroup: null, archGroup: null };
 
     // --- GARBAGE COLLECTOR (HELPER 3D) ---
@@ -458,6 +459,7 @@
         var C_M2="#00aa00"; 
         var C_M3="#0088ff"; 
         var C_RAY="rgba(0,0,0,0.2)";
+        var C_BAFFLE="#333333";
         
         var totalLen = (type==='newton') ? Math.abs(F1)*1.3 : (Math.abs(Sep)+Math.abs(B))*1.2;
         if(totalLen<=0) totalLen=500;
@@ -497,6 +499,7 @@
             var m1X = startX+F1*scale; 
             var m1Rad = (D*scale)/2;
             
+            // CORRECTIF NEWTON 2D
             var R_draw = m1Rad * 4; 
             var Rcx = m1X - R_draw;
             var aO = Math.asin(Math.min(1, m1Rad / R_draw));
@@ -1351,7 +1354,6 @@
     }
     window.downloadCoursePDF = downloadCoursePDF;
 
-    // --- RECALCUL AUTO DES ZONES SELON LE TROU (AJOUT EXPERT) ---
     function autoCalcZones() {
         var D = parseFloat(document.getElementById('an-diameter').value)||0; 
         var holeD = parseFloat(document.getElementById('an-hole').value)||0;
@@ -1382,7 +1384,6 @@
         var zoneCenters = [];
         
         for(var i=0; i<numZones; i++) {
-            // Répartition sur la couronne de verre restante uniquement
             var center = radiusHole + (i * actualWidth) + (actualWidth/2);
             zoneCenters.push(center.toFixed(1));
         }
@@ -1400,7 +1401,7 @@
         var h = container.offsetHeight;
         
         var sc = new THREE.Scene(); 
-        sc.background = new THREE.Color(0xffffff); // FOND BLANC
+        sc.background = new THREE.Color(0xffffff); 
         
         var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
         if(type==='an') {
@@ -1733,15 +1734,17 @@
                 var y = Math.sin(angle) * R1;
                 
                 // RAYTRACING EXACT SUR PLAN 45°
-                var t_val = (Sep + y - Z_m1) / (currentData.F1 + y);
+                var t_val = (Sep - Z_m1 + y) / (currentData.F1 - Z_m1 + y);
                 var xi = x * (1 - t_val);
                 var yi = y * (1 - t_val);
-                var zi = Z_m1 + t_val * currentData.F1;
+                var zi = Z_m1 + t_val * (currentData.F1 - Z_m1);
 
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); 
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1));
+                
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); 
                 ptsAll.push(new THREE.Vector3(xi, yi, zi));
+                
                 ptsAll.push(new THREE.Vector3(xi, yi, zi)); 
                 ptsAll.push(new THREE.Vector3(0, Y_exit, Sep));
             }
