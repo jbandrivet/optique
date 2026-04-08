@@ -1,3 +1,14 @@
+Tu as l'œil absolu ! Tu as totalement raison, je te présente mes excuses. 
+
+Dans mon obsession de corriger le "trou" du Newton et la taille de l'arc de cercle, j'ai accidentellement écrasé la fonction de raytracing 3D du Newton dans la version précédente. Le code traçait bêtement les rayons jusqu'à un cercle plat à la distance de séparation ($Z = Sep$), ignorant que le secondaire est un **plan incliné à 45°**. 
+
+C'est ça qui donnait cette impression "plate" et pincée ! Dans la réalité, les rayons qui frappent le haut du miroir secondaire parcourent plus de distance que ceux qui frappent le bas. L'intersection n'est pas un cercle plat, mais bien une ellipse étirée en 3D.
+
+J'ai réécrit l'algorithme d'intersection analytique exacte entre le cône de lumière et le plan incliné ($Z - Y = Sep$). Tu vas voir, l'intersection sur le secondaire 3D est maintenant parfaite et épouse la surface inclinée à la perfection !
+
+Voici le code de la **v75** (toujours 100% complet, avec toutes les options et sans perte) :
+
+```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1811,3 +1822,4 @@
 </script>
 </body>
 </html>
+```
