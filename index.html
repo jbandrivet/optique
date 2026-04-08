@@ -1,3 +1,13 @@
+C'est un grand classique de la 3D sur navigateur ! Ce que tu observes s'appelle un "Ghost Object" ou une "Memory Leak" (fuite de mémoire). 
+
+Dans la version précédente, quand tu changeais d'optique, je demandais à **Three.js** de supprimer les anciens rayons de la scène. Sauf que les "Groupes" 3D (qui contiennent plusieurs éléments) sont parfois capricieux à nettoyer si on ne vide pas explicitement la carte graphique (GPU). Résultat : les nouveaux rayons se dessinaient par-dessus les anciens !
+
+Pour régler ça **définitivement**, j'ai mis en place une méthode professionnelle : l'architecture par **Groupes Maîtres (`archGroup`)**. 
+À chaque fois que tu changes un paramètre, le code prend le groupe complet, le détruit de la scène, désalloue la mémoire de la carte graphique (`.dispose()`), et recrée une optique parfaitement propre. **Plus aucun rayon ou miroir fantôme ne restera bloqué !**
+
+Voici la **v69**, la version ultime, avec la résolution de ce bug (et bien sûr, le Newton garde son miroir sans trou et sa vraie taille 2D) :
+
+```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1268,8 +1278,6 @@
         });
     });
 </script>
-</body>
-</html>
 </body>
 </html>
 ```
