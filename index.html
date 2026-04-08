@@ -140,7 +140,7 @@
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v71</span></div>
+            <div class="brand">CAUSTIQUE <span>v72</span></div>
             <div class="input-group">
                 <label>Type</label>
                 <select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()">
@@ -354,7 +354,7 @@
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v71).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v72).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -390,7 +390,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v71</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v72</div>
 </div>
 
 <script>
@@ -977,7 +977,7 @@
             window.updateAn3D(); 
         }
 
-        // Calcul Mathématique Platzeck-Gaviola (Corrigé / 1-A)
+        // Calcul Mathématique Platzeck-Gaviola
         var c = (R>0)?1/R:0;
         zones.forEach((S,i)=>{
             var term = 1-(K+1)*Math.pow(c*S,2);
@@ -1195,7 +1195,6 @@
                 K1=-1+t2*(p/F1); s1="Ellipse Prolate"; 
             }
             else if(type==='rc' || type==='nasmyth') { 
-                // CORRECTION EXACTE RC
                 K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); 
                 K2=-Math.pow((M+1)/(M-1),2)-(4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep); 
                 s1="Hyperbole"; s2="Hyperbole"; 
@@ -1407,7 +1406,7 @@
         var h = container.offsetHeight;
         
         var sc = new THREE.Scene(); 
-        sc.background = new THREE.Color(0xffffff); // FOND BLANC
+        sc.background = new THREE.Color(0xffffff); 
         
         var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
         if(type==='an') {
@@ -1487,7 +1486,7 @@
         var geo = new THREE.LatheGeometry(points, 64); 
         geo.computeVertexNormals();
         
-        var mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
+        var mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
         grp.add(new THREE.Mesh(geo, mat));
     }
     window.updateAn3D = updateAn3D;
@@ -1545,7 +1544,7 @@
         }
         pts1.push(new THREE.Vector2(H1, 0)); 
         
-        var m1Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
+        var m1Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
         var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), m1Mat);
         m1.rotation.x = Math.PI/2; 
         grp.add(m1);
@@ -1720,7 +1719,7 @@
             var Sep = visualSep; 
             
             var m2Geo = new THREE.CylinderGeometry(currentData.D2/2, currentData.D2/2, 2, 32);
-            var m2Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2 });
+            var m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.8, roughness:0.2 });
             var m2 = new THREE.Mesh(m2Geo, m2Mat);
             m2.position.z = Sep; 
             m2.rotation.x = -Math.PI/4; 
