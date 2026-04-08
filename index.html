@@ -140,7 +140,7 @@
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v65</span></div>
+            <div class="brand">CAUSTIQUE <span>v66</span></div>
             <div class="input-group"><label>Type</label><select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()"><option value="parabola" selected>Parabole</option><option value="hyperbola">Hyperbole</option><option value="sphere">Sphère</option><option value="ellipse">Ellipse</option><option value="custom">Perso</option></select></div>
             <div class="input-group"><label>Diamètre (mm)</label><input type="number" id="an-diameter" value="300" oninput="runAnalyzer()"></div>
             <div class="input-group"><label>Épaisseur (mm)</label><input type="number" id="an-thickness" value="35" oninput="runAnalyzer()"></div>
@@ -233,7 +233,7 @@
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v48).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v65).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -268,117 +268,109 @@
             </div>
         </div>
     </div>
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v65</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v66</div>
 </div>
 
 <script>
     // VARS
-    var currentData = {};
-    var viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
-    var calculationMode = 'f1';
-    var anMode = 'R'; 
-    var vizModeAn = '2d';
-    var vizModeArch = '2d';
-    var scenes = { an: null, arch: null };
-    var renderers = { an: null, arch: null };
-    var cameras = { an: null, arch: null };
-    var controlsList = { an: null, arch: null };
-    var meshes = { an: null, arch_m1: null, arch_m2: null, arch_m3: null, arch_m3_support: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null, arch_baffles: null };
+    let currentData = {};
+    let viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
+    let calculationMode = 'f1';
+    let anMode = 'R'; 
+    let vizModeAn = '2d';
+    let vizModeArch = '2d';
+    const scenes = { an: null, arch: null };
+    const renderers = { an: null, arch: null };
+    const cameras = { an: null, arch: null };
+    const controlsList = { an: null, arch: null };
+    const meshes = { an: null, arch_m1: null, arch_m2: null, arch_m3: null, arch_m3_support: null, arch_rays: null, arch_struct: null, arch_cam: null, arch_foc: null, arch_baffles: null };
 
     // --- 2D DRAWING SAFE ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
         D = Math.abs(D)||1; F1=F1||1; Sep=Math.abs(Sep)||0; B=Math.abs(B)||0; D2=Math.abs(D2)||1; holeDiam=Math.abs(holeDiam)||0;
         ctx.clearRect(0,0, width, height); ctx.save();
         if(theme === 'screen') { 
-            var dpr = window.devicePixelRatio || 1;
+            const dpr = window.devicePixelRatio || 1;
             ctx.translate(viewState.offsetX, viewState.offsetY); 
             ctx.translate(width/2, height/2); 
             ctx.scale(viewState.scale, viewState.scale); 
             ctx.translate(-width/2, -height/2); 
         }
-        var C_AXIS="#cccccc"; var C_DIM="#0000ff"; var C_TEXT="#000000"; var C_M1="#ff8800"; var C_M2="#00aa00"; var C_M3="#0088ff"; var C_RAY="rgba(0,0,0,0.2)";
-        var C_BAFFLE="#333333";
-        var totalLen = (type==='newton') ? Math.abs(F1)*1.3 : (Math.abs(Sep)+Math.abs(B))*1.2;
+        const C_AXIS="#cccccc"; const C_DIM="#0000ff"; const C_TEXT="#000000"; const C_M1="#ff8800"; const C_M2="#00aa00"; const C_M3="#0088ff"; const C_RAY="rgba(0,0,0,0.2)";
+        const C_BAFFLE="#333333";
+        let totalLen = (type==='newton') ? Math.abs(F1)*1.3 : (Math.abs(Sep)+Math.abs(B))*1.2;
         if(totalLen<=0) totalLen=500;
-        var scale = (width-120)/totalLen; if(scale<=0) scale=0.1;
-        var startX=60; var axisY=height/2;
+        let scale = (width-120)/totalLen; if(scale<=0) scale=0.1;
+        const startX=60; const axisY=height/2;
         ctx.beginPath(); ctx.moveTo(-1000, axisY); ctx.lineTo(width+1000, axisY); ctx.setLineDash([5,5]); ctx.strokeStyle=C_AXIS; ctx.stroke(); ctx.setLineDash([]);
+        
         function dDim(l,x1,x2,y){ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.moveTo(x1,y-5); ctx.lineTo(x1,y+5); ctx.moveTo(x2,y-5); ctx.lineTo(x2,y+5); ctx.strokeStyle=C_DIM; ctx.lineWidth=1/viewState.scale; ctx.stroke(); ctx.fillStyle=C_TEXT; ctx.font=theme==='screen'?"12px Orbitron":"10px Helvetica"; ctx.textAlign="center"; ctx.fillText(l,x1+(x2-x1)/2,y-5);}
 
         if(type==='newton') {
-            // ... (Newton code) ...
-            var m1X = startX+F1*scale; var m1Rad = (D*scale)/2;
+            const m1X = startX+F1*scale; const m1Rad = (D*scale)/2;
             ctx.beginPath(); ctx.arc(m1X-m1Rad*2, axisY, Math.max(0, m1Rad*2), -0.25, 0.25); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
-            var tubeR = (D/2)*scale * 1.15; // Increased tube margin
-            var intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); var m2X = m1X - intercept;
-            var m2Size = (D2*scale); 
+            const tubeR = (D/2)*scale * 1.15; // Increased tube margin
+            const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); const m2X = m1X - intercept;
+            const m2Size = (D2*scale); 
             // FLAT SECONDARY NEWTON
             ctx.beginPath(); 
             ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); 
             ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); 
             ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
-            var m2Rad_ray = (D2*scale)/2; 
+            const m2Rad_ray = (D2*scale)/2; 
             ctx.strokeStyle=C_RAY; ctx.beginPath(); 
             ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad); ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
             ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(m2X, axisY - m2Rad_ray); ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(m2X, axisY + m2Rad_ray);
-            var focH = tubeR + B*scale; var focusY = axisY - focH;
+            const focH = tubeR + B*scale; const focusY = axisY - focH;
             ctx.moveTo(m2X, axisY - m2Rad_ray); ctx.lineTo(m2X, focusY); ctx.moveTo(m2X, axisY + m2Rad_ray); ctx.lineTo(m2X, focusY);
             ctx.stroke();
             dDim("F1", m2X, m1X, axisY+m1Rad+30); dDim("BACK FOCUS", m2X, m2X, focusY - 10);
             
         } else {
             // CASSEGRAIN / RC / DK / NASMYTH
-            var m2X=startX; var m1X=startX+Sep*scale; 
+            const m2X=startX; const m1X=startX+Sep*scale; 
+            const fX=m1X+B*scale; // Standard Cass/RC focus position (behind M1)
+            const nasmyth = (type === 'nasmyth');
             
-            // Focale position logic
-            var fX=m1X+B*scale; // Standard Cass/RC focus position (behind M1)
-            var nasmyth = (type === 'nasmyth');
-            
-            var m1Rad=(D*scale)/2; var m2Rad=(D2*scale)/2; 
+            const m1Rad=(D*scale)/2; const m2Rad=(D2*scale)/2; 
             
             // MARGINS & BAFFLES 2D
-            var margin_hole = 5 * scale; 
-            var margin_baffle_clr = 2 * scale; 
-            var baffle_wall = 2 * scale; 
+            const margin_hole = 5 * scale; 
+            const margin_baffle_clr = 2 * scale; 
+            const baffle_wall = 2 * scale; 
 
-            var opticalHoleRad = (holeDiam*scale)/2;
-            var physicalHoleRad = opticalHoleRad + margin_hole; 
+            const opticalHoleRad = (holeDiam*scale)/2;
+            let physicalHoleRad = opticalHoleRad + margin_hole; 
             
             // --- Baffle 1 (Tube central Primaire) ---
-            var b1_len_val = (Sep * 0.4); 
-            
-            // For Nasmyth, shorten primary baffle to avoid M3
+            let b1_len_val = (Sep * 0.4); 
             if (nasmyth) {
                 b1_len_val = (Sep * 0.25); // Short baffle
             }
 
-            var b1_len = b1_len_val * scale;
-            
-            // CALCUL DU RAYON DU FAISCEAU AU SOMMET DU BAFFLE PRIMAIRE
-            var r_beam_at_baffle_tip = (D2/2) * ( (B + b1_len_val) / (B + Sep) );
-            var b1Rad_val = r_beam_at_baffle_tip + 2;
+            const b1_len = b1_len_val * scale;
+            const r_beam_at_baffle_tip = (D2/2) * ( (B + b1_len_val) / (B + Sep) );
+            let b1Rad_val = r_beam_at_baffle_tip + 2;
             if(b1Rad_val < holeDiam/2) b1Rad_val = holeDiam/2 + 1;
             
-            var b1Rad = b1Rad_val * scale; 
-            var b1OuterRad = b1Rad + baffle_wall; // rayon externe pour le dessin
+            const b1Rad = b1Rad_val * scale; 
+            const b1OuterRad = b1Rad + baffle_wall;
 
-            // Dessin Baffle 1 (Rectangle)
             ctx.fillStyle = "#333"; 
             ctx.fillRect(m1X - b1_len, axisY - b1OuterRad, b1_len, b1OuterRad*2);
             ctx.strokeStyle = "#555"; ctx.lineWidth = 1;
             ctx.strokeRect(m1X - b1_len, axisY - b1OuterRad, b1_len, b1OuterRad*2);
 
             // --- Baffle 2 (Cône Secondaire) ---
-            var b2_len_val = (Sep * 0.15); 
-            var b2_len = b2_len_val * scale;
-            var b2Rad_base = m2Rad + 2*scale; 
+            const b2_len_val = (Sep * 0.15); 
+            const b2_len = b2_len_val * scale;
+            const b2Rad_base = m2Rad + 2*scale; 
             
-            // Evasement: Pointe (vers M1) est PLUS LARGE que la base
-            var r1_opt = (D/2);
-            var r2_opt = (D2/2);
-            var r_beam_at_tip = r2_opt + ( (r1_opt - r2_opt) * (b2_len_val / Sep) );
-            var b2Rad_tip = (r_beam_at_tip + 2) * scale; 
+            const r1_opt = (D/2);
+            const r2_opt = (D2/2);
+            const r_beam_at_tip = r2_opt + ( (r1_opt - r2_opt) * (b2_len_val / Sep) );
+            const b2Rad_tip = (r_beam_at_tip + 2) * scale; 
             
             ctx.beginPath();
             ctx.moveTo(m2X, axisY - b2Rad_base);
@@ -393,24 +385,22 @@
             ctx.stroke();
 
             // Miroirs
-            var R_draw=m1Rad*4; if(R_draw===0) R_draw=10; var Rcx=m1X-R_draw; 
+            let R_draw=m1Rad*4; if(R_draw===0) R_draw=10; const Rcx=m1X-R_draw; 
             if(physicalHoleRad < b1OuterRad + 2*scale) physicalHoleRad = b1OuterRad + 2*scale;
 
-            var aO=Math.asin(Math.min(1,m1Rad/R_draw)); var aI=Math.asin(Math.min(1,physicalHoleRad/R_draw));
+            const aO=Math.asin(Math.min(1,m1Rad/R_draw)); const aI=Math.asin(Math.min(1,physicalHoleRad/R_draw));
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, -aI); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, aI, aO); ctx.stroke();
             
-            var R2d=m2Rad*4; if(R2d===0) R2d=10; var R2cx=m2X-R2d; var aM2=Math.asin(Math.min(1,m2Rad/R2d));
+            let R2d=m2Rad*4; if(R2d===0) R2d=10; const R2cx=m2X-R2d; const aM2=Math.asin(Math.min(1,m2Rad/R2d));
             ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
             // --- NASMYTH M3 & RAYS ---
             if (nasmyth) {
-                // M3 Position: 25% of Sep (Proportional height) - REMOVED HARD CAP
-                var m3_dist_from_m1 = Sep * 0.25; 
-                var m3X = m1X - (m3_dist_from_m1 * scale); 
+                const m3_dist_from_m1 = Sep * 0.25; 
+                const m3X = m1X - (m3_dist_from_m1 * scale); 
                 
-                // Draw M3 (45 deg tilt) - FIXED ORIENTATION /
-                var m3Size = (D2 * 0.9) * scale; 
+                const m3Size = (D2 * 0.9) * scale; 
                 ctx.beginPath();
                 ctx.moveTo(m3X - m3Size/2, axisY + m3Size/2);
                 ctx.lineTo(m3X + m3Size/2, axisY - m3Size/2);
@@ -419,48 +409,38 @@
                 // Rays
                 ctx.strokeStyle=C_RAY; 
                 ctx.beginPath(); 
-                // In -> M1
                 ctx.moveTo(startX-30,axisY-m1Rad); ctx.lineTo(m1X,axisY-m1Rad); 
                 ctx.moveTo(startX-30,axisY+m1Rad); ctx.lineTo(m1X,axisY+m1Rad);
                 ctx.stroke();
 
-                // M1 -> M2
                 ctx.beginPath();
                 ctx.moveTo(m1X,axisY-m1Rad); ctx.lineTo(m2X,axisY-m2Rad); 
                 ctx.moveTo(m1X,axisY+m1Rad); ctx.lineTo(m2X,axisY+m2Rad);
                 ctx.stroke();
                 
-                // M2 -> M3 (Calcul Intersection Exacte)
-                var L = fX - m2X;
-                // Rayon Haut (y < 0)
-                var slope = m2Rad / L; // pente positive vers l'axe
+                const L = fX - m2X;
+                const slope = m2Rad / L; 
                 
-                var top_num = m3X + m2Rad + (slope*m2X);
-                var top_den = 1 + slope;
-                var x_int_top = top_num / top_den;
-                var y_int_top = axisY - x_int_top + m3X;
+                const top_num = m3X + m2Rad + (slope*m2X);
+                const top_den = 1 + slope;
+                const x_int_top = top_num / top_den;
+                const y_int_top = axisY - x_int_top + m3X;
 
-                // Bottom Ray (y > 0)
-                var bot_num = m2Rad + (slope*m2X) - m3X;
-                var bot_den = slope - 1;
-                var x_int_bot = bot_num / bot_den;
-                var y_int_bot = axisY - x_int_bot + m3X;
+                const bot_num = m2Rad + (slope*m2X) - m3X;
+                const bot_den = slope - 1;
+                const x_int_bot = bot_num / bot_den;
+                const y_int_bot = axisY - x_int_bot + m3X;
 
                 ctx.beginPath();
-                // Top Ray M2->M3
                 ctx.moveTo(m2X, axisY-m2Rad); ctx.lineTo(x_int_top, y_int_top); 
-                // Bottom Ray M2->M3
                 ctx.moveTo(m2X, axisY+m2Rad); ctx.lineTo(x_int_bot, y_int_bot);
                 ctx.stroke();
                 
-                // M3 -> Side Focus
-                var dist_rem = fX - m3X;
-                var sideFocusY = axisY - dist_rem; // Vers le haut du dessin (Y négatif)
+                const dist_rem = fX - m3X;
+                const sideFocusY = axisY - dist_rem; 
                 
                 ctx.beginPath();
-                // Bottom Ray reflection goes up from Bot Intersection
                 ctx.moveTo(x_int_bot, y_int_bot); ctx.lineTo(m3X, sideFocusY);
-                // Top Ray reflection goes up from Top Intersection
                 ctx.moveTo(x_int_top, y_int_top); ctx.lineTo(m3X, sideFocusY);
                 ctx.stroke();
                 
@@ -475,9 +455,8 @@
             
             dDim("SEPARATION",m2X,m1X,axisY-m1Rad-30); 
             
-            // Indication Trou Physique
             if(holeDiam>0){ 
-                var dHx=m1X-15; 
+                const dHx=m1X-15; 
                 ctx.beginPath(); ctx.moveTo(dHx,axisY-physicalHoleRad); ctx.lineTo(dHx,axisY+physicalHoleRad); 
                 ctx.setLineDash([1,2]); ctx.strokeStyle="#ff0055"; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
             }
@@ -488,15 +467,14 @@
     // --- GLOBALS ---
     function redrawCurrentBlueprint() {
         if(!currentData.type) return;
-        var canvas = document.getElementById('blueprint-canvas');
+        const canvas = document.getElementById('blueprint-canvas');
         if (!canvas) return; 
-        var rect = canvas.parentElement.getBoundingClientRect();
+        const rect = canvas.parentElement.getBoundingClientRect();
         if(rect.width === 0 || rect.height === 0) return;
-        var ctx = canvas.getContext('2d');
-        var dpr = window.devicePixelRatio || 1;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
         canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
-        // On passe VizSep pour le dessin 2D Newton
         drawBlueprintGeneric(ctx, rect.width, rect.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
     }
     window.redrawCurrentBlueprint = redrawCurrentBlueprint;
@@ -505,7 +483,7 @@
         document.querySelectorAll('.interface-container').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        var btns = document.querySelectorAll('.tab-btn');
+        const btns = document.querySelectorAll('.tab-btn');
         btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
         if(tabId === 'architect') setTimeout(window.runArchitect, 100);
     }
@@ -513,8 +491,8 @@
 
     function setAnMode(mode) {
         if(mode === anMode) return;
-        var input = document.getElementById('an-curvature-val');
-        var val = parseFloat(input.value);
+        const input = document.getElementById('an-curvature-val');
+        const val = parseFloat(input.value);
         if(mode === 'F') { input.value = (val / 2).toFixed(2); document.getElementById('mode-an-R').classList.remove('active'); document.getElementById('mode-an-F').classList.add('active'); } 
         else { input.value = (val * 2).toFixed(2); document.getElementById('mode-an-F').classList.remove('active'); document.getElementById('mode-an-R').classList.add('active'); }
         anMode = mode; window.runAnalyzer();
@@ -545,7 +523,7 @@
 
     function resetCamera(ctx, view) {
         if(!cameras[ctx] || !controlsList[ctx]) return;
-        var cam = cameras[ctx]; var ctr = controlsList[ctx];
+        const cam = cameras[ctx]; const ctr = controlsList[ctx];
         ctr.reset();
         if (ctx === 'an') {
             if(view === 'front') { cam.position.set(0, 500, 0); } 
@@ -563,35 +541,34 @@
     window.resetCamera = resetCamera;
 
     function runAnalyzer() {
-        var D = parseFloat(document.getElementById('an-diameter').value)||0; var holeD = parseFloat(document.getElementById('an-hole').value)||0; var thick = parseFloat(document.getElementById('an-thickness').value)||0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
-        var R = (anMode === 'F') ? R_val * 2 : R_val;
-        var K = parseFloat(document.getElementById('an-kfactor').value);
-        var zonesStr = document.getElementById('an-zones').value;
-        var zones = zonesStr.split(',').map(Number).filter(n=>n);
-        var tbody = document.getElementById('an-results'); tbody.innerHTML="";
+        const D = parseFloat(document.getElementById('an-diameter').value)||0; const holeD = parseFloat(document.getElementById('an-hole').value)||0; const thick = parseFloat(document.getElementById('an-thickness').value)||0;
+        const R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
+        const R = (anMode === 'F') ? R_val * 2 : R_val;
+        const K = parseFloat(document.getElementById('an-kfactor').value);
+        const zonesStr = document.getElementById('an-zones').value;
+        const zones = zonesStr.split(',').map(Number).filter(n=>n);
+        const tbody = document.getElementById('an-results'); tbody.innerHTML="";
         
-        var r_cm=(D/2)/10; var h_cm=thick/10; var rh_cm=(holeD/2)/10; var zmax_cm=(R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
-        var vol = (Math.PI*r_cm*r_cm*h_cm) - (Math.PI*rh_cm*rh_cm*h_cm) - (0.5*Math.PI*r_cm*r_cm*zmax_cm);
+        const r_cm=(D/2)/10; const h_cm=thick/10; const rh_cm=(holeD/2)/10; const zmax_cm=(R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
+        const vol = (Math.PI*r_cm*r_cm*h_cm) - (Math.PI*rh_cm*rh_cm*h_cm) - (0.5*Math.PI*r_cm*r_cm*zmax_cm);
         document.getElementById('an-weight').innerText = (vol*2.53/1000).toFixed(2)+" kg";
-        // AJOUT: Calcul F/D
         document.getElementById('an-fd').innerText = (D>0 && R>0) ? "f/" + (R/(2*D)).toFixed(1) : "-";
 
         if (vizModeAn === '2d') {
-            var cvs = document.getElementById('visualizer'); 
-            var dpr = window.devicePixelRatio || 1;
-            var rect = cvs.parentElement.getBoundingClientRect();
+            const cvs = document.getElementById('visualizer'); 
+            const dpr = window.devicePixelRatio || 1;
+            const rect = cvs.parentElement.getBoundingClientRect();
             
             if (rect.width === 0 || rect.height === 0) return;
 
             cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
-            var ctx = cvs.getContext('2d'); ctx.scale(dpr, dpr);
+            const ctx = cvs.getContext('2d'); ctx.scale(dpr, dpr);
             ctx.clearRect(0,0,rect.width,rect.height); ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,rect.width,rect.height); 
             
-            var W = rect.width; var H = rect.height; var midX = W/2;
-            var pad = 20; 
-            var maxR_face = Math.max(0, Math.min(midX, H)/2 - pad);
-            var scFace = (D>0) ? maxR_face/(D/2) : 1; var cxF = midX/2; var cyF = H/2;
+            const W = rect.width; const H = rect.height; const midX = W/2;
+            const pad = 20; 
+            const maxR_face = Math.max(0, Math.min(midX, H)/2 - pad);
+            const scFace = (D>0) ? maxR_face/(D/2) : 1; const cxF = midX/2; const cyF = H/2;
             
             // 1. Vue de Face
             ctx.beginPath(); ctx.arc(cxF, cyF, Math.max(0, (D/2)*scFace), 0, Math.PI*2);
@@ -604,25 +581,20 @@
             ctx.fillStyle="#000"; ctx.font="12px Orbitron"; ctx.textAlign="center"; ctx.fillText("VUE DE FACE", cxF, H - 10);
 
             // 2. Vue de Coupe CORRIGÉE SENS HORAIRE
-            var cxC = midX + midX/2; var cyC = H/2; var scCoupe = scFace * 0.8; 
+            const cxC = midX + midX/2; const cyC = H/2; const scCoupe = scFace * 0.8; 
             ctx.beginPath(); ctx.moveTo(cxC-maxR_face, cyC); ctx.lineTo(cxC+maxR_face, cyC); ctx.setLineDash([5,5]); ctx.strokeStyle="#ccc"; ctx.stroke(); ctx.setLineDash([]);
-            var rad = D/2; var hRad = holeD/2;
+            const rad = D/2; const hRad = holeD/2;
             
-            // Partie Droite (Contour Fermé)
+            // Partie Droite
             ctx.beginPath();
-            var z_edge = (rad*rad)/(2*R);
-            // 1. Haut-Ext
-            ctx.moveTo(cxC + rad*scCoupe, cyC - z_edge*scCoupe); // removed *50
-            // 2. Courbe vers Haut-Int
+            const z_edge = (rad*rad)/(2*R);
+            ctx.moveTo(cxC + rad*scCoupe, cyC - z_edge*scCoupe);
             for(let x=rad; x>=hRad; x-=1) {
                 let z = (x*x)/(2*R);
-                ctx.lineTo(cxC + x*scCoupe, cyC - z*scCoupe); // removed *50
+                ctx.lineTo(cxC + x*scCoupe, cyC - z*scCoupe);
             }
-            // 3. Bas-Int
             ctx.lineTo(cxC + hRad*scCoupe, cyC + thick*scCoupe);
-            // 4. Bas-Ext
             ctx.lineTo(cxC + rad*scCoupe, cyC + thick*scCoupe);
-            // 5. Fermeture
             ctx.closePath();
             ctx.fillStyle="#ddd"; ctx.fill(); ctx.strokeStyle="#000"; ctx.stroke();
 
@@ -640,26 +612,23 @@
 
             // Chanfreins
             ctx.fillStyle="#999";
-            // Droit
             ctx.beginPath(); ctx.moveTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe); ctx.lineTo(cxC+rad*scCoupe-5, cyC - z_edge*scCoupe + 5); ctx.lineTo(cxC+rad*scCoupe, cyC - z_edge*scCoupe + 10); ctx.fill();
-            // Gauche
             ctx.beginPath(); ctx.moveTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe); ctx.lineTo(cxC-rad*scCoupe+5, cyC - z_edge*scCoupe + 5); ctx.lineTo(cxC-rad*scCoupe, cyC - z_edge*scCoupe + 10); ctx.fill();
             
             ctx.fillStyle="#000"; ctx.fillText("PROFIL (Z x1)", cxC, H - 10);
 
         } else { window.updateAn3D(); }
 
-        var c = (R>0)?1/R:0;
+        const c = (R>0)?1/R:0;
         zones.forEach((S,i)=>{
-            var term = 1-(K+1)*Math.pow(c*S,2);
-            var err = ""; if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU"; else if(term<0) err="ERR GEOM";
+            const term = 1-(K+1)*Math.pow(c*S,2);
+            let err = ""; if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU"; else if(term<0) err="ERR GEOM";
             if(err) tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`;
             else {
-                var z = (c*S*S)/(1+Math.sqrt(term));
-                var A = c*z*(K+1); 
-                var Y = -K*z*(3+A*(A-3)); 
-                // CORRECTION: Facteur 2 retiré pour conformité Cornejo/Exactitude Evolute
-                var X = (-S*c*K*z*(2+A*(A-3)))/(1-A);
+                const z = (c*S*S)/(1+Math.sqrt(term));
+                const A = c*z*(K+1); 
+                const Y = -K*z*(3+A*(A-3)); 
+                const X = (-S*c*K*z*(2+A*(A-3)))/(1-A);
                 tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
             }
         });
@@ -667,8 +636,8 @@
     window.runAnalyzer = runAnalyzer;
 
     function updateAnalyzerK() {
-        var type = document.getElementById('an-type').value;
-        var kInput = document.getElementById('an-kfactor');
+        const type = document.getElementById('an-type').value;
+        const kInput = document.getElementById('an-kfactor');
         if(type === 'custom') { kInput.disabled = false; kInput.style.backgroundColor = 'rgba(255,255,255,0.15)'; } 
         else { kInput.disabled = true; kInput.style.backgroundColor = 'rgba(255,255,255,0.05)';
             if(type === 'parabola') kInput.value = -1; else if(type === 'sphere') kInput.value = 0;
@@ -678,17 +647,15 @@
     
     function setCalcMode(mode) {
         calculationMode = mode;
-        var f1=document.getElementById('arch-F1'); 
-        var sep=document.getElementById('arch-Sep');
-        var fSys=document.getElementById('arch-F');
+        const f1=document.getElementById('arch-F1'); 
+        const sep=document.getElementById('arch-Sep');
+        const fSys=document.getElementById('arch-F');
 
-        // Reset classes
         document.getElementById('mode-f1').classList.remove('active');
         document.getElementById('mode-sep').classList.remove('active');
         document.getElementById('mode-auto').classList.remove('active');
         document.getElementById('mode-free').classList.remove('active');
 
-        // Logic
         if(mode==='f1'){
             f1.disabled=false; sep.disabled=true; fSys.disabled=false;
             document.getElementById('lock-f1').style.display='inline';
@@ -704,7 +671,6 @@
             fSys.style.opacity = '1';
         }
         else if(mode==='auto'){
-            // Mode Auto: F1 et Sep sont calculés, F est input
             f1.disabled=true; sep.disabled=true; fSys.disabled=false;
             document.getElementById('lock-f1').style.display='none';
             document.getElementById('lock-sep').style.display='none';
@@ -713,7 +679,6 @@
         }
         else if(mode==='free'){
             f1.disabled=false; sep.disabled=false; 
-            // Focale Système devient une résultante
             fSys.disabled=true; 
             fSys.style.opacity = '0.5';
             document.getElementById('lock-f1').style.display='none';
@@ -724,7 +689,7 @@
     window.setCalcMode = setCalcMode;
 
     function updateArchUI() {
-        var type = document.getElementById('arch-type').value;
+        const type = document.getElementById('arch-type').value;
         if(type === 'newton') { 
             document.getElementById('calc-mode-container').style.opacity='0.3'; 
             document.getElementById('calc-mode-container').style.pointerEvents='none'; 
@@ -741,64 +706,38 @@
     window.updateArchUI = updateArchUI;
 
     function runArchitect() {
-        var type = document.getElementById('arch-type').value;
-        var D = parseFloat(document.getElementById('arch-D').value) || 0;
-        var B = parseFloat(document.getElementById('arch-B').value) || 0;
+        const type = document.getElementById('arch-type').value;
+        const D = parseFloat(document.getElementById('arch-D').value) || 0;
+        const B = parseFloat(document.getElementById('arch-B').value) || 0;
         
-        var F=0, F1=0, Sep=0, M=0;
-        var VizSep = 0; 
+        let F=0, F1=0, Sep=0, M=0;
+        let VizSep = 0; 
         
-        // Variables pour les résultats, initialisées ici pour éviter les problèmes de portée (scoping)
-        var R1=0, K1=0, R2=0, K2=0, s1="-", s2="-", D2_val=0, hD=0;
+        let R1=0, K1=0, R2=0, K2=0, s1="-", s2="-", D2_val=0, hD=0;
 
         if(type === 'newton') {
-            // Newton: On force F = F1. On lit F1 car le mode par défaut est 'FIXER F1'.
-            // Si on est en mode 'Focale Système', on force F1 = F.
-            // Simplification : Dans Newton, F = F1.
-            var inputF = parseFloat(document.getElementById('arch-F').value) || 0;
-            var inputF1 = parseFloat(document.getElementById('arch-F1').value) || 0;
+            const inputF = parseFloat(document.getElementById('arch-F').value) || 0;
+            const inputF1 = parseFloat(document.getElementById('arch-F1').value) || 0;
             
-            // Détection de changement pour Newton : Prioriser l'utilisateur s'il change F ou F1
-            // Si c'est le premier run ou switch de type, on garde F.
             if(currentData.type === 'NEWTON') {
-                if (inputF !== currentData.F) {
-                    F = inputF;
-                } else if (inputF1 !== currentData.F1) {
-                    F = inputF1;
-                } else {
-                    F = inputF;
-                }
-            } else {
-                F = inputF;
-            }
+                if (inputF !== currentData.F) { F = inputF; } 
+                else if (inputF1 !== currentData.F1) { F = inputF1; } 
+                else { F = inputF; }
+            } else { F = inputF; }
             
             F1 = F;
-            
-            // Update UI fields
             document.getElementById('arch-F').value = F.toFixed(2);
-            document.getElementById('arch-F1').value = F1.toFixed(2); // Sync
+            document.getElementById('arch-F1').value = F1.toFixed(2);
 
             Sep = 0; M = 1; 
             
-            // Calculer D2 (Petit Axe) pour avoir le champ pleine lumière minimal au foyer
-            // Distance du primaire au foyer = F
-            // Distance du primaire au secondaire = F - (D/2 + B)
-            // Distance du foyer au secondaire = D/2 + B
-            // Thales: d / D = (D/2 + B) / F
-            if (F > 0) {
-                // Petit axe géométrique minimum pour illuminer le centre
-                // Pour du champ pleine lumière, il faudrait ajouter (Champ * (F-Dist)/F).
-                // Ici on fait le minimum géométrique (obstruction minimale).
-                D2_val = (D * ((D/2) + B)) / F;
-            } else {
-                D2_val = 0;
-            }
-            if(D2_val<=0) D2_val=10; // Fallback
+            if (F > 0) { D2_val = (D * ((D/2) + B)) / F; } 
+            else { D2_val = 0; }
+            if(D2_val<=0) D2_val=10; 
 
             VizSep = Math.max(0, F - (D/2 + B));
         } 
         else {
-            // Logique de calcul selon le mode
             if(calculationMode === 'free') {
                 F1 = parseFloat(document.getElementById('arch-F1').value)||0;
                 Sep = parseFloat(document.getElementById('arch-Sep').value)||0;
@@ -809,11 +748,8 @@
                     return;
                 }
                 
-                if(F1 - Sep !== 0) {
-                    M = (Sep + B) / (F1 - Sep);
-                } else {
-                    M = 0; 
-                }
+                if(F1 - Sep !== 0) { M = (Sep + B) / (F1 - Sep); } 
+                else { M = 0;  }
                 F = F1 * M;
                 document.getElementById('arch-F').value = F.toFixed(2);
             }
@@ -855,33 +791,28 @@
             D2_val = (D*(F1-Sep))/F1; 
             hD = D2_val*(B/(Sep+B));
 
-            if(type==='cassegrain') { K1=-1; s1="Parabole"; var t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
-            else if(type==='dk') { K2=0; s2="Sphère"; var p=Sep+B; var t=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t*(p/F1); s1="Ellipse Prolate"; }
+            if(type==='cassegrain') { K1=-1; s1="Parabole"; const t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
+            else if(type==='dk') { K2=0; s2="Sphère"; const p=Sep+B; const t=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t*(p/F1); s1="Ellipse Prolate"; }
             else if(type==='rc' || type==='nasmyth') { 
-                // CORRECTION RC: Formules utilisant (Sep+B) au lieu de B pour la distance Secondaire-Foyer
-                // K1 = -1 - (2 * (Distance M2-F)) / (M^3 * d)
                 K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); 
-                // K2 corrigé aussi avec le bon terme de Back Focus effectif
                 K2=-Math.pow((M+1)/(M-1),2)-(4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep); 
                 s1="Hyperbole"; s2="Hyperbole"; 
             }
             else { K1=0; K2=0; s1="Sphère"; s2="Sphère"; }
         }
 
-        var baffle_margin = 4; // mm
-        var D_obs = 0;
+        const baffle_margin = 4;
+        let D_obs = 0;
         
         if(type === 'newton') {
              D_obs = Math.abs(D2_val) + baffle_margin; 
         } else {
-             // For Cassegrain/RC, obstruction depends on baffle size at M2
-             // Re-calculate the baffle base radius logic used in drawing
-             var r2_opt = Math.abs(D2_val) / 2;
-             var b2_baseR = r2_opt + 2; // +2mm margin on radius = +4mm on diameter
+             const r2_opt = Math.abs(D2_val) / 2;
+             const b2_baseR = r2_opt + 2;
              D_obs = b2_baseR * 2; 
         }
 
-        var Deff = Math.sqrt(Math.max(0, Math.pow(D, 2) - Math.pow(D_obs, 2))).toFixed(1);
+        const Deff = Math.sqrt(Math.max(0, Math.pow(D, 2) - Math.pow(D_obs, 2))).toFixed(1);
 
         currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff };
 
@@ -889,7 +820,7 @@
         document.getElementById('res-mag').innerText = isFinite(M) ? M.toFixed(2) + "x" : "Err";
         document.getElementById('res-obst').innerText = (D>0) ? (D_obs/D*100).toFixed(1) + "%" : "-";
         document.getElementById('res-d-eff').innerText = Deff + " mm";
-        var resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-";
+        const resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-";
         document.getElementById('res-resol').innerText = resArc;
 
         document.getElementById('res-r1').innerText = R1.toFixed(2);
@@ -897,8 +828,6 @@
         document.getElementById('res-k1').innerText = K1.toFixed(4);
         document.getElementById('res-shape1').innerText = s1;
         document.getElementById('res-hole').innerText = hD>0 ? hD.toFixed(1)+" mm" : "N/A";
-        
-        // --- Added: Display Shape2 ---
         document.getElementById('res-shape2').innerText = s2;
 
         if(type !== 'newton') {
@@ -926,22 +855,22 @@
     window.resetZoom = resetZoom;
     
     function downloadPDF() {
-        var { jsPDF } = window.jspdf;
-        var doc = new jsPDF();
-        var pName = document.getElementById('project-name').value || "Projet Optique";
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const pName = document.getElementById('project-name').value || "Projet Optique";
         doc.setFontSize(22); doc.text("J.B. ANDRIVET // RAPPORT", 20, 20);
         doc.setFontSize(16); doc.setTextColor(0, 86, 179); doc.text(pName, 20, 30);
         doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text("Date: "+new Date().toLocaleDateString(), 150, 20);
 
-        var cvs = document.createElement('canvas'); cvs.width=2000; cvs.height=1000;
-        var ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.fillRect(0,0,2000,1000);
+        const cvs = document.createElement('canvas'); cvs.width=2000; cvs.height=1000;
+        const ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.fillRect(0,0,2000,1000);
         
-        var oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0};
+        const oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0};
         drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'print');
         viewState = oldState;
 
         doc.addImage(cvs.toDataURL("image/png"), 'PNG', 10, 40, 190, 95);
-        var y=150; doc.line(10,y,200,y); doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.text("DONNÉES", 10, y-5);
+        const y=150; doc.line(10,y,200,y); doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.text("DONNÉES", 10, y-5);
         doc.setFontSize(10); doc.setFont("helvetica","normal");
         doc.text(`Diamètre: ${currentData.D} mm`, 15, y+10);
         doc.text(`Diamètre Pur: ${currentData.Deff} mm`, 15, y+20);
@@ -956,10 +885,10 @@
     window.downloadPDF = downloadPDF;
 
     function downloadCoursePDF() {
-        var { jsPDF } = window.jspdf;
-        var doc = new jsPDF();
-        var addWrappedText = (text, x, y, maxWidth, lineHeight) => {
-            var lines = doc.splitTextToSize(text, maxWidth);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const addWrappedText = (text, x, y, maxWidth, lineHeight) => {
+            const lines = doc.splitTextToSize(text, maxWidth);
             doc.text(lines, x, y);
             return lines.length * lineHeight;
         };
@@ -970,7 +899,7 @@
         doc.setFontSize(12); doc.setTextColor(100, 100, 100);
         doc.text("Auteur : Jean Baptiste Andrivet", 20, 45);
         doc.setFontSize(11); doc.setTextColor(0,0,0);
-        var y = 60;
+        let y = 60;
         y += addWrappedText("1. LE TEST DE LA CAUSTIQUE (PLATZECK-GAVIOLA)\n\nLes miroirs paraboliques ou hyperboliques ne focalisent pas la lumière en un point unique lorsqu'on les teste depuis leur centre de courbure (contrairement à une sphère). Chaque zone du miroir a un point de convergence différent (la caustique). Ce logiciel calcule les coordonnées (X, Y) pour le test de Foucault.", 20, y, 170, 7);
         y += 10;
         doc.setFont("helvetica", "bold"); doc.text("2. FORMULES (Cornejo & Malacara)", 20, y); y+=10;
@@ -986,20 +915,19 @@
     }
     window.downloadCoursePDF = downloadCoursePDF;
 
-    // Explicitly assigned to window to avoid scope issues
     function autoCalcZones() {
-        var D = parseFloat(document.getElementById('an-diameter').value)||0; var holeD = parseFloat(document.getElementById('an-hole').value)||0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
-        var R = (anMode === 'F') ? R_val * 2 : R_val;
-        var forcedN = parseInt(document.getElementById('an-nb-zones').value);
+        const D = parseFloat(document.getElementById('an-diameter').value)||0; const holeD = parseFloat(document.getElementById('an-hole').value)||0;
+        const R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
+        const R = (anMode === 'F') ? R_val * 2 : R_val;
+        const forcedN = parseInt(document.getElementById('an-nb-zones').value);
         if(!D || !R) return;
-        var width_mm = 4.53 * Math.pow(((R/2)/D) * Math.pow(R/10, 2), 1/3) * 0.1;
-        var radiusMirror = D / 2; var numZones = forcedN > 0 ? forcedN : Math.ceil(radiusMirror / width_mm);
+        const width_mm = 4.53 * Math.pow(((R/2)/D) * Math.pow(R/10, 2), 1/3) * 0.1;
+        const radiusMirror = D / 2; const numZones = forcedN > 0 ? forcedN : Math.ceil(radiusMirror / width_mm);
         if(forcedN <=0) document.getElementById('an-nb-zones').value = numZones; 
-        var actualWidth = radiusMirror / numZones;
-        var zoneCenters = [];
+        const actualWidth = radiusMirror / numZones;
+        const zoneCenters = [];
         for(let i=0; i<numZones; i++) {
-            var center = (i * actualWidth) + (actualWidth/2);
+            const center = (i * actualWidth) + (actualWidth/2);
             if(center > (holeD/2 + 2)) zoneCenters.push(center.toFixed(1));
         }
         document.getElementById('an-zones').value = zoneCenters.join(', ');
@@ -1010,111 +938,91 @@
 
     // --- 3D ENGINE ---
     function init3D(type) {
-        var container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
-        var w = container.offsetWidth; var h = container.offsetHeight;
-        var sc = new THREE.Scene(); sc.background = new THREE.Color(0xffffff); 
-        var cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
+        const container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
+        const w = container.offsetWidth; const h = container.offsetHeight;
+        const sc = new THREE.Scene(); sc.background = new THREE.Color(0xffffff); 
+        const cam = new THREE.PerspectiveCamera(45, w/h, 1, 10000); 
         if(type==='an') cam.position.set(0, 300, 500); else cam.position.set(500, 500, 1000);
-        var ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(w, h);
+        const ren = new THREE.WebGLRenderer({ antialias: true }); ren.setSize(w, h);
         ren.setPixelRatio(window.devicePixelRatio); // HD
         container.innerHTML = ""; container.appendChild(ren.domElement);
-        var ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
+        const ctr = new THREE.OrbitControls(cam, ren.domElement); ctr.enableDamping=true; 
         
-        sc.add(new THREE.AmbientLight(0xffffff, 0.6));
-        var dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(500,1000,500); sc.add(dl);
-        var pl = new THREE.PointLight(0xccccff, 0.5); pl.position.set(-200, 200, 200); sc.add(pl);
+        sc.add(new THREE.AmbientLight(0xffffff, 0.7)); // Enhanced ambient
+        const dl = new THREE.DirectionalLight(0xffffff, 1.2); dl.position.set(500,1000,500); sc.add(dl);
+        const pl = new THREE.PointLight(0xddddff, 0.8); pl.position.set(-200, 200, 200); sc.add(pl); // Brighter reflection light
 
         scenes[type] = sc; cameras[type] = cam; renderers[type] = ren; controlsList[type] = ctr;
-        var animate = function() { requestAnimationFrame(animate); ctr.update(); ren.render(sc, cam); };
+        const animate = function() { requestAnimationFrame(animate); ctr.update(); ren.render(sc, cam); };
         animate();
     }
     window.init3D = init3D;
 
     function updateAn3D() {
-        if(!scenes.an) window.init3D('an'); var sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
+        if(!scenes.an) window.init3D('an'); const sc = scenes.an; if(meshes.an) sc.remove(meshes.an);
         
-        var D = parseFloat(document.getElementById('an-diameter').value) || 0; 
-        var thick = parseFloat(document.getElementById('an-thickness').value) || 0; 
-        var holeD = parseFloat(document.getElementById('an-hole').value) || 0;
-        var R_val = parseFloat(document.getElementById('an-curvature-val').value) || 0; 
+        const D = parseFloat(document.getElementById('an-diameter').value) || 0; 
+        const thick = parseFloat(document.getElementById('an-thickness').value) || 0; 
+        const holeD = parseFloat(document.getElementById('an-hole').value) || 0;
+        const R_val = parseFloat(document.getElementById('an-curvature-val').value) || 0; 
         
-        if (D <= 0 || R_val === 0) return; // Stop if invalid dimensions
+        if (D <= 0 || R_val === 0) return;
 
-        var R = (anMode === 'F') ? R_val * 2 : R_val;
-        
-        var points = []; var segments = 40; var radius = D/2; var holeR = holeD/2;
-        
-        // Sagitta at edge
-        var sagEdge = (radius*radius)/(2*R);
+        const R = (anMode === 'F') ? R_val * 2 : R_val;
+        const points = []; const segments = 40; const radius = D/2; const holeR = holeD/2;
+        const sagEdge = (radius*radius)/(2*R);
 
-        // Back is flat at y=0
         points.push(new THREE.Vector2(holeR, 0)); 
         points.push(new THREE.Vector2(radius, 0)); 
         points.push(new THREE.Vector2(radius, thick));
         
-        // Front surface (Concave)
         for(let i=0; i<=segments; i++) { 
             let r = radius - (i/segments)*(radius-holeR); 
-            // Sagitta at r
             let sagLocal = (r*r)/(2*R);
-            // y position relative to edge
             let y = thick - (sagEdge - sagLocal);
             points.push(new THREE.Vector2(r, y)); 
         }
-        points.push(new THREE.Vector2(holeR, 0)); // Close loop
+        points.push(new THREE.Vector2(holeR, 0));
 
-        var geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
-        var mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.9, roughness:0.1, clearcoat: 1.0, clearcoatRoughness: 0.1, side:THREE.DoubleSide });
+        const geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
+        // Improved Glass/Metal Material
+        const mat = new THREE.MeshStandardMaterial({ color: 0xaabbcc, metalness:0.95, roughness:0.05, clearcoat: 1.0, clearcoatRoughness: 0.05, side:THREE.DoubleSide });
         meshes.an = new THREE.Mesh(geo, mat); sc.add(meshes.an);
     }
     window.updateAn3D = updateAn3D;
 
     function updateArch3D() {
-        if(!scenes.arch) window.init3D('arch'); var sc = scenes.arch;
+        if(!scenes.arch) window.init3D('arch'); const sc = scenes.arch;
         if(meshes.arch_m1) sc.remove(meshes.arch_m1); if(meshes.arch_m2) sc.remove(meshes.arch_m2); if(meshes.arch_m3) sc.remove(meshes.arch_m3); if(meshes.arch_m3_support) sc.remove(meshes.arch_m3_support);
         if(meshes.arch_rays) sc.remove(meshes.arch_rays); if(meshes.arch_struct) sc.remove(meshes.arch_struct);
         if(meshes.arch_cam) sc.remove(meshes.arch_cam);
         if(meshes.arch_foc) sc.remove(meshes.arch_foc); 
-        if(meshes.arch_baffles) sc.remove(meshes.arch_baffles); // Cleanup baffles
+        if(meshes.arch_baffles) sc.remove(meshes.arch_baffles);
 
         if(!currentData.type) return;
 
-        // Visual Clamping
-        var visualSep = currentData.VizSep || currentData.Sep;
+        let visualSep = currentData.VizSep || currentData.Sep;
         if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
 
-        // --- CALCULATION OF PHYSICAL MARGINS ---
-        // Minimum optical hole
-        var opticalHoleR = currentData.Hole / 2;
+        const opticalHoleR = currentData.Hole / 2;
+        let b1_len_val = (currentData.Sep * 0.4); 
         
-        // Baffle 1 (Tube Central Primaire)
-        // Rayon doit être calculé pour laisser passer le cône M2 -> Foyer
-        // Rayon du cône au sommet du baffle (Z = lenB1)
-        var b1_len_val = (currentData.Sep * 0.4); 
-        
-        // Shorten for Nasmyth to clear M3
-        if (currentData.type === 'NASMYTH') {
-            b1_len_val = (currentData.Sep * 0.25);
-        }
+        if (currentData.type === 'NASMYTH') { b1_len_val = (currentData.Sep * 0.25); }
 
-        var dist_focus_to_tip = currentData.B + b1_len_val;
-        var dist_focus_to_m2 = currentData.B + currentData.Sep;
-        // Rayon optique nécessaire au sommet du baffle
-        var r_beam_at_tip = (currentData.D2/2) * (dist_focus_to_tip / dist_focus_to_m2);
+        const dist_focus_to_tip = currentData.B + b1_len_val;
+        const dist_focus_to_m2 = currentData.B + currentData.Sep;
+        const r_beam_at_tip = (currentData.D2/2) * (dist_focus_to_tip / dist_focus_to_m2);
         
-        var b1_innerR = r_beam_at_tip + 2; // +2mm marge
-        // S'assurer qu'on ne descend pas sous le trou optique min
+        let b1_innerR = r_beam_at_tip + 2; 
         if(b1_innerR < opticalHoleR) b1_innerR = opticalHoleR + 1;
         
-        var b1_thick = 2;
-        var b1_outerR = b1_innerR + b1_thick;
-
-        // Physical hole = baffle outer + 2mm margin
-        var physicalHoleR = b1_outerR + 2; 
+        const b1_thick = 2;
+        const b1_outerR = b1_innerR + b1_thick;
+        const physicalHoleR = b1_outerR + 2; 
 
         // MIROIR PRIMAIRE
-        var R1 = currentData.D/2; var H1 = physicalHoleR; var thick1 = currentData.D/6;
-        var pts1 = [];
+        const R1 = currentData.D/2; const H1 = physicalHoleR; const thick1 = currentData.D/6;
+        const pts1 = [];
         pts1.push(new THREE.Vector2(H1, 0)); pts1.push(new THREE.Vector2(R1, 0)); pts1.push(new THREE.Vector2(R1, thick1)); 
         for(let i=0; i<=40; i++){ 
             let r = R1 - (i/40)*(R1-H1); 
@@ -1122,262 +1030,177 @@
             pts1.push(new THREE.Vector2(r, thick1 - ( (R1*R1)/(4*currentData.F1) - sag )));
         }
         pts1.push(new THREE.Vector2(H1, 0)); 
-        var m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1, side:THREE.DoubleSide }));
+        const m1Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.95, roughness:0.05, side:THREE.DoubleSide });
+        const m1 = new THREE.Mesh(new THREE.LatheGeometry(pts1, 64), m1Mat);
         m1.rotation.x = Math.PI/2; sc.add(m1); meshes.arch_m1 = m1;
 
         if(currentData.type !== 'NEWTON') {
-            // ... (CODE EXISTANT POUR CASSEGRAIN/RC/DK) ...
-            var R2 = currentData.D2/2; var Sep = visualSep; var thick2 = R2/3;
-            var pts2 = [];
+            const R2 = currentData.D2/2; const Sep = visualSep; const thick2 = R2/3;
+            const pts2 = [];
             pts2.push(new THREE.Vector2(0, 0)); pts2.push(new THREE.Vector2(R2, 0)); pts2.push(new THREE.Vector2(R2, thick2)); 
             for(let i=0; i<=20; i++){ 
                 let r = R2 - (i/20)*R2; let sag = (r*r)/(1000); 
                 pts2.push(new THREE.Vector2(r, thick2 + sag)); 
             }
-            var m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1, side:THREE.DoubleSide }));
+            const m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), m1Mat);
             m2.rotation.x = -Math.PI/2; m2.position.z = Sep; sc.add(m2); meshes.arch_m2 = m2;
 
-            // BAFFLES (Pare-lumière)
-            var baffleGroup = new THREE.Group();
-            var matBaffle = new THREE.MeshStandardMaterial({color: 0x151515, side: THREE.DoubleSide, roughness: 1.0, metalness: 0.1});
+            const baffleGroup = new THREE.Group();
+            const matBaffle = new THREE.MeshStandardMaterial({color: 0x151515, side: THREE.DoubleSide, roughness: 1.0, metalness: 0.1});
             
-            // 1. Baffle Primaire (Tube central)
-            var lenB1 = b1_len_val; 
-            var geoB1 = new THREE.CylinderGeometry(b1_outerR, b1_outerR, lenB1, 32, 1, true);
-            var meshB1 = new THREE.Mesh(geoB1, matBaffle);
-            meshB1.rotation.x = Math.PI/2;
-            meshB1.position.z = lenB1/2; // Part de Z=0 vers Z+
+            const lenB1 = b1_len_val; 
+            const geoB1 = new THREE.CylinderGeometry(b1_outerR, b1_outerR, lenB1, 32, 1, true);
+            const meshB1 = new THREE.Mesh(geoB1, matBaffle);
+            meshB1.rotation.x = Math.PI/2; meshB1.position.z = lenB1/2; 
             baffleGroup.add(meshB1);
 
-            // 2. Baffle Secondaire (Cône autour du secondaire)
-            // Optical Radius at secondary
-            var r2_opt = currentData.D2 / 2;
-            var b2_baseR = r2_opt + 2; // Petite marge à la base
-            var lenB2 = Sep * 0.15; // Plus court (15%)
-            // Evasement: Pointe (vers M1) est PLUS LARGE que la base.
-            // On veut un cône qui s'ouvre vers le primaire.
-            // TopRadius = Base (M2). BottomRadius = Pointe (M1).
-            // Le rayon doit augmenter pour laisser passer le cône de lumière M1->M2.
-            var b2_tipR = b2_baseR * 1.25; 
+            const r2_opt = currentData.D2 / 2;
+            const b2_baseR = r2_opt + 2; 
+            const lenB2 = Sep * 0.15; 
+            const b2_tipR = b2_baseR * 1.25; 
             
-            var geoB2 = new THREE.CylinderGeometry(b2_baseR, b2_tipR, lenB2, 32, 1, true); 
-            var meshB2 = new THREE.Mesh(geoB2, matBaffle);
-            meshB2.rotation.x = Math.PI/2;
-            meshB2.position.z = Sep - lenB2/2; // Part de Sep vers Z-
+            const geoB2 = new THREE.CylinderGeometry(b2_baseR, b2_tipR, lenB2, 32, 1, true); 
+            const meshB2 = new THREE.Mesh(geoB2, matBaffle);
+            meshB2.rotation.x = Math.PI/2; meshB2.position.z = Sep - lenB2/2; 
             baffleGroup.add(meshB2);
 
             sc.add(baffleGroup); meshes.arch_baffles = baffleGroup;
 
-            // --- NASMYTH SPECIFICS ---
-            var nasmyth = (currentData.type === 'NASMYTH');
-            // M3 Position: 25% of Sep (Proportional height) - REMOVED HARD CAP
-            var m3_z_pos = currentData.Sep * 0.25; 
+            const nasmyth = (currentData.type === 'NASMYTH');
+            const m3_z_pos = currentData.Sep * 0.25; 
 
             if (nasmyth) {
-                // --- M3 SUPPORT ---
-                // Support needs to go from behind M1 through the hole to hold M3.
-                // Diameter: Fits in physical hole with clearance.
-                var supportRad = physicalHoleR - 2; 
-                if (supportRad < 5) supportRad = 5; // Minimum size
+                let supportRad = physicalHoleR - 2; 
+                if (supportRad < 5) supportRad = 5; 
 
-                // Length: From behind M1 (let's say Z = -50) to M3 (Z = m3_z_pos)
-                // Support goes up to slightly before the mirror center
-                var supportStart = -50; 
-                var supportEnd = m3_z_pos - 2; 
-                var supportLen = supportEnd - supportStart;
+                const supportStart = -50; 
+                const supportEnd = m3_z_pos - 2; 
+                const supportLen = supportEnd - supportStart;
                 
-                var suppGeo = new THREE.CylinderGeometry(supportRad, supportRad, supportLen, 32);
-                var suppMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
-                var supp = new THREE.Mesh(suppGeo, suppMat);
-                
-                supp.rotation.x = Math.PI/2; 
-                supp.position.z = (supportStart + supportEnd) / 2;
-                
+                const suppGeo = new THREE.CylinderGeometry(supportRad, supportRad, supportLen, 32);
+                const suppMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+                const supp = new THREE.Mesh(suppGeo, suppMat);
+                supp.rotation.x = Math.PI/2; supp.position.z = (supportStart + supportEnd) / 2;
                 sc.add(supp); meshes.arch_m3_support = supp;
 
-                // --- M3 MIRROR ---
-                // Draw M3 (Mirror Plan at 45 deg) - CORRECTED ORIENTATION
-                // Make it look like a mirror slice (thin Cylinder) - Easier orientation
-                var m3_minor_axis = currentData.D2 * 0.8;
-                // No need to calculate major axis manually for geometry args, we scale.
-                
-                // Radius, Radius, Thickness, Segments
-                var m3Geo = new THREE.CylinderGeometry(m3_minor_axis/2, m3_minor_axis/2, 2, 32); 
-                var m3Mat = new THREE.MeshStandardMaterial({ color: 0x88ccff, metalness: 0.9, roughness: 0.1 });
-                var m3 = new THREE.Mesh(m3Geo, m3Mat);
+                const m3_minor_axis = currentData.D2 * 0.8;
+                const m3Geo = new THREE.CylinderGeometry(m3_minor_axis/2, m3_minor_axis/2, 2, 32); 
+                const m3Mat = new THREE.MeshStandardMaterial({ color: 0x88ccff, metalness: 0.95, roughness: 0.05 });
+                const m3 = new THREE.Mesh(m3Geo, m3Mat);
                 m3.position.z = m3_z_pos;
-                
-                // Scale Z to make it elliptical (1.414 = 1/cos(45))
                 m3.scale.z = 1.414; 
-                
-                // Orientation: Reflect light from +Z (M2) to +X (Side).
-                // Normal (1, 0, 1).
-                // Cylinder Axis Y. Face X-Z.
-                // Rot Z -90 -> Axis X. Face Y-Z. Major Axis Z.
-                // Rot Y -45 -> Tilts the plane.
-                m3.rotation.z = -Math.PI/2; 
-                m3.rotation.y = -Math.PI/4;
-
+                m3.rotation.z = -Math.PI/2; m3.rotation.y = -Math.PI/4;
                 sc.add(m3); meshes.arch_m3 = m3;
             }
 
-            // RAYONS
-            var numRays = 16; var ptsAll = [];
-            var Z_start = Sep + 500; var Z_m1 = thick1; var Z_m2 = Sep - thick2; var Z_foc = -currentData.B;
+            const numRays = 16; const ptsAll = [];
+            const Z_start = Sep + 500; const Z_m1 = thick1; const Z_m2 = Sep - thick2; const Z_foc = -currentData.B;
             
             for(let i=0; i<numRays; i++) {
-                var angle = (i/numRays) * Math.PI * 2;
-                var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
-                var x2 = Math.cos(angle) * (currentData.D2/2); var y2 = Math.sin(angle) * (currentData.D2/2);
+                const angle = (i/numRays) * Math.PI * 2;
+                const x = Math.cos(angle) * R1; const y = Math.sin(angle) * R1;
+                const x2 = Math.cos(angle) * (currentData.D2/2); const y2 = Math.sin(angle) * (currentData.D2/2);
                 
-                // M1 -> M2
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(x2, y2, Z_m2));
                 
                 if(nasmyth) {
-                    // M2 -> M3 -> Side Focus (+X)
-                    // Intercept at M3 (Z = m3_z_pos)
-                    // Simplified ray tracing: Linear interpolation to virtual focus
-                    var dist_total = currentData.Sep + currentData.B; // M2 to Focus
-                    var dist_to_m3 = currentData.Sep - m3_z_pos; // M2 to M3
-                    var fraction = dist_to_m3 / dist_total;
+                    const dist_total = currentData.Sep + currentData.B; 
+                    const dist_to_m3 = currentData.Sep - m3_z_pos; 
+                    const fraction = dist_to_m3 / dist_total;
                     
-                    // Ray coords at M3 (approximated, assuming convergence to 0,0)
-                    var x3 = x2 * (1 - fraction);
-                    var y3 = y2 * (1 - fraction);
-                    
+                    const x3 = x2 * (1 - fraction); const y3 = y2 * (1 - fraction);
                     ptsAll.push(new THREE.Vector3(x2, y2, Z_m2)); ptsAll.push(new THREE.Vector3(x3, y3, m3_z_pos));
                     
-                    // Reflect sideways (+X)
-                    var side_focus_X = currentData.B + m3_z_pos; 
-                    
-                    // 3D Cone effect: Rays converge to (side_focus_X, 0, m3_z_pos).
-                    // The "flat" look was because we didn't converge Y and Z coordinates properly
-                    // After reflection, the optical axis is +X.
-                    // The transverse coordinates are Y and Z (relative to axis Z=m3_z_pos).
-                    // So rays must go to Y=0 and Z=m3_z_pos as X approaches focus.
-                    
+                    const side_focus_X = currentData.B + m3_z_pos; 
                     ptsAll.push(new THREE.Vector3(x3, y3, m3_z_pos)); 
-                    ptsAll.push(new THREE.Vector3(side_focus_X, 0, m3_z_pos)); // Convergence point
+                    ptsAll.push(new THREE.Vector3(side_focus_X, 0, m3_z_pos)); 
                     
                 } else {
-                    // Standard M2 -> Focus
                     ptsAll.push(new THREE.Vector3(x2, y2, Z_m2)); ptsAll.push(new THREE.Vector3(0, 0, Z_foc));
                 }
             }
-            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
+            const lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
             sc.add(lRays); meshes.arch_rays = lRays;
             
-            // CAMERA
-            var camRad = 35; var camLen = 40; 
-            var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
-            var camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
-            var cam = new THREE.Mesh(camGeo, camMat);
+            const camRad = 35; const camLen = 40; 
+            const camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
+            const camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
+            const cam = new THREE.Mesh(camGeo, camMat);
             
             if(nasmyth) {
-                // Side Mounted (Along X)
-                cam.rotation.z = -Math.PI/2; // Point along X
-                var side_focus_X = currentData.B + m3_z_pos;
+                cam.rotation.z = -Math.PI/2; 
+                const side_focus_X = currentData.B + m3_z_pos;
                 cam.position.set(side_focus_X + camLen/2, 0, m3_z_pos);
             } else {
-                cam.rotation.x = Math.PI/2;
-                cam.position.z = Z_foc - (camLen/2);
+                cam.rotation.x = Math.PI/2; cam.position.z = Z_foc - (camLen/2);
             }
             sc.add(cam); meshes.arch_cam = cam;
 
-            // STRUCTURE
-            var trussGroup = new THREE.Group(); 
-            var boxR = (R1*1.15); // Tube radius + margin
-            var matTruss = new THREE.MeshStandardMaterial({color: 0x222222, roughness:0.9});
+            const trussGroup = new THREE.Group(); 
+            const boxR = (R1*1.15); 
+            const matTruss = new THREE.MeshStandardMaterial({color: 0x222222, roughness:0.9});
             for(let i=0; i<8; i++) {
-                var a1 = (Math.floor(i/2)*90)*(Math.PI/180); var a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
-                var v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0);
-                var v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, Sep);
-                var dist = v1.distanceTo(v2);
-                var tube = new THREE.Mesh(new THREE.CylinderGeometry(5,5,dist,8), matTruss);
+                const a1 = (Math.floor(i/2)*90)*(Math.PI/180); const a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
+                const v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0);
+                const v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, Sep);
+                const dist = v1.distanceTo(v2);
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(5,5,dist,8), matTruss);
                 tube.position.copy(new THREE.Vector3().addVectors(v1,v2).multiplyScalar(0.5));
                 tube.lookAt(v2); tube.rotateX(Math.PI/2); trussGroup.add(tube);
             }
-            var spiderMat = new THREE.MeshBasicMaterial({color: 0x111111});
-            var spiderV = new THREE.Mesh(new THREE.BoxGeometry(4, boxR*2, 20), spiderMat); spiderV.position.z = Sep + 20; trussGroup.add(spiderV);
-            var spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 4, 20), spiderMat); spiderH.position.z = Sep + 20; trussGroup.add(spiderH);
-            var cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshStandardMaterial({color:0x111111})); cell.rotation.x = Math.PI/2; cell.position.z = -10; trussGroup.add(cell);
-            var cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = Sep; trussGroup.add(cage);
+            const spiderMat = new THREE.MeshBasicMaterial({color: 0x111111});
+            const spiderV = new THREE.Mesh(new THREE.BoxGeometry(4, boxR*2, 20), spiderMat); spiderV.position.z = Sep + 20; trussGroup.add(spiderV);
+            const spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 4, 20), spiderMat); spiderH.position.z = Sep + 20; trussGroup.add(spiderH);
+            const cell = new THREE.Mesh(new THREE.CylinderGeometry(boxR,boxR,20,32), new THREE.MeshStandardMaterial({color:0x111111})); cell.rotation.x = Math.PI/2; cell.position.z = -10; trussGroup.add(cell);
+            const cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = Sep; trussGroup.add(cage);
             sc.add(trussGroup); meshes.arch_struct = trussGroup;
 
         } else {
-            // --- LOGIQUE SPÉCIFIQUE NEWTON 3D CORRIGÉE ---
-            var Sep = visualSep; // Utilisation de la séparation calculée
-            var D2 = currentData.D2; // Petit axe
+            const Sep = visualSep; 
+            const D2 = currentData.D2; 
             
-            // Miroir Secondaire (Plan 45°)
-            // Elliptique : Petit axe D2, Grand axe D2*sqrt(2)
-            // Cylinder génère un cercle. On scale un axe.
-            // Cylinder along Y. Cap in XZ.
-            // On veut étirer selon l'axe qui sera projeté : Z.
-            var m2Geo = new THREE.CylinderGeometry(D2/2, D2/2, 2, 32);
-            var m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.9, roughness:0.1 });
-            var m2 = new THREE.Mesh(m2Geo, m2Mat);
-            m2.position.z = Sep;
-            m2.rotation.x = -Math.PI/4; // Face au primaire, renvoi vers +Y
-            m2.scale.z = 1.414; // Elongation pour projection circulaire
+            const m2Geo = new THREE.CylinderGeometry(D2/2, D2/2, 2, 32);
+            const m2Mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.95, roughness:0.05 });
+            const m2 = new THREE.Mesh(m2Geo, m2Mat);
+            m2.position.z = Sep; m2.rotation.x = -Math.PI/4; m2.scale.z = 1.414; 
             sc.add(m2); meshes.arch_m2 = m2;
 
-            // Rayons Newton (Entrée -> M1 -> M2 (intercepte cône) -> Sortie Latérale)
-            var numRays = 16; var ptsAll = [];
-            var Z_start = Sep + 500; var Z_m1 = thick1; var Z_m2 = Sep; 
-            var tubeR = (R1*1.15); // Rayon approx du tube
-            var Y_exit = tubeR + currentData.B; // Sortie sur axe Y (Foyer)
+            const numRays = 16; const ptsAll = [];
+            const Z_start = Sep + 500; const Z_m1 = thick1; const Z_m2 = Sep; 
+            const tubeR = (R1*1.15); 
+            const Y_exit = tubeR + currentData.B; 
 
-            // Ratio de réduction du cône au niveau de M2
-            // Focale = F1. Distance M1->M2 = Sep.
-            // Ratio = (F1 - Sep) / F1;
-            // Pour être précis, Sep est la distance depuis le sommet du primaire (approx Z=0)
-            // Donc distance restante = F1 - Sep.
-            var ratio = Math.max(0, (currentData.F1 - Sep) / currentData.F1);
+            const ratio = Math.max(0, (currentData.F1 - Sep) / currentData.F1);
 
             for(let i=0; i<numRays; i++) {
-                var angle = (i/numRays) * Math.PI * 2;
-                var x = Math.cos(angle) * R1; var y = Math.sin(angle) * R1;
-                
-                // Coordonnées d'impact sur le plan transversal de M2 (avant reflection)
-                var xi = x * ratio;
-                var yi = y * ratio;
+                const angle = (i/numRays) * Math.PI * 2;
+                const x = Math.cos(angle) * R1; const y = Math.sin(angle) * R1;
+                const xi = x * ratio; const yi = y * ratio;
 
-                // Entrée -> M1
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
-                
-                // M1 -> M2 (Impact sur le bord du secondaire, pas le centre)
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(xi, yi, Z_m2));
-                
-                // M2 -> Sortie (+Y) (Convergence vers le foyer unique)
-                // Ici on simplifie visuellement : les rayons rebondissent et vont vers le foyer.
                 ptsAll.push(new THREE.Vector3(xi, yi, Z_m2)); ptsAll.push(new THREE.Vector3(0, Y_exit, Z_m2));
             }
-            var lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
+            const lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true }));
             sc.add(lRays); meshes.arch_rays = lRays;
 
-            // Tube Plein
-            var tubeGeo = new THREE.CylinderGeometry(tubeR, tubeR, Sep + 100, 32, 1, true);
-            var tubeMat = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity:0.3, transparent:true});
-            var tube = new THREE.Mesh(tubeGeo, tubeMat);
-            tube.rotation.x = Math.PI/2;
-            tube.position.z = Sep/2;
+            const tubeGeo = new THREE.CylinderGeometry(tubeR, tubeR, Sep + 100, 32, 1, true);
+            const tubeMat = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity:0.3, transparent:true});
+            const tube = new THREE.Mesh(tubeGeo, tubeMat);
+            tube.rotation.x = Math.PI/2; tube.position.z = Sep/2;
             sc.add(tube); meshes.arch_struct = tube;
 
-            // Porte Oculaire + Camera
-            var focGeo = new THREE.CylinderGeometry(25, 25, currentData.B, 16); // Porte oculaire
-            var focMat = new THREE.MeshStandardMaterial({color: 0x111111});
-            var foc = new THREE.Mesh(focGeo, focMat);
+            const focGeo = new THREE.CylinderGeometry(25, 25, currentData.B, 16); 
+            const focMat = new THREE.MeshStandardMaterial({color: 0x111111});
+            const foc = new THREE.Mesh(focGeo, focMat);
             foc.position.set(0, tubeR + currentData.B/2, Sep);
-            sc.add(foc);
-            meshes.arch_foc = foc; // NEW: Track focuser mesh
+            sc.add(foc); meshes.arch_foc = foc; 
 
-            var camRad = 35; var camLen = 40; 
-            var camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
-            var camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
-            var cam = new THREE.Mesh(camGeo, camMat);
-            // La caméra est posée sur le porte oculaire, axe Y
+            const camRad = 35; const camLen = 40; 
+            const camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32);
+            const camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2});
+            const cam = new THREE.Mesh(camGeo, camMat);
             cam.position.set(0, tubeR + currentData.B + camLen/2, Sep);
             sc.add(cam); meshes.arch_cam = cam;
         }
@@ -1385,7 +1208,7 @@
 
     // INIT
     window.addEventListener('DOMContentLoaded', () => {
-        var cvs = document.getElementById('blueprint-canvas');
+        const cvs = document.getElementById('blueprint-canvas');
         if(cvs) {
             cvs.addEventListener('mousedown', (e) => { viewState.isDragging = true; viewState.lastX = e.clientX; viewState.lastY = e.clientY; });
             window.addEventListener('mouseup', () => { viewState.isDragging = false; });
@@ -1397,7 +1220,6 @@
             cvs.addEventListener('wheel', (e) => { e.preventDefault(); window.zoomBlueprint(e.deltaY > 0 ? -0.1 : 0.1); });
         }
         
-        // Safety check to avoid immediate crash if DOM isn't fully ready or function not registered
         if (typeof window.autoCalcZones === 'function') {
             window.autoCalcZones();
         }
