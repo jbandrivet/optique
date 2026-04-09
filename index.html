@@ -394,23 +394,14 @@
 </div>
 
 <script>
-    // --- VARIABLES DE BASE ---
     let currentData = {};
     let viewState = { scale: 1, offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
-    let calculationMode = 'f1';
-    let anMode = 'R'; 
-    let vizModeAn = '2d';
-    let vizModeArch = '2d';
+    let calculationMode = 'f1'; let anMode = 'R'; let vizModeAn = '2d'; let vizModeArch = '2d';
     
-    const scenes = { an: null, arch: null };
-    const renderers = { an: null, arch: null };
-    const cameras = { an: null, arch: null };
-    const controlsList = { an: null, arch: null };
-    
-    // Dictionnaire pour stocker les groupes globaux de maillages
+    const scenes = { an: null, arch: null }; const renderers = { an: null, arch: null };
+    const cameras = { an: null, arch: null }; const controlsList = { an: null, arch: null };
     const meshes = { anGroup: null, archGroup: null };
 
-    // --- GARBAGE COLLECTOR ---
     function clearGroup3D(scene, groupName) {
         if(meshes[groupName]) {
             scene.remove(meshes[groupName]);
@@ -451,41 +442,31 @@
 
         if(type === 'newton') {
             const m1X = startX+F1*scale; const m1Rad = (D*scale)/2;
-            
-            // PRIMAIRE NEWTON 2D
             const R_draw = m1Rad * 4; const Rcx = m1X - R_draw; const aO = Math.asin(Math.min(1, m1Rad / R_draw));
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, aO); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
             
             const tubeR = (D/2)*scale * 1.15; const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); 
             const m2X = m1X - intercept; const m2Size = (D2*scale); 
             
-            // SECONDAIRE NEWTON 2D (Ligne à 45°)
-            ctx.beginPath(); ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
+            // DESSIN DU MIROIR SECONDAIRE EN 2D (CORRIGÉ : INCLINAISON "/")
+            ctx.beginPath(); ctx.moveTo(m2X - m2Size/2, axisY + m2Size/2); ctx.lineTo(m2X + m2Size/2, axisY - m2Size/2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
             // RAYTRACING EXACT 2D (NEWTON)
-            const F_scale = F1 * scale;
-            const slope = m1Rad / F_scale; 
+            const F_scale = F1 * scale; const focusX = m1X - F_scale; 
+            const ray_y = m1Rad * 0.95; 
             
-            // Equations analytiques exactes de l'intersection faisceau / plan 45°
-            const x_int_top = (m2X - m1Rad + slope * m1X) / (1 + slope);
-            const y_int_top = axisY + x_int_top - m2X;
-            const x_int_bot = (m2X + m1Rad - slope * m1X) / (1 - slope);
-            const y_int_bot = axisY + x_int_bot - m2X;
+            const t_top = (m2X - m1X + ray_y) / (focusX - m1X + ray_y);
+            const x_int_top = m1X + t_top * (focusX - m1X); const y_int_top = (axisY - ray_y) + t_top * ray_y;
+
+            const t_bot = (m2X - m1X - ray_y) / (focusX - m1X - ray_y);
+            const x_int_bot = m1X + t_bot * (focusX - m1X); const y_int_bot = (axisY + ray_y) - t_bot * ray_y;
 
             ctx.strokeStyle=C_RAY; ctx.beginPath(); 
+            ctx.moveTo(startX, axisY - ray_y); ctx.lineTo(m1X, axisY - ray_y); ctx.moveTo(startX, axisY + ray_y); ctx.lineTo(m1X, axisY + ray_y);
+            ctx.moveTo(m1X, axisY - ray_y); ctx.lineTo(x_int_top, y_int_top); ctx.moveTo(m1X, axisY + ray_y); ctx.lineTo(x_int_bot, y_int_bot);
             
-            // Rayons Entrants
-            ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad); 
-            ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
-            
-            // Rayons Convergents
-            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(x_int_top, y_int_top); 
-            ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(x_int_bot, y_int_bot);
-            
-            // Rayons Réfléchis
             const focH = tubeR + B*scale; const focusY = axisY - focH;
-            ctx.moveTo(x_int_top, y_int_top); ctx.lineTo(m2X, focusY); 
-            ctx.moveTo(x_int_bot, y_int_bot); ctx.lineTo(m2X, focusY);
+            ctx.moveTo(x_int_top, y_int_top); ctx.lineTo(m2X, focusY); ctx.moveTo(x_int_bot, y_int_bot); ctx.lineTo(m2X, focusY);
             ctx.stroke();
             
             dDim("F1", m2X, m1X, axisY+m1Rad+30); dDim("BACK FOCUS", m2X, m2X, focusY - 10);
@@ -510,7 +491,6 @@
             ctx.beginPath(); ctx.moveTo(m2X, axisY - b2Rad_base); ctx.lineTo(m2X + b2_len, axisY - b2Rad_tip); ctx.lineTo(m2X + b2_len, axisY + b2Rad_tip); ctx.lineTo(m2X, axisY + b2Rad_base); ctx.closePath();
             ctx.fillStyle = "rgba(50,50,50,0.8)"; ctx.fill(); ctx.strokeStyle = "#555"; ctx.stroke();
 
-            // Miroirs Plan 2D
             let R_draw = m1Rad*4; if(R_draw===0) R_draw=10; const Rcx = m1X-R_draw; 
             if(physicalHoleRad < b1OuterRad + 2*scale) { physicalHoleRad = b1OuterRad + 2*scale; }
 
@@ -521,12 +501,10 @@
             let R2d = m2Rad*4; if(R2d===0) R2d=10; const R2cx = m2X-R2d; const aM2 = Math.asin(Math.min(1,m2Rad/R2d));
             ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
-            // Configuration Nasmyth (M3)
             if (nasmyth) {
                 const m3_dist_from_m1 = Sep * 0.25; const m3X = m1X - (m3_dist_from_m1 * scale); const m3Size = (D2 * 0.9) * scale; 
                 ctx.beginPath(); ctx.moveTo(m3X - m3Size/2, axisY + m3Size/2); ctx.lineTo(m3X + m3Size/2, axisY - m3Size/2); ctx.strokeStyle = C_M3; ctx.lineWidth = 4; ctx.stroke();
                 
-                // RAYTRACING EXACT NASMYTH 2D
                 ctx.strokeStyle=C_RAY; ctx.beginPath(); 
                 ctx.moveTo(startX-30,axisY-m1Rad); ctx.lineTo(m1X,axisY-m1Rad); ctx.moveTo(startX-30,axisY+m1Rad); ctx.lineTo(m1X,axisY+m1Rad); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(m1X,axisY-m1Rad); ctx.lineTo(m2X,axisY-m2Rad); ctx.moveTo(m1X,axisY+m1Rad); ctx.lineTo(m2X,axisY+m2Rad); ctx.stroke();
@@ -565,7 +543,6 @@
     }
     window.redrawCurrentBlueprint = redrawCurrentBlueprint;
 
-    // --- NAVIGATION ---
     function switchTab(tabId) {
         document.querySelectorAll('.interface-container').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -613,7 +590,6 @@
     }
     window.resetCamera = resetCamera;
 
-    // --- LIAISON DIAMETRE -> EPAISSEUR & FOCALE ---
     function onDiameterChange() {
         const D = parseFloat(document.getElementById('an-diameter').value)||0;
         if(D > 0) {
@@ -793,7 +769,7 @@
         const addWrappedText = (text, x, y, maxWidth, lineHeight) => { const lines = doc.splitTextToSize(text, maxWidth); doc.text(lines, x, y); return lines.length * lineHeight; };
         doc.setFontSize(22); doc.setTextColor(0,0,0); doc.text("J.B. ANDRIVET // COURS OPTIQUE", 20, 20); doc.setFontSize(16); doc.setTextColor(0, 86, 179); doc.text("THÉORIE DE LA CAUSTIQUE & ARCHITECTURE", 20, 35); doc.setFontSize(12); doc.setTextColor(100, 100, 100); doc.text("Auteur : Jean Baptiste Andrivet", 20, 45); doc.setFontSize(11); doc.setTextColor(0,0,0);
         let y = 60; y += addWrappedText("1. LE TEST DE LA CAUSTIQUE (PLATZECK-GAVIOLA)\n\nLes miroirs paraboliques ou hyperboliques ne focalisent pas la lumière en un point unique lorsqu'on les teste depuis leur centre de courbure (contrairement à une sphère). Chaque zone du miroir a un point de convergence différent (la caustique). Ce logiciel calcule les coordonnées (X, Y) pour le test de Foucault.", 20, y, 170, 7);
-        y += 10; doc.setFont("helvetica", "bold"); doc.text("2. FORMULES (Cornejo & Malacara)", 20, y); y+=10; doc.setFont("courier", "normal"); doc.text("c = 1 / R", 25, y); y+=7; doc.text("z = (c * S^2) / (1 + sqrt(1 - (K+1)*c^2*S^2))", 25, y); y+=7; doc.text("Y = -K*z * [3 + c*z*(K+1)*(c*z*(K+1)-3)]", 25, y); y+=7; doc.text("X = -S*c*K*z * [2 + ... ] / (1 - ...)", 25, y); y+=15; doc.setFont("helvetica", "bold"); doc.text("3. ARCHITECTURE (Schwarzschild)", 20, y); y+=10; doc.setFont("helvetica", "normal"); y += addWrappedText("Le module Architecte utilise les équations du 3ème ordre pour éliminer l'aberration sphérique et la coma. Pour un Dall-Kirkham, le primaire est une ellipse prolate compensant un secondaire sphérique.", 20, y, 170, 7);
+        y += 10; doc.setFont("helvetica", "bold"); doc.text("2. FORMULES (Cornejo & Malacara)", 20, y); y+=10; doc.setFont("courier", "normal"); doc.text("c = 1 / R", 25, y); y+=7; doc.text("z = (c * S^2) / (1 + sqrt(1 - (K+1)*c^2*S^2))", 25, y); y+=7; doc.text("Y = -K*z * [3 + c*z*(K+1)*(c*z*(K+1)-3)]", 25, y); y+=7; doc.text("X = -S*c*K*z * [2 + ... ] / (1 - ...)", 25, y); y+=15; doc.setFont("helvetica", "bold"); doc.text("3. ARCHITECTURE (Schwarzschild)", 20, y); y+=10; doc.setFont("helvetica", "normal"); y += addWrappedText("Le module Architecte utilise les equations du 3ème ordre pour éliminer l'aberration sphérique et la coma. Pour un Dall-Kirkham, le primaire est une ellipse prolate compensant un secondaire sphérique.", 20, y, 170, 7);
         doc.save("Cours_Optique_JBAndrivet.pdf");
     }
     window.downloadCoursePDF = downloadCoursePDF;
@@ -903,7 +879,7 @@
                 
                 const m3Group = new THREE.Group();
                 m3Group.position.z = m3_z_pos;
-                m3Group.rotation.y = 3 * Math.PI / 4; 
+                m3Group.rotation.y = -3 * Math.PI / 4; 
 
                 const m3 = new THREE.Mesh(new THREE.CircleGeometry(m3_minor_axis/2, 64), m1Mat);
                 m3.scale.x = 1.414;
@@ -915,12 +891,6 @@
                 m3Cell.position.z = -5; 
                 m3Group.add(m3Cell);
                 grp.add(m3Group);
-
-                const m3StalkLen = m3_z_pos - supportEnd;
-                const m3Stalk = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, m3StalkLen, 32), cellMat);
-                m3Stalk.rotation.x = Math.PI/2;
-                m3Stalk.position.z = supportEnd + m3StalkLen/2;
-                grp.add(m3Stalk);
             }
 
             const numRays = 16; const ptsAll = []; const Z_start = Sep + 500; const Z_m1 = thick1; const Z_foc = -currentData.B;
@@ -932,7 +902,7 @@
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2_ray));
                 
                 if(nasmyth) {
-                    const t_val = (m3_z_pos - Z_m2_ray + x2_ray) / (Z_foc - Z_m2_ray + x2_ray);
+                    const t_val = (m3_z_pos - x2_ray - Z_m2_ray) / (Z_foc - Z_m2_ray - x2_ray);
                     const x3 = x2_ray * (1 - t_val); const y3 = y2_ray * (1 - t_val); const z3 = Z_m2_ray + t_val * (Z_foc - Z_m2_ray);
                     
                     ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2_ray)); ptsAll.push(new THREE.Vector3(x3, y3, z3));
@@ -960,9 +930,10 @@
             // NEWTON 3D - ROTATION + RAYTRACING EXACT
             const Sep = visualSep; 
             const tubeR = (R1*1.15); const Y_exit = tubeR + currentData.B; 
+            
             const m2Group = new THREE.Group();
             m2Group.position.z = Sep;
-            m2Group.rotation.x = 3 * Math.PI / 4; 
+            m2Group.rotation.x = -3 * Math.PI / 4; 
             
             const m2 = new THREE.Mesh(new THREE.CircleGeometry(currentData.D2/2, 64), m1Mat);
             m2.scale.y = 1.414;
@@ -990,7 +961,7 @@
             for(let i=0; i<numRays; i++) {
                 const angle = (i/numRays) * Math.PI * 2; const x = Math.cos(angle) * R1; const y = Math.sin(angle) * R1;
                 
-                const t_val = (Sep - Z_m1 + y) / (currentData.F1 - Z_m1 + y);
+                const t_val = (Sep - Z_m1 - y) / (currentData.F1 - Z_m1 - y);
                 const xi = x * (1 - t_val); const yi = y * (1 - t_val); const zi = Z_m1 + t_val * (currentData.F1 - Z_m1);
 
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
