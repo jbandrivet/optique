@@ -1,14 +1,3 @@
-Tu as l'œil absolu ! Tu as totalement raison, je te présente mes excuses. 
-
-Dans mon obsession de corriger le "trou" du Newton et la taille de l'arc de cercle, j'ai accidentellement écrasé la fonction de raytracing 3D du Newton dans la version précédente. Le code traçait bêtement les rayons jusqu'à un cercle plat à la distance de séparation ($Z = Sep$), ignorant que le secondaire est un **plan incliné à 45°**. 
-
-C'est ça qui donnait cette impression "plate" et pincée ! Dans la réalité, les rayons qui frappent le haut du miroir secondaire parcourent plus de distance que ceux qui frappent le bas. L'intersection n'est pas un cercle plat, mais bien une ellipse étirée en 3D.
-
-J'ai réécrit l'algorithme d'intersection analytique exacte entre le cône de lumière et le plan incliné ($Z - Y = Sep$). Tu vas voir, l'intersection sur le secondaire 3D est maintenant parfaite et épouse la surface inclinée à la perfection !
-
-Voici le code de la **v75** (toujours 100% complet, avec toutes les options et sans perte) :
-
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -151,7 +140,7 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v75</span></div>
+            <div class="brand">CAUSTIQUE <span>v76</span></div>
             <div class="input-group">
                 <label>Type</label>
                 <select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()">
@@ -365,7 +354,7 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v75).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v76).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -401,7 +390,7 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
         </div>
     </div>
     
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v75</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v76</div>
 </div>
 
 <script>
@@ -510,7 +499,7 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
             var m1X = startX+F1*scale; 
             var m1Rad = (D*scale)/2;
             
-            // CORRECTIF NEWTON 2D
+            // Dessin du Primaire
             var R_draw = m1Rad * 4; 
             var Rcx = m1X - R_draw;
             var aO = Math.asin(Math.min(1, m1Rad / R_draw));
@@ -525,6 +514,7 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
             var m2X = m1X - intercept;
             var m2Size = (D2*scale); 
             
+            // Dessin du Secondaire incliné à 45°
             ctx.beginPath(); 
             ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); 
             ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); 
@@ -532,32 +522,51 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
             ctx.lineWidth=3; 
             ctx.stroke();
             
-            var m2Rad_ray = (D2*scale)/2; 
+            // RAYTRACING 2D EXACT (NEWTON)
+            var F_scale = F1 * scale;
+            var focusX = m1X - F_scale; 
+
+            // Calcul pente du faisceau convergent (Haut)
+            var slope_top = -m1Rad / F_scale;
+            var x_int_top = (m2X - slope_top * focusX) / (1 - slope_top);
+            var y_int_top = x_int_top - m2X + axisY;
+
+            // Calcul pente du faisceau convergent (Bas)
+            var slope_bot = m1Rad / F_scale;
+            var x_int_bot = (m2X - slope_bot * focusX) / (1 - slope_bot);
+            var y_int_bot = x_int_bot - m2X + axisY;
+
             ctx.strokeStyle=C_RAY; 
             ctx.beginPath(); 
+            
+            // Rayons Entrants (Parallèles)
             ctx.moveTo(startX, axisY - m1Rad); 
             ctx.lineTo(m1X, axisY - m1Rad); 
             ctx.moveTo(startX, axisY + m1Rad); 
             ctx.lineTo(m1X, axisY + m1Rad);
             
+            // Rayons Convergents (M1 -> M2 Incliné)
             ctx.moveTo(m1X, axisY - m1Rad); 
-            ctx.lineTo(m2X, axisY - m2Rad_ray); 
+            ctx.lineTo(x_int_top, y_int_top); 
             ctx.moveTo(m1X, axisY + m1Rad); 
-            ctx.lineTo(m2X, axisY + m2Rad_ray);
+            ctx.lineTo(x_int_bot, y_int_bot);
             
+            // Rayons Réfléchis (M2 -> Foyer)
             var focH = tubeR + B*scale; 
             var focusY = axisY - focH;
             
-            ctx.moveTo(m2X, axisY - m2Rad_ray); 
+            ctx.moveTo(x_int_top, y_int_top); 
             ctx.lineTo(m2X, focusY); 
-            ctx.moveTo(m2X, axisY + m2Rad_ray); 
+            ctx.moveTo(x_int_bot, y_int_bot); 
             ctx.lineTo(m2X, focusY);
+            
             ctx.stroke();
             
             dDim("F1", m2X, m1X, axisY+m1Rad+30); 
             dDim("BACK FOCUS", m2X, m2X, focusY - 10);
             
         } else {
+            // CASSEGRAIN / RC / DK / NASMYTH
             var m2X = startX; 
             var m1X = startX+Sep*scale; 
             var fX = m1X+B*scale; 
@@ -1822,4 +1831,3 @@ Voici le code de la **v75** (toujours 100% complet, avec toutes les options et s
 </script>
 </body>
 </html>
-```
