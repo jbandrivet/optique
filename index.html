@@ -140,7 +140,7 @@
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v86</span></div>
+            <div class="brand">CAUSTIQUE <span>v88</span></div>
             <div class="input-group">
                 <label>Type</label>
                 <select id="an-type" onchange="updateAnalyzerK(); autoCalcZones()">
@@ -354,7 +354,7 @@
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v86).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v88).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -390,7 +390,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v86</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v88</div>
 </div>
 
 <script>
@@ -407,7 +407,6 @@
     const cameras = { an: null, arch: null };
     const controlsList = { an: null, arch: null };
     
-    // Dictionnaire pour stocker les groupes globaux de maillages
     const meshes = { anGroup: null, archGroup: null };
 
     // --- GARBAGE COLLECTOR ---
@@ -451,47 +450,29 @@
 
         if(type === 'newton') {
             const m1X = startX+F1*scale; const m1Rad = (D*scale)/2;
-            
-            // PRIMAIRE NEWTON 2D
             const R_draw = m1Rad * 4; const Rcx = m1X - R_draw; const aO = Math.asin(Math.min(1, m1Rad / R_draw));
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, aO); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
             
             const tubeR = (D/2)*scale * 1.15; const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); 
             const m2X = m1X - intercept; const m2Size = (D2*scale); 
             
-            // SECONDAIRE NEWTON 2D (Ligne à 45°)
             ctx.beginPath(); ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
-            // RAYTRACING EXACT 2D (NEWTON)
-            const F_scale = F1 * scale;
-            const slope = m1Rad / F_scale; 
+            const F_scale = F1 * scale; const slope = m1Rad / F_scale; 
             
-            // Equations analytiques exactes de l'intersection faisceau / plan 45°
-            const x_int_top = (m2X - m1Rad + slope * m1X) / (1 + slope);
-            const y_int_top = axisY + x_int_top - m2X;
-            const x_int_bot = (m2X + m1Rad - slope * m1X) / (1 - slope);
-            const y_int_bot = axisY + x_int_bot - m2X;
+            const x_int_top = (m2X - m1Rad + slope * m1X) / (1 + slope); const y_int_top = axisY + x_int_top - m2X;
+            const x_int_bot = (m2X + m1Rad - slope * m1X) / (1 - slope); const y_int_bot = axisY + x_int_bot - m2X;
 
             ctx.strokeStyle=C_RAY; ctx.beginPath(); 
-            
-            // Rayons Entrants (Parallèles)
-            ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad); 
-            ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
-            
-            // Rayons Convergents (M1 -> M2 Incliné EXACT)
-            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(x_int_top, y_int_top); 
-            ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(x_int_bot, y_int_bot);
-            
-            // Rayons Réfléchis (M2 -> Foyer Latéral EXACT)
+            ctx.moveTo(startX, axisY - m1Rad); ctx.lineTo(m1X, axisY - m1Rad); ctx.moveTo(startX, axisY + m1Rad); ctx.lineTo(m1X, axisY + m1Rad);
+            ctx.moveTo(m1X, axisY - m1Rad); ctx.lineTo(x_int_top, y_int_top); ctx.moveTo(m1X, axisY + m1Rad); ctx.lineTo(x_int_bot, y_int_bot);
             const focH = tubeR + B*scale; const focusY = axisY - focH;
-            ctx.moveTo(x_int_top, y_int_top); ctx.lineTo(m2X, focusY); 
-            ctx.moveTo(x_int_bot, y_int_bot); ctx.lineTo(m2X, focusY);
+            ctx.moveTo(x_int_top, y_int_top); ctx.lineTo(m2X, focusY); ctx.moveTo(x_int_bot, y_int_bot); ctx.lineTo(m2X, focusY);
             ctx.stroke();
             
             dDim("F1", m2X, m1X, axisY+m1Rad+30); dDim("BACK FOCUS", m2X, m2X, focusY - 10);
             
         } else {
-            // CASSEGRAIN / RC / DK / NASMYTH
             const m2X = startX; const m1X = startX+Sep*scale; const fX = m1X+B*scale; const nasmyth = (type === 'nasmyth');
             const m1Rad = (D*scale)/2; const m2Rad = (D2*scale)/2; 
             const margin_hole = 5 * scale; const baffle_wall = 2 * scale; const opticalHoleRad = (holeDiam*scale)/2; let physicalHoleRad = opticalHoleRad + margin_hole; 
@@ -510,7 +491,6 @@
             ctx.beginPath(); ctx.moveTo(m2X, axisY - b2Rad_base); ctx.lineTo(m2X + b2_len, axisY - b2Rad_tip); ctx.lineTo(m2X + b2_len, axisY + b2Rad_tip); ctx.lineTo(m2X, axisY + b2Rad_base); ctx.closePath();
             ctx.fillStyle = "rgba(50,50,50,0.8)"; ctx.fill(); ctx.strokeStyle = "#555"; ctx.stroke();
 
-            // Miroirs Plan 2D
             let R_draw = m1Rad*4; if(R_draw===0) R_draw=10; const Rcx = m1X-R_draw; 
             if(physicalHoleRad < b1OuterRad + 2*scale) { physicalHoleRad = b1OuterRad + 2*scale; }
             const aO = Math.asin(Math.min(1,m1Rad/R_draw)); const aI = Math.asin(Math.min(1,physicalHoleRad/R_draw));
@@ -521,12 +501,10 @@
             let R2d = m2Rad*4; if(R2d===0) R2d=10; const R2cx = m2X-R2d; const aM2 = Math.asin(Math.min(1,m2Rad/R2d));
             ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
-            // Configuration Nasmyth (M3)
             if (nasmyth) {
                 const m3_dist_from_m1 = Sep * 0.25; const m3X = m1X - (m3_dist_from_m1 * scale); const m3Size = (D2 * 0.9) * scale; 
                 ctx.beginPath(); ctx.moveTo(m3X - m3Size/2, axisY + m3Size/2); ctx.lineTo(m3X + m3Size/2, axisY - m3Size/2); ctx.strokeStyle = C_M3; ctx.lineWidth = 4; ctx.stroke();
                 
-                // RAYTRACING EXACT NASMYTH 2D
                 ctx.strokeStyle=C_RAY; ctx.beginPath(); 
                 ctx.moveTo(startX-30,axisY-m1Rad); ctx.lineTo(m1X,axisY-m1Rad); ctx.moveTo(startX-30,axisY+m1Rad); ctx.lineTo(m1X,axisY+m1Rad); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(m1X,axisY-m1Rad); ctx.lineTo(m2X,axisY-m2Rad); ctx.moveTo(m1X,axisY+m1Rad); ctx.lineTo(m2X,axisY+m2Rad); ctx.stroke();
@@ -895,17 +873,15 @@
             const nasmyth = (currentData.type === 'NASMYTH'); const m3_z_pos = currentData.Sep * 0.25; 
             if (nasmyth) {
                 let supportRad = physicalHoleR - 2; if (supportRad < 5) supportRad = 5; 
-                const supportStart = -20; const supportEnd = m3_z_pos - 2; const supportLen = supportEnd - supportStart;
-                const supp = new THREE.Mesh(new THREE.CylinderGeometry(supportRad, supportRad, supportLen, 32), cellMat); supp.rotation.x = Math.PI/2; supp.position.z = (supportStart + supportEnd) / 2; grp.add(supp);
-                const m3_minor_axis = currentData.D2 * 0.8; 
+                const supportStart = -20; const supportEnd = m3_z_pos - (currentData.D2 * 0.8 / 2) - 5; const supportLen = supportEnd - supportStart;
+                const supp = new THREE.Mesh(new THREE.CylinderGeometry(supportRad, supportRad, supportLen, 32), cellMat); supp.rotation.x = Math.PI/2; supp.position.z = supportStart + supportLen / 2; grp.add(supp);
                 
-                // M3 Nasmyth - EXACT ORIENTATION 3D
-                const m3Geo = new THREE.CylinderGeometry(m3_minor_axis/2, m3_minor_axis/2, 4, 64); 
-                const m3 = new THREE.Mesh(m3Geo, m1Mat);
-                m3.scale.set(1.414, 1, 1);
-                m3.rotation.z = Math.PI/4; 
-                m3.position.set(-2 * 0.707, 0, m3_z_pos - 2 * 0.707);
-                grp.add(m3);
+                const m3_minor_axis = currentData.D2 * 0.8; 
+                const m3Geo = new THREE.CircleGeometry(m3_minor_axis/2, 64); 
+                const m3 = new THREE.Mesh(m3Geo, m1Mat); m3.position.z = m3_z_pos; m3.rotation.y = Math.PI/4; m3.scale.x = 1.414; grp.add(m3);
+                
+                const m3CellGeo = new THREE.CircleGeometry(m3_minor_axis/2 * 0.9, 64); 
+                const m3CellObj = new THREE.Mesh(m3CellGeo, cellMat); m3CellObj.position.set(-2 * 0.707, 0, m3_z_pos - 2 * 0.707); m3CellObj.rotation.y = Math.PI/4; m3CellObj.scale.x = 1.414; grp.add(m3CellObj);
             }
 
             const numRays = 16; const ptsAll = []; const Z_start = Sep + 500; const Z_m1 = thick1; const Z_foc = -currentData.B;
@@ -913,7 +889,6 @@
                 const angle = (i/numRays) * Math.PI * 2; const x = Math.cos(angle) * R1; const y = Math.sin(angle) * R1;
                 const ratio = Math.max(0, (currentData.F1 - Sep) / currentData.F1); const x2_ray = x * ratio; const y2_ray = y * ratio;
                 const ray_sag = (r2_abs > 0) ? (Math.pow(Math.sqrt(x2_ray*x2_ray + y2_ray*y2_ray), 2))/(2*r2_abs) : 0; const Z_m2_ray = Sep - ray_sag;
-                
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2_ray));
                 
                 if(nasmyth) {
@@ -941,29 +916,30 @@
             const cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = Sep; trussGroup.add(cage); grp.add(trussGroup);
 
         } else {
-            // NEWTON 3D - ORIENTATION ET RAYTRACING EXACT 100%
+            // NEWTON 3D
             const Sep = visualSep; 
             
-            // Miroir M2 3D (Elipse coupée à 45°)
-            const m2Geo = new THREE.CylinderGeometry(currentData.D2/2, currentData.D2/2, 4, 64); 
-            const m2Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide }); 
+            // M2 3D EXACT - CIRCLE GEOMETRY (Ellipse parfaite)
+            const m2Geo = new THREE.CircleGeometry(currentData.D2/2, 64);
+            const m2Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
             const m2 = new THREE.Mesh(m2Geo, m2Mat);
-            m2.scale.set(1, 1, 1.414); 
+            m2.position.set(0, -2 * 0.707, Sep + 2 * 0.707); // Avancé sur la normale
             m2.rotation.x = -Math.PI/4; 
-            m2.position.set(0, -2 * 0.707, Sep + 2 * 0.707); // Face avant à Z=Sep, Y=0
+            m2.scale.y = 1.414; 
             grp.add(m2);
 
-            // Barillet M2
-            const m2Cell = new THREE.Mesh(new THREE.CylinderGeometry(currentData.D2/2 * 0.9, currentData.D2/2 * 0.9, 20, 32), cellMat);
-            m2Cell.scale.set(1, 1, 1.414);
+            // BARILLET NEWTON
+            const m2CellGeo = new THREE.CircleGeometry(currentData.D2/2 * 0.9, 64); 
+            const m2Cell = new THREE.Mesh(m2CellGeo, cellMat);
+            m2Cell.position.z = Sep; 
             m2Cell.rotation.x = -Math.PI/4; 
-            m2Cell.position.set(0, -12 * 0.707, Sep + 12 * 0.707); 
+            m2Cell.scale.y = 1.414; 
             grp.add(m2Cell);
 
             const tubeR = (R1*1.15); const Y_exit = tubeR + currentData.B; 
-            const spiderZ = Sep + 12 * 0.707;
-            const spiderV = new THREE.Mesh(new THREE.BoxGeometry(2, tubeR * 2, 15), cellMat); spiderV.position.set(0, -12 * 0.707, spiderZ); spiderV.rotation.z = Math.PI / 4; grp.add(spiderV);
-            const spiderH = new THREE.Mesh(new THREE.BoxGeometry(tubeR * 2, 2, 15), cellMat); spiderH.position.set(0, -12 * 0.707, spiderZ); spiderH.rotation.z = Math.PI / 4; grp.add(spiderH);
+            const spiderZ = Sep + 10 * 0.707;
+            const spiderV = new THREE.Mesh(new THREE.BoxGeometry(2, tubeR * 2, 15), cellMat); spiderV.position.set(0, -10 * 0.707, spiderZ); spiderV.rotation.z = Math.PI / 4; grp.add(spiderV);
+            const spiderH = new THREE.Mesh(new THREE.BoxGeometry(tubeR * 2, 2, 15), cellMat); spiderH.position.set(0, -10 * 0.707, spiderZ); spiderH.rotation.z = Math.PI / 4; grp.add(spiderH);
 
             const numRays = 16; const ptsAll = []; const Z_start = Sep + 500; const Z_m1 = thick1; 
 
@@ -977,7 +953,6 @@
                 ptsAll.push(new THREE.Vector3(x, y, Z_start)); ptsAll.push(new THREE.Vector3(x, y, Z_m1));
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(xi, yi, zi));
                 
-                // REFLET EXACT NEWTON VERS LE FOYER
                 const Y_foc_newton = currentData.F1 - Sep; 
                 ptsAll.push(new THREE.Vector3(xi, yi, zi)); ptsAll.push(new THREE.Vector3(0, Y_foc_newton, Sep));
             }
