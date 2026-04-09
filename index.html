@@ -140,7 +140,7 @@
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v82</span></div>
+            <div class="brand">CAUSTIQUE <span>v83</span></div>
             <div class="input-group">
                 <label>Type</label>
                 <select id="an-type" onchange="updateAnalyzerK(); autoCalcZones()">
@@ -354,7 +354,7 @@
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v82).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v83).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -390,7 +390,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v82</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v83</div>
 </div>
 
 <script>
@@ -535,19 +535,19 @@
             ctx.strokeStyle=C_RAY; 
             ctx.beginPath(); 
             
-            // Rayons Entrants (Parallèles)
+            // Rayons Entrants
             ctx.moveTo(startX, axisY - m1Rad); 
             ctx.lineTo(m1X, axisY - m1Rad); 
             ctx.moveTo(startX, axisY + m1Rad); 
             ctx.lineTo(m1X, axisY + m1Rad);
             
-            // Rayons Convergents (M1 -> M2 Incliné EXACT)
+            // Rayons Convergents
             ctx.moveTo(m1X, axisY - m1Rad); 
             ctx.lineTo(x_int_top, y_int_top); 
             ctx.moveTo(m1X, axisY + m1Rad); 
             ctx.lineTo(x_int_bot, y_int_bot);
             
-            // Rayons Réfléchis (M2 -> Foyer Latéral)
+            // Rayons Réfléchis
             const focH = tubeR + B*scale; 
             const focusY = axisY - focH;
             
@@ -851,9 +851,7 @@
     function onDiameterChange() {
         const D = parseFloat(document.getElementById('an-diameter').value)||0;
         if(D > 0) {
-            // Epaisseur proposée = 15% du diamètre
             document.getElementById('an-thickness').value = (D * 0.15).toFixed(1);
-            // Focale proposée = f/5 
             if(anMode === 'F') {
                 document.getElementById('an-curvature-val').value = (D * 5).toFixed(1);
             } else {
@@ -1394,6 +1392,51 @@
     }
     window.downloadCoursePDF = downloadCoursePDF;
 
+    // --- RECALCUL AUTO DES ZONES (CORRIGÉ AVEC CHECK isNaN) ---
+    function autoCalcZones() {
+        const D = parseFloat(document.getElementById('an-diameter').value)||0; 
+        const holeD = parseFloat(document.getElementById('an-hole').value)||0;
+        const R_val = parseFloat(document.getElementById('an-curvature-val').value)||0;
+        const R = (anMode === 'F') ? R_val * 2 : R_val;
+        
+        let forcedN = parseInt(document.getElementById('an-nb-zones').value);
+        if(!D || !R) return;
+        
+        const width_mm = 4.53 * Math.pow(((R/2)/D) * Math.pow(R/10, 2), 1/3) * 0.1;
+        
+        const radiusMirror = D / 2; 
+        const radiusHole = holeD / 2;
+        const usefulRadius = radiusMirror - radiusHole;
+        
+        if(usefulRadius <= 0) {
+            document.getElementById('an-zones').value = "";
+            window.runAnalyzer();
+            return;
+        }
+
+        const numZones = (forcedN > 0) ? forcedN : Math.ceil(usefulRadius / width_mm);
+        
+        if(isNaN(forcedN) || forcedN <= 0) {
+            document.getElementById('an-nb-zones').placeholder = numZones;
+            if(document.getElementById('an-nb-zones').value !== "") {
+                document.getElementById('an-nb-zones').value = ""; 
+            }
+        }
+        
+        const actualWidth = usefulRadius / numZones;
+        const zoneCenters = [];
+        
+        for(let i=0; i<numZones; i++) {
+            const center = radiusHole + (i * actualWidth) + (actualWidth/2);
+            zoneCenters.push(center.toFixed(1));
+        }
+        
+        document.getElementById('an-zones').value = zoneCenters.join(', ');
+        document.getElementById('an-maxw').innerText = width_mm.toFixed(1) + " mm";
+        window.runAnalyzer();
+    }
+    window.autoCalcZones = autoCalcZones;
+
     // --- 3D ENGINE ---
     function init3D(type) {
         const container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
@@ -1546,7 +1589,7 @@
         m1.rotation.x = Math.PI/2; 
         grp.add(m1);
 
-        // AJOUT EXPERT : BARILLET M1 (CELLULE)
+        // BARILLET M1 (CELLULE)
         const cellMat = new THREE.MeshStandardMaterial({color: 0x2a2a2a, roughness: 0.8, metalness: 0.5});
         const m1CellPts = [];
         m1CellPts.push(new THREE.Vector2(H1, 0));
@@ -1578,12 +1621,11 @@
             }
             
             const m2 = new THREE.Mesh(new THREE.LatheGeometry(pts2, 64), m1Mat);
-            // CORRECTION M2 : FACE A M1
             m2.rotation.x = Math.PI/2; 
             m2.position.z = Sep; 
             grp.add(m2);
 
-            // AJOUT EXPERT : BARILLET M2
+            // BARILLET M2
             const m2CellPts = [];
             m2CellPts.push(new THREE.Vector2(0, thick2));
             m2CellPts.push(new THREE.Vector2(R2*1.05, thick2));
@@ -1643,7 +1685,7 @@
             const ptsAll = [];
             const Z_start = Sep + 500; 
             const Z_m1 = thick1; 
-            const Z_m2 = Sep; // La surface est à Sep
+            const Z_m2 = Sep; 
             const Z_foc = -currentData.B;
             
             for(let i=0; i<numRays; i++) {
@@ -1713,7 +1755,7 @@
                 trussGroup.add(tube);
             }
             
-            const spiderZ = Sep + thick2 + 7.5; // L'araignée s'attache au barillet M2
+            const spiderZ = Sep + thick2 + 7.5; 
             const spiderV = new THREE.Mesh(new THREE.BoxGeometry(4, boxR*2, 20), matTruss); 
             spiderV.position.z = spiderZ; 
             trussGroup.add(spiderV);
@@ -1736,15 +1778,15 @@
             const m2Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
             const m2 = new THREE.Mesh(m2Geo, m2Mat);
             m2.position.z = Sep; 
-            m2.rotation.x = 3 * Math.PI / 4; 
+            m2.rotation.x = -Math.PI/4; 
             m2.scale.y = 1.414; 
             grp.add(m2);
 
-            // AJOUT EXPERT : BARILLET NEWTON
+            // BARILLET NEWTON
             const m2Cell = new THREE.Mesh(new THREE.CylinderGeometry(currentData.D2/2 * 0.8, currentData.D2/2 * 0.8, 15, 32), cellMat);
             m2Cell.rotation.x = -Math.PI/4;
-            m2Cell.scale.z = 1.414;
-            m2Cell.position.set(0, -7.5 * 0.707, Sep + 7.5 * 0.707); // Derrière le miroir
+            m2Cell.scale.y = 1.414;
+            m2Cell.position.set(0, 7.5 * 0.707, Sep + 7.5 * 0.707);
             grp.add(m2Cell);
 
             const numRays = 16; 
@@ -1759,7 +1801,8 @@
                 const x = Math.cos(angle) * R1; 
                 const y = Math.sin(angle) * R1;
                 
-                const t_val = (Sep - Z_m1 + y) / (currentData.F1 - Z_m1 + y);
+                // RAYTRACING EXACT SUR PLAN 45°
+                const t_val = (Sep - Z_m1 - y) / (currentData.F1 - Z_m1 - y);
                 const xi = x * (1 - t_val);
                 const yi = y * (1 - t_val);
                 const zi = Z_m1 + t_val * (currentData.F1 - Z_m1);
