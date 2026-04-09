@@ -140,10 +140,10 @@
 
     <div id="analyzer" class="interface-container active">
         <div class="controls">
-            <div class="brand">CAUSTIQUE <span>v79</span></div>
+            <div class="brand">CAUSTIQUE <span>v80</span></div>
             <div class="input-group">
                 <label>Type</label>
-                <select id="an-type" onchange="updateAnalyzerK(); runAnalyzer()">
+                <select id="an-type" onchange="updateAnalyzerK(); autoCalcZones()">
                     <option value="parabola" selected>Parabole</option>
                     <option value="hyperbola">Hyperbole</option>
                     <option value="sphere">Sphère</option>
@@ -153,11 +153,11 @@
             </div>
             <div class="input-group">
                 <label>Diamètre (mm)</label>
-                <input type="number" id="an-diameter" value="300" oninput="runAnalyzer()">
+                <input type="number" id="an-diameter" value="300" oninput="autoCalcZones()">
             </div>
             <div class="input-group">
                 <label>Épaisseur (mm)</label>
-                <input type="number" id="an-thickness" value="35" oninput="runAnalyzer()">
+                <input type="number" id="an-thickness" value="35" oninput="autoCalcZones()">
             </div>
             <div class="input-group">
                 <label>Trou Central (mm)</label>
@@ -170,17 +170,17 @@
                         <span id="mode-an-F" onclick="setAnMode('F')">FOCALE</span>
                     </div>
                 </label>
-                <input type="number" id="an-curvature-val" value="6200" step="0.1" oninput="runAnalyzer()">
+                <input type="number" id="an-curvature-val" value="6200" step="0.1" oninput="autoCalcZones()">
             </div>
             <div class="input-group">
                 <label>Constante (K)</label>
-                <input type="number" id="an-kfactor" value="-1" step="0.0001" disabled oninput="runAnalyzer()">
+                <input type="number" id="an-kfactor" value="-1" step="0.0001" disabled oninput="autoCalcZones()">
             </div>
             <label style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; display:block;">GÉNÉRATEUR DE ZONES</label>
             <div class="auto-group">
                 <div style="flex:1">
                     <label style="font-size:0.6rem">NB. ZONES</label>
-                    <input type="number" id="an-nb-zones" class="input-small" placeholder="Auto">
+                    <input type="number" id="an-nb-zones" class="input-small" placeholder="Auto" oninput="autoCalcZones()">
                 </div>
                 <button class="btn-auto" onclick="autoCalcZones()">CALCULER ZONES</button>
             </div>
@@ -354,7 +354,7 @@
 
             <div class="chapter">
                 <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v79).</p>
+                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v80).</p>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -390,7 +390,7 @@
         </div>
     </div>
     
-    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v79</div>
+    <div class="footer-brand">JEAN BAPTISTE ANDRIVET // OPTICAL SUITE v80</div>
 </div>
 
 <script>
@@ -407,7 +407,7 @@
     var cameras = { an: null, arch: null };
     var controlsList = { an: null, arch: null };
     
-    // Le dictionnaire pour stocker les groupes globaux de maillages
+    // Dictionnaire pour stocker les groupes globaux de maillages
     var meshes = { anGroup: null, archGroup: null };
 
     // --- GARBAGE COLLECTOR (HELPER 3D) ---
@@ -499,7 +499,6 @@
             var m1X = startX+F1*scale; 
             var m1Rad = (D*scale)/2;
             
-            // PRIMAIRE NEWTON 2D
             var R_draw = m1Rad * 4; 
             var Rcx = m1X - R_draw;
             var aO = Math.asin(Math.min(1, m1Rad / R_draw));
@@ -514,7 +513,6 @@
             var m2X = m1X - intercept;
             var m2Size = (D2*scale); 
             
-            // SECONDAIRE NEWTON 2D (Ligne à 45°)
             ctx.beginPath(); 
             ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); 
             ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); 
@@ -522,38 +520,28 @@
             ctx.lineWidth=3; 
             ctx.stroke();
             
-            // RAYTRACING EXACT 2D (NEWTON)
-            // Calcul mathématique de l'intersection faisceau-plan à 45°
             var F_scale = F1 * scale;
             var focusX = m1X - F_scale; 
-
-            var slope = m1Rad / F_scale; // Pente du faisceau
+            var slope = m1Rad / F_scale; 
             
-            // Rayon Supérieur : Y = axisY - m1Rad, descend vers focusX
-            // Equation Droite M2 : Y_m2 - axisY = X_m2 - m2X
             var x_int_top = (m2X - focusX * slope) / (1 - slope);
             var y_int_top = axisY + (x_int_top - m2X);
-
-            // Rayon Inférieur : Y = axisY + m1Rad, monte vers focusX
             var x_int_bot = (m2X + focusX * slope) / (1 + slope);
             var y_int_bot = axisY + (x_int_bot - m2X);
 
             ctx.strokeStyle=C_RAY; 
             ctx.beginPath(); 
             
-            // Rayons Entrants (Parallèles, depuis l'infini à gauche)
             ctx.moveTo(startX, axisY - m1Rad); 
             ctx.lineTo(m1X, axisY - m1Rad); 
             ctx.moveTo(startX, axisY + m1Rad); 
             ctx.lineTo(m1X, axisY + m1Rad);
             
-            // Rayons Convergents (M1 -> M2 Incliné EXACT)
             ctx.moveTo(m1X, axisY - m1Rad); 
             ctx.lineTo(x_int_top, y_int_top); 
             ctx.moveTo(m1X, axisY + m1Rad); 
             ctx.lineTo(x_int_bot, y_int_bot);
             
-            // Rayons Réfléchis (M2 -> Foyer Latéral)
             var focH = tubeR + B*scale; 
             var focusY = axisY - focH;
             
@@ -568,7 +556,6 @@
             dDim("BACK FOCUS", m2X, m2X, focusY - 10);
             
         } else {
-            // CASSEGRAIN / RC / DK / NASMYTH
             var m2X = startX; 
             var m1X = startX+Sep*scale; 
             var fX = m1X+B*scale; 
@@ -583,7 +570,6 @@
             var opticalHoleRad = (holeDiam*scale)/2;
             var physicalHoleRad = opticalHoleRad + margin_hole; 
             
-            // Baffle Primaire
             var b1_len_val = (Sep * 0.4); 
             if (nasmyth) {
                 b1_len_val = (Sep * 0.25); 
@@ -605,7 +591,6 @@
             ctx.lineWidth = 1;
             ctx.strokeRect(m1X - b1_len, axisY - b1OuterRad, b1_len, b1OuterRad*2);
 
-            // Baffle Secondaire
             var b2_len_val = (Sep * 0.15); 
             var b2_len = b2_len_val * scale;
             var b2Rad_base = m2Rad + 2*scale; 
@@ -627,7 +612,6 @@
             ctx.strokeStyle = "#555";
             ctx.stroke();
 
-            // Miroirs Plan 2D
             var R_draw = m1Rad*4; 
             if(R_draw===0) R_draw=10; 
             var Rcx = m1X-R_draw; 
@@ -660,7 +644,6 @@
             ctx.lineWidth=3; 
             ctx.stroke();
             
-            // Configuration Nasmyth (M3)
             if (nasmyth) {
                 var m3_dist_from_m1 = Sep * 0.25; 
                 var m3X = m1X - (m3_dist_from_m1 * scale); 
@@ -673,7 +656,6 @@
                 ctx.lineWidth = 4; 
                 ctx.stroke();
                 
-                // RAYTRACING EXACT NASMYTH 2D
                 ctx.strokeStyle=C_RAY; 
                 ctx.beginPath(); 
                 
@@ -690,7 +672,6 @@
                 ctx.lineTo(m2X,axisY+m2Rad);
                 ctx.stroke();
                 
-                // Intersection du faisceau M2->Focus avec la droite M3
                 var L = fX - m2X;
                 var slope = m2Rad / L; 
                 
@@ -995,7 +976,6 @@
             window.updateAn3D(); 
         }
 
-        // Calcul Mathématique Exact (Corrigé / 1-A)
         var c = (R>0)?1/R:0;
         zones.forEach((S,i)=>{
             var term = 1-(K+1)*Math.pow(c*S,2);
@@ -1409,7 +1389,11 @@
         var numZones = (forcedN > 0) ? forcedN : Math.ceil(usefulRadius / width_mm);
         
         if(isNaN(forcedN) || forcedN <= 0) {
-            document.getElementById('an-nb-zones').value = numZones; 
+            document.getElementById('an-nb-zones').placeholder = numZones;
+            // Si le champ est vide on efface la value pour forcer le placeholder a s'afficher
+            if(document.getElementById('an-nb-zones').value !== "") {
+                document.getElementById('an-nb-zones').value = ""; 
+            }
         }
         
         var actualWidth = usefulRadius / numZones;
@@ -1638,13 +1622,12 @@
                 supp.position.z = (supportStart + supportEnd) / 2;
                 grp.add(supp);
 
-                // M3 3D EXACT - CIRCLE GEOMETRY (Ellipse parfaite)
                 var m3_minor_axis = currentData.D2 * 0.8;
                 var m3Geo = new THREE.CircleGeometry(m3_minor_axis/2, 32); 
                 var m3 = new THREE.Mesh(m3Geo, m1Mat);
                 m3.position.z = m3_z_pos; 
-                m3.rotation.y = Math.PI/4; // Inclinaison pour refléter vers +X
-                m3.scale.x = 1.414; // Allongement de l'axe local pour épouser le faisceau
+                m3.rotation.y = Math.PI/4; 
+                m3.scale.x = 1.414; 
                 grp.add(m3);
             }
 
@@ -1667,7 +1650,6 @@
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); 
                 
                 if(nasmyth) {
-                    // RAYTRACING 3D EXACT NASMYTH
                     var t_val = (m3_z_pos - x2_ray - Z_m2) / (Z_foc - x2_ray - Z_m2);
                     var x3 = x2_ray * (1 - t_val); 
                     var y3 = y2_ray * (1 - t_val);
@@ -1680,7 +1662,6 @@
                     ptsAll.push(new THREE.Vector3(x3, y3, z3)); 
                     ptsAll.push(new THREE.Vector3(side_focus_X, 0, m3_z_pos)); 
                 } else {
-                    ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2));
                     ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2)); 
                     ptsAll.push(new THREE.Vector3(0, 0, Z_foc));
                 }
@@ -1744,12 +1725,11 @@
             // NEWTON 3D
             var Sep = visualSep; 
             
-            // M2 3D EXACT - CIRCLE GEOMETRY (Ellipse parfaite)
             var m2Geo = new THREE.CircleGeometry(currentData.D2/2, 32);
-            var m2Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2 });
+            var m2Mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
             var m2 = new THREE.Mesh(m2Geo, m2Mat);
             m2.position.z = Sep; 
-            m2.rotation.x = 3 * Math.PI / 4; // Orientation exacte pour reflet 90° vers +Y
+            m2.rotation.x = 3 * Math.PI / 4; 
             m2.scale.y = 1.414; 
             grp.add(m2);
 
@@ -1765,7 +1745,6 @@
                 var x = Math.cos(angle) * R1; 
                 var y = Math.sin(angle) * R1;
                 
-                // RAYTRACING EXACT 3D SUR PLAN 45° (NEWTON)
                 var t_val = (Sep - Z_m1 + y) / (currentData.F1 - Z_m1 + y);
                 var xi = x * (1 - t_val);
                 var yi = y * (1 - t_val);
