@@ -182,7 +182,7 @@
                     <label style="font-size:0.6rem">NB. ZONES</label>
                     <input type="number" id="an-nb-zones" class="input-small" placeholder="Auto" oninput="autoCalcZones()">
                 </div>
-                <button type="button" class="btn-auto" onclick="autoCalcZones()">CALCULER ZONES</button>
+                <button class="btn-auto" onclick="autoCalcZones()">CALCULER ZONES</button>
             </div>
             <div class="input-group">
                 <label>Liste Rayons (mm)</label>
@@ -275,14 +275,14 @@
                 <input type="number" id="arch-Sep" value="650" disabled>
             </div>
             
-            <button type="button" class="btn-action" onclick="runArchitect()">CALCULER & DESSINER</button>
+            <button class="btn-action" onclick="runArchitect()">CALCULER & DESSINER</button>
             
             <div class="pdf-group" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
                 <div class="input-group">
                     <label>Nom du Projet</label>
                     <input type="text" id="project-name" placeholder="Ex: Mon DK 300">
                 </div>
-                <button type="button" class="btn-pdf" onclick="downloadPDF()">TÉLÉCHARGER LE PLAN (PDF)</button>
+                <button class="btn-pdf" onclick="downloadPDF()">TÉLÉCHARGER LE PLAN (PDF)</button>
             </div>
         </div>
         
@@ -344,7 +344,7 @@
                     <div class="course-title">COURS D'OPTIQUE APPLIQUÉE</div>
                     <div class="course-author">Rédigé par Monsieur Andrivet</div>
                 </div>
-                <button type="button" class="btn-pdf" style="width:auto; margin:0;" onclick="downloadCoursePDF()">TÉLÉCHARGER LE COURS (PDF)</button>
+                <button class="btn-pdf" style="width:auto; margin:0;" onclick="downloadCoursePDF()">TÉLÉCHARGER LE COURS (PDF)</button>
             </div>
             
             <div class="chapter">
@@ -606,8 +606,8 @@
     window.onDiameterChange = onDiameterChange;
 
     /* ----------------------------------------------------------------------
-       LE COEUR DE L'ANALYSEUR CAUSTIQUE (CORRIGÉ ET SÉCURISÉ)
-       L'affichage du tableau est garanti avant toute tentative de dessin 2D
+       LE CŒUR MATHÉMATIQUE SÉCURISÉ
+       Les calculs s'exécutent TOUJOURS avant les tentatives de rendu 2D/3D
     ----------------------------------------------------------------------- */
     function runAnalyzer() {
         const D = parseFloat(document.getElementById('an-diameter').value)||0; 
@@ -615,11 +615,11 @@
         const thick = parseFloat(document.getElementById('an-thickness').value)||0;
         const R_val = parseFloat(document.getElementById('an-curvature-val').value)||0; 
         const R = (anMode === 'F') ? R_val * 2 : R_val;
-        const K = parseFloat(document.getElementById('an-kfactor').value) || 0;
         
-        // Sécurisation de l'analyse des zones
+        // Exactement la logique de l'Astro Master
+        const K = parseFloat(document.getElementById('an-kfactor').value);
         const zonesStr = document.getElementById('an-zones').value; 
-        const zones = zonesStr.split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+        const zones = zonesStr.split(',').map(Number).filter(n=>n);
 
         const tbody = document.getElementById('an-results'); tbody.innerHTML="";
         const r_cm = (D/2)/10; const h_cm = thick/10; const rh_cm = (holeD/2)/10; const zmax_cm = (R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
@@ -628,38 +628,26 @@
         document.getElementById('an-weight').innerText = (vol*2.53/1000).toFixed(2)+" kg";
         document.getElementById('an-fd').innerText = (D>0 && R>0) ? "f/" + (R/(2*D)).toFixed(1) : "-";
 
-        // ==========================================
-        // 1. CALCUL ET AFFICHAGE DU TABLEAU EN PRIORITÉ
-        // ==========================================
+        // GÉNÉRATION DU TABLEAU (Priorité absolue)
         const c = (R>0)?1/R:0;
-        zones.forEach((S, i) => {
+        zones.forEach((S,i)=>{
             const term = 1-(K+1)*Math.pow(c*S,2); let err = ""; 
-            if(S>D/2) err="HORS MIROIR"; 
-            else if(S<holeD/2) err="DANS TROU"; 
-            else if(term<0) err="ERR GEOM";
-            
-            if(err) { 
-                tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`; 
-            } else {
-                const z = (c*S*S)/(1+Math.sqrt(term)); 
-                const A = c*z*(K+1); 
-                const Y = -K*z*(3+A*(A-3)); 
-                const X = (-S*c*K*z*(2+A*(A-3)))/(1-A);
+            if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU"; else if(term<0) err="ERR GEOM";
+            if(err) { tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`; } 
+            else {
+                const z = (c*S*S)/(1+Math.sqrt(term)); const A = c*z*(K+1); const Y = -K*z*(3+A*(A-3)); const X = (-S*c*K*z*(2+A*(A-3)))/(1-A);
                 tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
             }
         });
 
-        // ==========================================
-        // 2. DESSIN 2D / 3D DANS UN BLOC PROTÉGÉ
-        // ==========================================
+        // TENTATIVE DE DESSIN ENCADRÉE
         try {
             if (vizModeAn === '2d') {
                 const cvs = document.getElementById('visualizer'); 
+                const dpr = window.devicePixelRatio || 1;
                 if (cvs && cvs.parentElement) {
                     const rect = cvs.parentElement.getBoundingClientRect();
-                    const dpr = window.devicePixelRatio || 1;
-                    
-                    // On ne dessine que si la zone est visible à l'écran
+                    // On dessine si le panneau est visible (width > 0)
                     if (rect.width > 0 && rect.height > 0) {
                         cvs.width = rect.width * dpr; cvs.height = rect.height * dpr;
                         const ctx = cvs.getContext('2d'); ctx.scale(dpr, dpr);
@@ -697,7 +685,7 @@
                 if(typeof window.updateAn3D === 'function') window.updateAn3D(); 
             }
         } catch(e) {
-            console.error("L'Astro Master a capturé une erreur graphique :", e);
+            console.error("L'Astro Master a capturé une erreur graphique, mais les mathématiques sont sauves :", e);
         }
     }
     window.runAnalyzer = runAnalyzer;
@@ -751,9 +739,29 @@
                 F = F1 * M; document.getElementById('arch-F').value = F.toFixed(2);
             } else {
                 F = parseFloat(document.getElementById('arch-F').value) || 0;
-                if(calculationMode === 'auto') { F1 = D * 3.5; document.getElementById('arch-F1').value = F1.toFixed(2); M = (F1 > 0) ? F / F1 : 0; Sep = (M * F1 - B) / (M + 1); document.getElementById('arch-Sep').value = Sep.toFixed(2); }
-                else if(calculationMode === 'f1') { F1 = parseFloat(document.getElementById('arch-F1').value)||0; M = (F1>0) ? F/F1 : 0; Sep = (M*F1 - B)/(M+1); document.getElementById('arch-Sep').value = Sep.toFixed(2); } 
-                else { Sep = parseFloat(document.getElementById('arch-Sep').value)||0; M = (Sep>0) ? (F-B-Sep)/Sep : 0; if(M<=0){ return; } F1 = F/M; document.getElementById('arch-F1').value = F1.toFixed(2); }
+                
+                // LE VRAI MODE AUTO INTELLIGENT
+                if(calculationMode === 'auto') { 
+                    // Si F a été corrompu (négatif ou infini par le mode manuel précédent), on le force à D * 10
+                    if (F <= 0 || !isFinite(F)) { 
+                        F = D * 10; 
+                        document.getElementById('arch-F').value = F.toFixed(2); 
+                    }
+                    F1 = D * 3.5; 
+                    document.getElementById('arch-F1').value = F1.toFixed(2); 
+                    M = (F1 > 0) ? F / F1 : 0; 
+                    Sep = (M * F1 - B) / (M + 1); 
+                    document.getElementById('arch-Sep').value = Sep.toFixed(2); 
+                }
+                else if(calculationMode === 'f1') { 
+                    F1 = parseFloat(document.getElementById('arch-F1').value)||0; M = (F1>0) ? F/F1 : 0; 
+                    Sep = (M*F1 - B)/(M+1); document.getElementById('arch-Sep').value = Sep.toFixed(2); 
+                } 
+                else { 
+                    Sep = parseFloat(document.getElementById('arch-Sep').value)||0; M = (Sep>0) ? (F-B-Sep)/Sep : 0; 
+                    if(M<=0){ alert("ERREUR GÉOMÉTRIQUE : Séparation ou Focale invalide."); return; } 
+                    F1 = F/M; document.getElementById('arch-F1').value = F1.toFixed(2); 
+                }
                 VizSep = Sep;
             }
         }
@@ -775,10 +783,10 @@
 
         currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff, CPL: CPL };
 
-        document.getElementById('res-fd').innerText = (D>0 && F>0) ? "f/" + (F/D).toFixed(1) : "-"; document.getElementById('res-mag').innerText = isFinite(M) ? M.toFixed(2) + "x" : "Err"; document.getElementById('res-obst').innerText = (D>0) ? (D_obs/D*100).toFixed(1) + "%" : "-"; document.getElementById('res-d-eff').innerText = Deff + " mm"; const resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-"; document.getElementById('res-resol').innerText = resArc;
+        document.getElementById('res-fd').innerText = (D>0 && F>0) ? "f/" + (F/D).toFixed(1) : "-"; document.getElementById('res-mag').innerText = (isFinite(M) && M>0) ? M.toFixed(2) + "x" : "Err"; document.getElementById('res-obst').innerText = (D>0) ? (D_obs/D*100).toFixed(1) + "%" : "-"; document.getElementById('res-d-eff').innerText = Deff + " mm"; const resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-"; document.getElementById('res-resol').innerText = resArc;
         document.getElementById('res-r1').innerText = R1.toFixed(2); document.getElementById('res-f1-out').innerText = F1.toFixed(2); document.getElementById('res-k1').innerText = K1.toFixed(4); document.getElementById('res-shape1').innerText = s1; document.getElementById('res-hole').innerText = hD>0 ? hD.toFixed(1)+" mm" : "N/A"; document.getElementById('res-shape2').innerText = s2;
 
-        if(type !== 'newton') { document.getElementById('res-r2').innerText = isFinite(R2) ? Math.abs(R2).toFixed(2) : "-"; document.getElementById('res-sep-out').innerText = Sep.toFixed(2); document.getElementById('res-k2').innerText = isFinite(K2) ? K2.toFixed(4) : "-"; document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); } 
+        if(type !== 'newton') { document.getElementById('res-r2').innerText = (isFinite(R2) && M>0) ? Math.abs(R2).toFixed(2) : "-"; document.getElementById('res-sep-out').innerText = Sep.toFixed(2); document.getElementById('res-k2').innerText = isFinite(K2) ? K2.toFixed(4) : "-"; document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); } 
         else { document.getElementById('res-r2').innerText = "-"; document.getElementById('res-sep-out').innerText = "-"; document.getElementById('res-k2').innerText = "-"; document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); }
         
         let sensorStr = "-";
@@ -789,7 +797,9 @@
         else if (CPL > 0) sensorStr = "Planétaire";
         document.getElementById('res-sensor').innerText = sensorStr;
 
-        if(vizModeArch === '2d') { window.redrawCurrentBlueprint(); } else { window.updateArch3D(); }
+        try {
+            if(vizModeArch === '2d') { window.redrawCurrentBlueprint(); } else { window.updateArch3D(); }
+        } catch(e) { console.error(e); }
     }
     window.runArchitect = runArchitect;
 
