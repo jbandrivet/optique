@@ -254,7 +254,7 @@
             
             <div class="input-group">
                 <label>CPL / Capteur (mm)</label>
-                <input type="number" id="arch-CPL" value="28" title="Champ de pleine lumière désiré (ex: 44 pour Full Frame, 28 pour APS-C)">
+                <input type="number" id="arch-CPL" value="60" title="Champ de pleine lumière désiré (ex: 44 pour Full Frame, 60 pour grand format)">
             </div>
             
             <div id="calc-mode-container">
@@ -424,8 +424,8 @@
     }
 
     // --- MOTEUR DE DESSIN 2D (BLUEPRINT EXACT) ---
-    function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, theme) {
-        D = Math.abs(D)||1; F1 = F1||1; Sep = Math.abs(Sep)||0; B = Math.abs(B)||0; D2 = Math.abs(D2)||1; holeDiam = Math.abs(holeDiam)||0;
+    function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, CPL, theme) {
+        D = Math.abs(D)||1; F1 = F1||1; Sep = Math.abs(Sep)||0; B = Math.abs(B)||0; D2 = Math.abs(D2)||1; holeDiam = Math.abs(holeDiam)||0; CPL = Math.abs(CPL)||0;
         ctx.clearRect(0,0, width, height); ctx.save();
         if(theme === 'screen') { 
             const dpr = window.devicePixelRatio || 1;
@@ -485,7 +485,9 @@
             const margin_hole = 5 * scale; const baffle_wall = 2 * scale; const opticalHoleRad = (holeDiam*scale)/2; let physicalHoleRad = opticalHoleRad + margin_hole; 
             
             let b1_len_val = (Sep * 0.4); if (nasmyth) { b1_len_val = (Sep * 0.25); }
-            const b1_len = b1_len_val * scale; const r_beam_at_baffle_tip = (D2/2) * ( (B + b1_len_val) / (B + Sep) );
+            const b1_len = b1_len_val * scale; 
+            // Formule exacte du cône CPL pour B1
+            const r_beam_at_baffle_tip = (CPL/2) + ( (D2/2) - (CPL/2) ) * ( (B + b1_len_val) / (B + Sep) );
             let b1Rad_val = r_beam_at_baffle_tip + 2; if(b1Rad_val < holeDiam/2) { b1Rad_val = holeDiam/2 + 1; }
             const b1Rad = b1Rad_val * scale; const b1OuterRad = b1Rad + baffle_wall;
 
@@ -546,7 +548,7 @@
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         canvas.width = rect.width * dpr; canvas.height = rect.height * dpr; ctx.scale(dpr, dpr);
-        drawBlueprintGeneric(ctx, rect.width, rect.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'screen');
+        drawBlueprintGeneric(ctx, rect.width, rect.height, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, currentData.CPL, 'screen');
     }
     window.redrawCurrentBlueprint = redrawCurrentBlueprint;
 
@@ -743,7 +745,7 @@
         if(type === 'newton') { D_obs = Math.abs(D2_val) + baffle_margin; } else { const r2_opt = Math.abs(D2_val) / 2; const b2_baseR = r2_opt + 2; D_obs = b2_baseR * 2; }
         const Deff = Math.sqrt(Math.max(0, Math.pow(D, 2) - Math.pow(D_obs, 2))).toFixed(1);
 
-        currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff };
+        currentData = { type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff, CPL: CPL };
 
         document.getElementById('res-fd').innerText = (D>0 && F>0) ? "f/" + (F/D).toFixed(1) : "-"; document.getElementById('res-mag').innerText = isFinite(M) ? M.toFixed(2) + "x" : "Err"; document.getElementById('res-obst').innerText = (D>0) ? (D_obs/D*100).toFixed(1) + "%" : "-"; document.getElementById('res-d-eff').innerText = Deff + " mm"; const resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-"; document.getElementById('res-resol').innerText = resArc;
         document.getElementById('res-r1').innerText = R1.toFixed(2); document.getElementById('res-f1-out').innerText = F1.toFixed(2); document.getElementById('res-k1').innerText = K1.toFixed(4); document.getElementById('res-shape1').innerText = s1; document.getElementById('res-hole').innerText = hD>0 ? hD.toFixed(1)+" mm" : "N/A"; document.getElementById('res-shape2').innerText = s2;
@@ -773,7 +775,7 @@
         const { jsPDF } = window.jspdf; const doc = new jsPDF(); const pName = document.getElementById('project-name').value || "Projet Optique";
         doc.setFontSize(22); doc.text("MONSIEUR ANDRIVET // RAPPORT v2", 20, 20); doc.setFontSize(16); doc.setTextColor(0, 86, 179); doc.text(pName, 20, 30); doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text("Date: "+new Date().toLocaleDateString(), 150, 20);
         const cvs = document.createElement('canvas'); cvs.width=2000; cvs.height=1000; const ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.fillRect(0,0,2000,1000);
-        const oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0}; drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, 'print'); viewState = oldState;
+        const oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0}; drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, currentData.CPL, 'print'); viewState = oldState;
         doc.addImage(cvs.toDataURL("image/png"), 'PNG', 10, 40, 190, 95);
         const y=150; doc.line(10,y,200,y); doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.text("DONNÉES", 10, y-5); doc.setFontSize(10); doc.setFont("helvetica","normal");
         doc.text(`Diamètre: ${currentData.D} mm`, 15, y+10); doc.text(`Diamètre Pur: ${currentData.Deff} mm`, 15, y+20); doc.text(`Focale: ${currentData.F} mm (f/${(currentData.F/currentData.D).toFixed(1)})`, 15, y+30); doc.text(`PRIMAIRE (R1): ${currentData.R1.toFixed(2)} mm (K=${currentData.K1.toFixed(4)})`, 80, y+10);
@@ -851,11 +853,15 @@
         let visualSep = currentData.VizSep || currentData.Sep; if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
 
         let physicalHoleR = 0; let b1_len_val = 0; let b1_outerR = 0;
+        const CPL = currentData.CPL || 0;
+
         if(currentData.type !== 'NEWTON') {
             const opticalHoleR = currentData.Hole / 2; b1_len_val = (currentData.Sep * 0.4); 
             if (currentData.type === 'NASMYTH') { b1_len_val = (currentData.Sep * 0.25); }
             const dist_focus_to_tip = currentData.B + b1_len_val; const dist_focus_to_m2 = currentData.B + currentData.Sep;
-            const r_beam_at_tip = (currentData.D2/2) * (dist_focus_to_tip / dist_focus_to_m2);
+            
+            // Calcul exact du tronc de cône pour le baffle primaire (B1)
+            const r_beam_at_tip = (CPL/2) + ( (currentData.D2/2) - (CPL/2) ) * (dist_focus_to_tip / dist_focus_to_m2);
             let b1_innerR = r_beam_at_tip + 2; if(b1_innerR < opticalHoleR) b1_innerR = opticalHoleR + 1;
             const b1_thick = 2; b1_outerR = b1_innerR + b1_thick; physicalHoleR = b1_outerR + 2; 
         }
@@ -882,9 +888,23 @@
             const m2CellObj = new THREE.Mesh(new THREE.LatheGeometry(m2CellPts, 64), cellMat); m2CellObj.rotation.x = Math.PI/2; m2CellObj.position.z = Sep; grp.add(m2CellObj);
 
             const baffleGroup = new THREE.Group(); const matBaffle = new THREE.MeshStandardMaterial({color: 0x151515, side: THREE.DoubleSide, roughness: 1.0, metalness: 0.1});
-            const lenB1 = b1_len_val; const meshB1 = new THREE.Mesh(new THREE.CylinderGeometry(b1_outerR, b1_outerR, lenB1, 32, 1, true), matBaffle); meshB1.rotation.x = Math.PI/2; meshB1.position.z = lenB1/2; baffleGroup.add(meshB1);
-            const b2_baseR = R2 + 2; const lenB2 = Sep * 0.15; const b2_tipR = b2_baseR * 1.25; 
-            const meshB2 = new THREE.Mesh(new THREE.CylinderGeometry(b2_baseR, b2_tipR, lenB2, 32, 1, true), matBaffle); meshB2.rotation.x = Math.PI/2; meshB2.position.z = Sep - lenB2/2; baffleGroup.add(meshB2);
+            
+            // Mesh Baffle Primaire (B1)
+            const lenB1 = b1_len_val; 
+            const meshB1 = new THREE.Mesh(new THREE.CylinderGeometry(b1_outerR, b1_outerR, lenB1, 32, 1, true), matBaffle); 
+            meshB1.rotation.x = Math.PI/2; meshB1.position.z = lenB1/2; 
+            baffleGroup.add(meshB1);
+            
+            // Mesh Baffle Secondaire (B2) - Géométrie exacte pointant vers le primaire
+            const b2_baseR = R2 + 2; 
+            const lenB2 = Sep * 0.15; 
+            const r1_opt = currentData.D / 2;
+            const r_beam_at_m2_tip = R2 + (r1_opt - R2) * (lenB2 / Sep);
+            const b2_tipR = r_beam_at_m2_tip + 2; 
+            
+            const meshB2 = new THREE.Mesh(new THREE.CylinderGeometry(b2_baseR, b2_tipR, lenB2, 32, 1, true), matBaffle); 
+            meshB2.rotation.x = Math.PI/2; meshB2.position.z = Sep - lenB2/2; 
+            baffleGroup.add(meshB2);
             grp.add(baffleGroup);
 
             const nasmyth = (currentData.type === 'NASMYTH'); const m3_z_pos = currentData.Sep * 0.25; 
