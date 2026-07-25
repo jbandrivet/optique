@@ -331,6 +331,7 @@
                     <div class="result-row"><span>Constante K2</span><div class="res-val" id="res-k2">-</div></div>
                     <div class="result-row"><span>Forme</span><div class="res-val" id="res-shape2" style="font-size:0.8rem">-</div></div>
                     <div class="result-row"><span>Diamètre Optique</span><div class="res-val" id="res-d2">-</div></div>
+                    <div class="result-row"><span>Marge CPL</span><div class="res-val" id="res-cpl-margin" style="color:var(--neon-cyan)">-</div></div>
                     <div class="result-row"><span>Capteur Couvert</span><div class="res-val" id="res-sensor" style="color:var(--neon-pink)">-</div></div>
                 </div>
             </div>
@@ -740,9 +741,7 @@
             } else {
                 F = parseFloat(document.getElementById('arch-F').value) || 0;
                 
-                // LE VRAI MODE AUTO INTELLIGENT
                 if(calculationMode === 'auto') { 
-                    // Si F a été corrompu (négatif ou infini par le mode manuel précédent), on le force à D * 10
                     if (F <= 0 || !isFinite(F)) { 
                         F = D * 10; 
                         document.getElementById('arch-F').value = F.toFixed(2); 
@@ -770,9 +769,15 @@
         if(type==='newton') { K1=-1; R2=0; K2=0; s1="Parabole"; s2="Plan"; hD=0; } 
         else if(F1 > 0) {
             if(M === 1) { R2 = 0; } else { R2 = (2*Sep*M)/(M-1); }
-            D2_val = (D*(F1-Sep))/F1 + CPL*(Sep/F); hD = D2_val*(B/(Sep+B));
+            
+            // INTÉGRATION EXACTE DU CHAMP DE PLEINE LUMIÈRE (CPL)
+            const p = F1 - Sep;
+            const D2_min = (D * p) / F1; 
+            D2_val = D2_min + CPL * (p / F1);
+            hD = (D2_val * B) / (Sep + B) + CPL * (Sep / (Sep + B));
+
             if(type==='cassegrain') { K1=-1; s1="Parabole"; const t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
-            else if(type==='dk') { K2=0; s2="Sphère"; const p=Sep+B; const t2=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t2*(p/F1); s1="Ellipse Prolate"; }
+            else if(type==='dk') { K2=0; s2="Sphère"; const p_val=Sep+B; const t2=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t2*(p_val/F1); s1="Ellipse Prolate"; }
             else if(type==='rc' || type==='nasmyth') { K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); K2=-Math.pow((M+1)/(M-1),2)-(4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep); s1="Hyperbole"; s2="Hyperbole"; }
             else { K1=0; K2=0; s1="Sphère"; s2="Sphère"; }
         }
@@ -786,8 +791,29 @@
         document.getElementById('res-fd').innerText = (D>0 && F>0) ? "f/" + (F/D).toFixed(1) : "-"; document.getElementById('res-mag').innerText = (isFinite(M) && M>0) ? M.toFixed(2) + "x" : "Err"; document.getElementById('res-obst').innerText = (D>0) ? (D_obs/D*100).toFixed(1) + "%" : "-"; document.getElementById('res-d-eff').innerText = Deff + " mm"; const resArc = (D>0) ? (116/D).toFixed(2) + '"' : "-"; document.getElementById('res-resol').innerText = resArc;
         document.getElementById('res-r1').innerText = R1.toFixed(2); document.getElementById('res-f1-out').innerText = F1.toFixed(2); document.getElementById('res-k1').innerText = K1.toFixed(4); document.getElementById('res-shape1').innerText = s1; document.getElementById('res-hole').innerText = hD>0 ? hD.toFixed(1)+" mm" : "N/A"; document.getElementById('res-shape2').innerText = s2;
 
-        if(type !== 'newton') { document.getElementById('res-r2').innerText = (isFinite(R2) && M>0) ? Math.abs(R2).toFixed(2) : "-"; document.getElementById('res-sep-out').innerText = Sep.toFixed(2); document.getElementById('res-k2').innerText = isFinite(K2) ? K2.toFixed(4) : "-"; document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); } 
-        else { document.getElementById('res-r2').innerText = "-"; document.getElementById('res-sep-out').innerText = "-"; document.getElementById('res-k2').innerText = "-"; document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); }
+        if(type !== 'newton') { 
+            document.getElementById('res-r2').innerText = (isFinite(R2) && M>0) ? Math.abs(R2).toFixed(2) : "-"; 
+            document.getElementById('res-sep-out').innerText = Sep.toFixed(2); 
+            document.getElementById('res-k2').innerText = isFinite(K2) ? K2.toFixed(4) : "-"; 
+            document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1);
+            
+            // Calcul de la marge CPL
+            const D2_min = (D * (F1 - Sep)) / F1;
+            const cplMargin = Math.abs(D2_val) - D2_min;
+            document.getElementById('res-cpl-margin').innerText = cplMargin > 0 ? "+" + cplMargin.toFixed(1) + " mm" : "0 mm";
+        } 
+        else { 
+            document.getElementById('res-r2').innerText = "-"; 
+            document.getElementById('res-sep-out').innerText = "-"; 
+            document.getElementById('res-k2').innerText = "-"; 
+            document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); 
+            
+            // Calcul de la marge CPL Newton
+            const L = (D/2) + B;
+            const D2_min_newton = (D * L) / F;
+            const cplMargin = Math.abs(D2_val) - D2_min_newton;
+            document.getElementById('res-cpl-margin').innerText = cplMargin > 0 ? "+" + cplMargin.toFixed(1) + " mm" : "0 mm";
+        }
         
         let sensorStr = "-";
         if (CPL >= 43) sensorStr = "Full Frame (35mm)";
@@ -1033,7 +1059,6 @@
             for(let i=0; i<numRays; i++) {
                 const angle = (i/numRays) * Math.PI * 2; const x = Math.cos(angle) * R1; const y = Math.sin(angle) * R1;
                 
-                // Correction de l'intersection du rayon 3D avec le miroir plan M2 (inversion de signe)
                 const t_val = (Sep - Z_m1 + y) / (currentData.F1 - Z_m1 + y);
                 const xi = x * (1 - t_val); const yi = y * (1 - t_val); const zi = Z_m1 + t_val * (currentData.F1 - Z_m1);
 
