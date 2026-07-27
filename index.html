@@ -1448,9 +1448,24 @@
             cvs.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                viewState.scale *= zoomFactor;
-                if(viewState.scale < 0.1) viewState.scale = 0.1;
-                if(viewState.scale > 10) viewState.scale = 10;
+                
+                const rect = cvs.getBoundingClientRect();
+                let xs = e.clientX - rect.left;
+                let ys = e.clientY - rect.top;
+                let width = rect.width;
+                let height = rect.height;
+                
+                let oldScale = viewState.scale;
+                let newScale = oldScale * zoomFactor;
+                if(newScale < 0.1) newScale = 0.1;
+                if(newScale > 10) newScale = 10;
+                
+                let scaleRatio = newScale / oldScale;
+                
+                viewState.offsetX = xs - width/2 - (xs - width/2 - viewState.offsetX) * scaleRatio;
+                viewState.offsetY = ys - height/2 - (ys - height/2 - viewState.offsetY) * scaleRatio;
+                viewState.scale = newScale;
+                
                 window.redrawCurrentBlueprint();
             });
         }
