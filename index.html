@@ -1492,11 +1492,10 @@
                 e.preventDefault();
                 let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
                 
-                const rect = cvs.getBoundingClientRect();
-                let xs = e.clientX - rect.left;
-                let ys = e.clientY - rect.top;
-                let width = rect.width;
-                let height = rect.height;
+                let xs = e.offsetX;
+                let ys = e.offsetY;
+                let width = cvs.clientWidth;
+                let height = cvs.clientHeight;
                 
                 let oldScale = viewState.scale;
                 let newScale = oldScale * zoomFactor;
