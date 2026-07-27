@@ -509,7 +509,7 @@
             corrData.lenses.forEach((l, i) => {
                 currentX += l.d * scaleCorr;
                 let cx = currentX + (l.t * scaleCorr) / 2;
-                drawLens(cx, axisY, corrData.diam * scaleCorr, l.r1, l.r2, l.t * scaleCorr);
+                drawLens(cx, axisY, corrData.diam * scaleCorr, l.r1 * scaleCorr, l.r2 * scaleCorr, l.t * scaleCorr);
                 ctx.fillStyle = C_TEXT; ctx.font = "12px Orbitron"; ctx.textAlign = "center";
                 ctx.fillText(`L${i+1}: ${l.glass}`, cx, axisY + (corrData.diam * scaleCorr)/2 + 20);
                 let r1Txt = l.r1 === Infinity ? "Plan" : l.r1.toFixed(1);
@@ -565,7 +565,7 @@
                     let currentX = -corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0)*scale / 2;
                     corrData.lenses.forEach(l => {
                         currentX += l.d * scale; let cx = currentX + (l.t * scale)/2;
-                        drawLens(cx, 0, corrData.diam * scale, l.r1, l.r2, l.t * scale); currentX += l.t * scale;
+                        drawLens(cx, 0, corrData.diam * scale, l.r1 * scale, l.r2 * scale, l.t * scale); currentX += l.t * scale;
                     });
                     ctx.restore();
                     ctx.fillStyle = "rgba(0, 200, 255, 1)"; ctx.font = "10px Orbitron"; ctx.textAlign="left"; ctx.fillText(corrData.name.split(" ")[0], m2X + (corrData.diam*scale)/2 + 5, corrY + 3);
@@ -636,7 +636,7 @@
                         let currentX = -corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0)*scale / 2;
                         corrData.lenses.forEach(l => {
                             currentX += l.d * scale; let cx = currentX + (l.t * scale)/2;
-                            drawLens(cx, 0, corrData.diam * scale, l.r1, l.r2, l.t * scale); currentX += l.t * scale;
+                            drawLens(cx, 0, corrData.diam * scale, l.r1 * scale, l.r2 * scale, l.t * scale); currentX += l.t * scale;
                         });
                         ctx.restore();
                     } else {
@@ -658,7 +658,7 @@
                 if(corrData) {
                     if (type === 'sct') { // Lame à l'entrée
                         if (corrData.lenses && corrData.lenses.length > 0) {
-                            drawLens(m2X, axisY, corrData.diam * scale, corrData.lenses[0].r1, corrData.lenses[0].r2, corrData.lenses[0].t * scale);
+                            drawLens(m2X, axisY, corrData.diam * scale, corrData.lenses[0].r1 * scale, corrData.lenses[0].r2 * scale, corrData.lenses[0].t * scale);
                             ctx.fillStyle = "rgba(0, 200, 255, 1)"; ctx.font = "10px Orbitron"; ctx.textAlign="center"; ctx.fillText("Lame Schmidt", m2X, axisY - (corrData.diam*scale)/2 - 10);
                         } else {
                             const cRad = (D*scale)/2; ctx.fillStyle = "rgba(0, 200, 255, 0.4)"; ctx.fillRect(m2X - 2*scale, axisY - cRad, 4*scale, cRad*2);
@@ -671,7 +671,7 @@
                             let currentX = -corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0)*scale / 2;
                             corrData.lenses.forEach(l => {
                                 currentX += l.d * scale; let cx = currentX + (l.t * scale)/2;
-                                drawLens(cx, 0, corrData.diam * scale, l.r1, l.r2, l.t * scale); currentX += l.t * scale;
+                                drawLens(cx, 0, corrData.diam * scale, l.r1 * scale, l.r2 * scale, l.t * scale); currentX += l.t * scale;
                             });
                             ctx.restore();
                             ctx.fillStyle = "rgba(0, 200, 255, 1)"; ctx.font = "10px Orbitron"; ctx.textAlign="center"; ctx.fillText(corrData.name.split(" ")[0], corrX, axisY - (corrData.diam*scale)/2 - 10);
@@ -1367,22 +1367,10 @@
             });
             cvs.addEventListener('wheel', (e) => {
                 e.preventDefault();
-                const rect = cvs.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                const cx = rect.width / 2;
-                const cy = rect.height / 2;
-                const wx = (mouseX - cx - viewState.offsetX) / viewState.scale;
-                const wy = (mouseY - cy - viewState.offsetY) / viewState.scale;
-                
                 let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                let newScale = viewState.scale * zoomFactor;
-                if(newScale < 0.1) newScale = 0.1;
-                if(newScale > 10) newScale = 10;
-                
-                viewState.offsetX = mouseX - cx - wx * newScale;
-                viewState.offsetY = mouseY - cy - wy * newScale;
-                viewState.scale = newScale;
+                viewState.scale *= zoomFactor;
+                if(viewState.scale < 0.1) viewState.scale = 0.1;
+                if(viewState.scale > 10) viewState.scale = 10;
                 window.redrawCurrentBlueprint();
             });
         }
