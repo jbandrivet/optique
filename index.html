@@ -502,12 +502,16 @@
 
         if (theme === 'corr') {
             if (!corrData || !corrData.lenses || corrData.lenses.length === 0) {
-                ctx.fillStyle = C_TEXT; ctx.font = "20px Orbitron"; ctx.fillText("AUCUN CORRECTEUR", width/2 - 100, height/2);
+                ctx.fillStyle = C_TEXT; ctx.font = "20px Orbitron"; ctx.textAlign="center"; ctx.fillText("AUCUN CORRECTEUR", width/2, height/2);
                 ctx.restore(); return;
             }
             let totalLensesLen = corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0);
-            let tubeLength = totalLensesLen + (corrData.diam * 0.2); // extra margin for tube
-            let tubeThickness = Math.max(corrData.diam * 0.05, 2);
+            let frontRingW = 10; // 10 mm
+            let backRingW = 10; // 10 mm
+            let extraMargin = 10; // 5 mm empty space each side
+            let tubeLength = totalLensesLen + frontRingW + backRingW + extraMargin;
+            
+            let tubeThickness = Math.max(corrData.diam * 0.05, 3);
             let outerDiam = corrData.diam + 2 * tubeThickness;
             
             let totalLenDraw = tubeLength + 150;
@@ -522,47 +526,44 @@
             
             // Draw Tube (housing)
             ctx.fillStyle = "#333344";
-            let topYTube = axisY - (outerDiam * scaleCorr) / 2;
-            let botYTube = axisY + (corrData.diam * scaleCorr) / 2;
-            ctx.fillRect(startXTube, topYTube, tubeLength * scaleCorr, tubeThickness * scaleCorr);
-            ctx.fillRect(startXTube, botYTube, tubeLength * scaleCorr, tubeThickness * scaleCorr);
+            let topInnerY = axisY - (corrData.diam * scaleCorr) / 2;
+            let botInnerY = axisY + (corrData.diam * scaleCorr) / 2;
+            let topOuterY = axisY - (outerDiam * scaleCorr) / 2;
+            let botOuterY = axisY + (outerDiam * scaleCorr) / 2;
+            
+            ctx.fillRect(startXTube, topOuterY, tubeLength * scaleCorr, tubeThickness * scaleCorr);
+            ctx.fillRect(startXTube, botInnerY, tubeLength * scaleCorr, tubeThickness * scaleCorr);
             
             ctx.strokeStyle = "#555566"; ctx.lineWidth = 2;
-            ctx.strokeRect(startXTube, topYTube, tubeLength * scaleCorr, tubeThickness * scaleCorr);
-            ctx.strokeRect(startXTube, botYTube, tubeLength * scaleCorr, tubeThickness * scaleCorr);
+            ctx.strokeRect(startXTube, topOuterY, tubeLength * scaleCorr, tubeThickness * scaleCorr);
+            ctx.strokeRect(startXTube, botInnerY, tubeLength * scaleCorr, tubeThickness * scaleCorr);
             
             // Tube dimensions
-            dDim(`L. TUBE: ${tubeLength.toFixed(1)} mm`, startXTube, endXTube, topYTube - 25);
-            dDim(`Ø INT: ${corrData.diam.toFixed(1)} mm`, endXTube + 20, endXTube + 20, axisY - (corrData.diam * scaleCorr) / 2, axisY + (corrData.diam * scaleCorr) / 2); // custom vertical
-            // Draw vertical dim line
-            ctx.beginPath(); ctx.moveTo(endXTube + 20, axisY - (corrData.diam * scaleCorr) / 2); ctx.lineTo(endXTube + 20, axisY + (corrData.diam * scaleCorr) / 2);
-            ctx.moveTo(endXTube + 15, axisY - (corrData.diam * scaleCorr) / 2); ctx.lineTo(endXTube + 25, axisY - (corrData.diam * scaleCorr) / 2);
-            ctx.moveTo(endXTube + 15, axisY + (corrData.diam * scaleCorr) / 2); ctx.lineTo(endXTube + 25, axisY + (corrData.diam * scaleCorr) / 2);
+            dDim(`L. TUBE: ${tubeLength.toFixed(1)} mm`, startXTube, endXTube, topOuterY - 25);
+            dDim(`Ø INT: ${corrData.diam.toFixed(1)} mm`, endXTube + 20, endXTube + 20, topInnerY, botInnerY); 
+            ctx.beginPath(); ctx.moveTo(endXTube + 20, topInnerY); ctx.lineTo(endXTube + 20, botInnerY);
+            ctx.moveTo(endXTube + 15, topInnerY); ctx.lineTo(endXTube + 25, topInnerY);
+            ctx.moveTo(endXTube + 15, botInnerY); ctx.lineTo(endXTube + 25, botInnerY);
             ctx.strokeStyle=C_DIM; ctx.lineWidth=1; ctx.stroke();
             ctx.fillStyle=C_TEXT; ctx.font="12px Orbitron"; ctx.textAlign="left"; ctx.fillText(`Ø EXT: ${outerDiam.toFixed(1)} mm`, endXTube + 30, axisY);
             
-            let currentX = startXTube + (tubeLength - totalLensesLen) * scaleCorr / 2;
-            
+            // Mechanics
+            let currentX = startXTube + (extraMargin/2) * scaleCorr;
             let ringThick = (corrData.diam * scaleCorr) * 0.10; // Epaisseur des bagues (10% diam)
-            let topInnerY = axisY - (corrData.diam * scaleCorr) / 2;
-            let botInnerY = axisY + (corrData.diam * scaleCorr) / 2;
+            let overlap = 3 * scaleCorr; // visual overlap
             
             // Front Retaining Ring
-            let frontRingWidth = 5 * scaleCorr;
-            let overlap = 2 * scaleCorr;
             ctx.fillStyle = "#888899";
-            ctx.fillRect(currentX, topInnerY, frontRingWidth + overlap, ringThick);
-            ctx.fillRect(currentX, botInnerY - ringThick, frontRingWidth + overlap, ringThick);
+            ctx.fillRect(currentX, topInnerY, (frontRingW * scaleCorr) + overlap, ringThick);
+            ctx.fillRect(currentX, botInnerY - ringThick, (frontRingW * scaleCorr) + overlap, ringThick);
             ctx.strokeStyle = "#aaaaaa"; ctx.lineWidth=1;
-            ctx.strokeRect(currentX, topInnerY, frontRingWidth + overlap, ringThick);
-            ctx.strokeRect(currentX, botInnerY - ringThick, frontRingWidth + overlap, ringThick);
+            ctx.strokeRect(currentX, topInnerY, (frontRingW * scaleCorr) + overlap, ringThick);
+            ctx.strokeRect(currentX, botInnerY - ringThick, (frontRingW * scaleCorr) + overlap, ringThick);
             
-            currentX += frontRingWidth;
+            currentX += (frontRingW * scaleCorr);
 
             corrData.lenses.forEach((l, i) => {
                 if (l.d > 0) {
-                    // Spacer ring (Bague d'espacement) between lenses - slightly wider to touch lens curves
-                    let overlap = 4 * scaleCorr; // visual overlap
                     let gapX = currentX - overlap;
                     let gapW = l.d * scaleCorr + 2*overlap;
                     ctx.fillStyle = "#666677";
@@ -579,22 +580,22 @@
                 drawLens(cx, axisY, corrData.diam * scaleCorr, l.r1 * scaleCorr, l.r2 * scaleCorr, l.t * scaleCorr);
                 
                 ctx.fillStyle = C_TEXT; ctx.font = "12px Orbitron"; ctx.textAlign = "center";
-                ctx.fillText(`L${i+1}: ${l.glass}`, cx, axisY + (outerDiam * scaleCorr)/2 + 25);
+                ctx.fillText(`L${i+1}: ${l.glass}`, cx, botOuterY + 25);
                 let r1Txt = l.r1 === Infinity ? "Plan" : l.r1.toFixed(1);
                 let r2Txt = l.r2 === Infinity ? "Plan" : l.r2.toFixed(1);
-                ctx.fillText(`R1:${r1Txt} R2:${r2Txt}`, cx, axisY + (outerDiam * scaleCorr)/2 + 40);
-                ctx.fillText(`ép:${l.t.toFixed(1)}`, cx, axisY + (outerDiam * scaleCorr)/2 + 55);
+                ctx.fillText(`R1:${r1Txt} R2:${r2Txt}`, cx, botOuterY + 40);
+                ctx.fillText(`ép:${l.t.toFixed(1)}`, cx, botOuterY + 55);
                 
                 currentX += l.t * scaleCorr;
             });
             
             // Back Retaining Ring
             ctx.fillStyle = "#888899";
-            ctx.fillRect(currentX - overlap, topInnerY, frontRingWidth + overlap, ringThick);
-            ctx.fillRect(currentX - overlap, botInnerY - ringThick, frontRingWidth + overlap, ringThick);
-            ctx.strokeRect(currentX - overlap, topInnerY, frontRingWidth + overlap, ringThick);
-            ctx.strokeRect(currentX - overlap, botInnerY - ringThick, frontRingWidth + overlap, ringThick);
-
+            ctx.fillRect(currentX - overlap, topInnerY, (backRingW * scaleCorr) + overlap, ringThick);
+            ctx.fillRect(currentX - overlap, botInnerY - ringThick, (backRingW * scaleCorr) + overlap, ringThick);
+            ctx.strokeRect(currentX - overlap, topInnerY, (backRingW * scaleCorr) + overlap, ringThick);
+            ctx.strokeRect(currentX - overlap, botInnerY - ringThick, (backRingW * scaleCorr) + overlap, ringThick);
+            
             ctx.restore(); return;
         }
 
@@ -740,15 +741,10 @@
                 ctx.fillStyle = "#ffaa00"; ctx.fillRect(fX, axisY - (CPL>0 ? CPL*scale/2 : 10*scale), 2*scale, (CPL>0 ? CPL*scale : 20*scale));
                 ctx.fillStyle = "#ffaa00"; ctx.font = "10px Orbitron"; ctx.textAlign="left"; ctx.fillText("CAPTEUR", fX + 10*scale, axisY + 4);
                 if(corrData) {
-                    if (type === 'sct') { // Lame à l'entrée
-                        if (corrData.lenses && corrData.lenses.length > 0) {
-                            drawLens(m2X, axisY, corrData.diam * scale, corrData.lenses[0].r1 * scale, corrData.lenses[0].r2 * scale, corrData.lenses[0].t * scale);
-                            ctx.fillStyle = "rgba(0, 200, 255, 1)"; ctx.font = "10px Orbitron"; ctx.textAlign="center"; ctx.fillText("Lame Schmidt", m2X, axisY - (corrData.diam*scale)/2 - 10);
-                        } else {
-                            const cRad = (D*scale)/2; ctx.fillStyle = "rgba(0, 200, 255, 0.4)"; ctx.fillRect(m2X - 2*scale, axisY - cRad, 4*scale, cRad*2);
-                            ctx.fillStyle = "rgba(0, 200, 255, 1)"; ctx.font = "10px Orbitron"; ctx.textAlign="center"; ctx.fillText("Lame Schmidt", m2X, axisY - cRad - 10);
-                        }
-                    } else if (corrData.pos > 0) {
+                    if (type === 'sct' && corrData.lenses && corrData.lenses.length > 0) { // Lame à l'entrée
+                        drawLens(m2X, axisY, corrData.diam * scale, corrData.lenses[0].r1 * scale, corrData.lenses[0].r2 * scale, corrData.lenses[0].t * scale);
+                        ctx.fillStyle = "rgba(0, 200, 255, 1)"; ctx.font = "10px Orbitron"; ctx.textAlign="center"; ctx.fillText("Lame Schmidt", m2X, axisY - (corrData.diam*scale)/2 - 10);
+                    } else if (corrData.pos > 0 && corrData.lenses && corrData.lenses.length > 0) {
                         const corrX = fX - corrData.pos * scale; // Vers M1
                         if (corrData.lenses && corrData.lenses.length > 0) {
                             ctx.save(); ctx.translate(corrX, axisY);
