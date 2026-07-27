@@ -1042,9 +1042,9 @@
             corrGlass = "N-BK7 / N-F2 / N-BK7";
             let cD = corrDiam;
             lenses = [
-                {r1: cD * 3.0, r2: -cD * 3.0, t: cD * 0.3, d: 0, glass: "N-BK7"},
-                {r1: -cD * 1.6, r2: cD * 1.6, t: cD * 0.1, d: cD * 0.2, glass: "N-F2"},
-                {r1: cD * 4.0, r2: -cD * 4.0, t: cD * 0.24, d: cD * 0.3, glass: "N-BK7"}
+                {r1: cD * 3.0, r2: -cD * 3.0, t: cD * 0.15, d: 0, glass: "N-BK7"},
+                {r1: -cD * 1.6, r2: cD * 1.6, t: cD * 0.05, d: cD * 0.1, glass: "N-F2"},
+                {r1: cD * 4.0, r2: -cD * 4.0, t: cD * 0.12, d: cD * 0.15, glass: "N-BK7"}
             ];
         } else if (type === 'dk') {
             corrType = "Corr. Sous-ouverture (Coma/Astig)";
@@ -1053,8 +1053,8 @@
             corrGlass = "N-BK7 / Silice Fondue";
             let cD = corrDiam;
             lenses = [
-                {r1: cD * 2.5, r2: Infinity, t: cD * 0.25, d: 0, glass: "N-BK7"},
-                {r1: -cD * 2.0, r2: cD * 3.0, t: cD * 0.15, d: cD * 0.3, glass: "Silice Fondue"}
+                {r1: cD * 2.5, r2: Infinity, t: cD * 0.12, d: 0, glass: "N-BK7"},
+                {r1: -cD * 2.0, r2: cD * 3.0, t: cD * 0.05, d: cD * 0.15, glass: "Silice Fondue"}
             ];
         } else if (type === 'rc') {
             corrType = "Aplanisseur (Astigmatisme)";
@@ -1063,8 +1063,8 @@
             corrGlass = "Silice Fondue (x2)";
             let cD = corrDiam;
             lenses = [
-                {r1: cD * 3.0, r2: Infinity, t: cD * 0.25, d: 0, glass: "Silice Fondue"},
-                {r1: Infinity, r2: cD * 2.4, t: cD * 0.25, d: cD * 0.3, glass: "Silice Fondue"}
+                {r1: cD * 3.0, r2: Infinity, t: cD * 0.12, d: 0, glass: "Silice Fondue"},
+                {r1: Infinity, r2: cD * 2.4, t: cD * 0.12, d: cD * 0.15, glass: "Silice Fondue"}
             ];
         } else if (type === 'cassegrain') {
             corrType = "Aplanisseur de Champ";
@@ -1073,7 +1073,7 @@
             corrGlass = "N-BK7";
             let cD = corrDiam;
             lenses = [
-                {r1: Infinity, r2: cD * 2.4, t: cD * 0.25, d: 0, glass: "N-BK7"}
+                {r1: Infinity, r2: cD * 2.4, t: cD * 0.12, d: 0, glass: "N-BK7"}
             ];
         } else if (type === 'nasmyth') {
             corrType = "Aplanisseur Nasmyth";
@@ -1082,7 +1082,7 @@
             corrGlass = "N-BK7 / Silice Fondue";
             let cD = corrDiam;
             lenses = [
-                {r1: Infinity, r2: cD * 2.4, t: cD * 0.25, d: 0, glass: "N-BK7"}
+                {r1: Infinity, r2: cD * 2.4, t: cD * 0.12, d: 0, glass: "N-BK7"}
             ];
         } else if (type === 'sct') {
             corrType = "Lame de Schmidt (Correctrice)";
