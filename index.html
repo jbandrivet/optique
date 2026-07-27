@@ -540,7 +540,35 @@
             
             let currentX = startXTube + (tubeLength - totalLensesLen) * scaleCorr / 2;
             
+            let ringThick = (corrData.diam * scaleCorr) * 0.10; // Epaisseur des bagues (10% diam)
+            let topInnerY = axisY - (corrData.diam * scaleCorr) / 2;
+            let botInnerY = axisY + (corrData.diam * scaleCorr) / 2;
+            
+            // Front Retaining Ring
+            let frontRingWidth = 5 * scaleCorr;
+            ctx.fillStyle = "#888899";
+            ctx.fillRect(currentX, topInnerY, frontRingWidth, ringThick);
+            ctx.fillRect(currentX, botInnerY - ringThick, frontRingWidth, ringThick);
+            ctx.strokeStyle = "#aaaaaa"; ctx.lineWidth=1;
+            ctx.strokeRect(currentX, topInnerY, frontRingWidth, ringThick);
+            ctx.strokeRect(currentX, botInnerY - ringThick, frontRingWidth, ringThick);
+            
+            currentX += frontRingWidth;
+
             corrData.lenses.forEach((l, i) => {
+                if (l.d > 0) {
+                    // Spacer ring (Bague d'espacement) between lenses
+                    let gapX = currentX;
+                    let gapW = l.d * scaleCorr;
+                    ctx.fillStyle = "#666677";
+                    ctx.fillRect(gapX, topInnerY, gapW, ringThick);
+                    ctx.fillRect(gapX, botInnerY - ringThick, gapW, ringThick);
+                    ctx.strokeRect(gapX, topInnerY, gapW, ringThick);
+                    ctx.strokeRect(gapX, botInnerY - ringThick, gapW, ringThick);
+                    
+                    dDim(`d=${l.d.toFixed(1)}`, currentX, currentX + gapW, topInnerY - 10);
+                }
+                
                 currentX += l.d * scaleCorr;
                 let cx = currentX + (l.t * scaleCorr) / 2;
                 drawLens(cx, axisY, corrData.diam * scaleCorr, l.r1 * scaleCorr, l.r2 * scaleCorr, l.t * scaleCorr);
@@ -552,9 +580,16 @@
                 ctx.fillText(`R1:${r1Txt} R2:${r2Txt}`, cx, axisY + (outerDiam * scaleCorr)/2 + 40);
                 ctx.fillText(`ép:${l.t.toFixed(1)}`, cx, axisY + (outerDiam * scaleCorr)/2 + 55);
                 
-                if (l.d > 0) dDim(`d=${l.d.toFixed(1)}`, currentX - l.d * scaleCorr, currentX, axisY - (corrData.diam * scaleCorr)/2 - 10);
                 currentX += l.t * scaleCorr;
             });
+            
+            // Back Retaining Ring
+            ctx.fillStyle = "#888899";
+            ctx.fillRect(currentX, topInnerY, frontRingWidth, ringThick);
+            ctx.fillRect(currentX, botInnerY - ringThick, frontRingWidth, ringThick);
+            ctx.strokeRect(currentX, topInnerY, frontRingWidth, ringThick);
+            ctx.strokeRect(currentX, botInnerY - ringThick, frontRingWidth, ringThick);
+
             ctx.restore(); return;
         }
 
