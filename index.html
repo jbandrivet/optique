@@ -1048,6 +1048,11 @@
             }
         }
 
+        if(type !== 'newton' && M <= 1) {
+            alert("ERREUR GÉOMÉTRIQUE : Le grandissement M doit être > 1 pour ces configurations.");
+            return;
+        }
+
         R1 = 2*F1; 
         if(type==='newton') { K1=-1; R2=0; K2=0; s1="Parabole"; s2="Plan"; hD=0; } 
         else if(F1 > 0) {
