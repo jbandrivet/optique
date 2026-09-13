@@ -296,6 +296,7 @@
                 <div class="view-tab active" onclick="setVizMode('arch','2d')" id="tab-arch-2d">PLAN 2D EXACT</div>
                 <div class="view-tab" onclick="setVizMode('arch','3d')" id="tab-arch-3d">RAYTRACING 3D</div>
                 <div class="view-tab" onclick="setVizMode('arch','corr')" id="tab-arch-corr">SCHÉMA CORRECTEUR</div>
+                <div class="view-tab" onclick="setVizMode('arch','corr3d')" id="tab-arch-corr3d">CORRECTEUR 3D</div>
             </div>
             
             <div class="blueprint-wrapper">
@@ -539,7 +540,7 @@
             ctx.strokeRect(startXTube, botInnerY, tubeLength * scaleCorr, tubeThickness * scaleCorr);
             
             // Tube dimensions
-            dDim(`L. TUBE: ${tubeLength.toFixed(1)} mm`, startXTube, endXTube, topOuterY - 25);
+            dDim(`L. TUBE: ${tubeLength.toFixed(1)} mm`, startXTube, endXTube, topOuterY - 95);
             dDim(`Ø INT: ${corrData.diam.toFixed(1)} mm`, endXTube + 20, endXTube + 20, topInnerY, botInnerY); 
             ctx.beginPath(); ctx.moveTo(endXTube + 20, topInnerY); ctx.lineTo(endXTube + 20, botInnerY);
             ctx.moveTo(endXTube + 15, topInnerY); ctx.lineTo(endXTube + 25, topInnerY);
@@ -617,7 +618,7 @@
                 drawLens(cx, axisY, corrData.diam * scaleCorr, l.r1 * scaleCorr, l.r2 * scaleCorr, l.t * scaleCorr);
                 
                 // Text Labels (Alternating top/bottom)
-                let textY = (i % 2 === 0) ? botOuterY + 25 : topOuterY - 40;
+                let textY = (i % 2 === 0) ? botOuterY + 45 : topOuterY - 60;
                 ctx.fillStyle = C_TEXT; ctx.font = "12px Orbitron"; ctx.textAlign = "center";
                 ctx.fillText(`L${i+1}: ${l.glass}`, cx, textY);
                 let r1Txt = l.r1 === Infinity ? "Plan" : l.r1.toFixed(1);
@@ -855,10 +856,11 @@
             document.getElementById('tab-arch-2d').classList.toggle('active', mode==='2d');
             document.getElementById('tab-arch-3d').classList.toggle('active', mode==='3d');
             let tCorr = document.getElementById('tab-arch-corr'); if(tCorr) tCorr.classList.toggle('active', mode==='corr');
+            let tCorr3d = document.getElementById('tab-arch-corr3d'); if(tCorr3d) tCorr3d.classList.toggle('active', mode==='corr3d');
             document.getElementById('blueprint-canvas').style.display = (mode==='2d'||mode==='corr')?'block':'none';
             document.getElementById('zoom-controls-2d').style.display = (mode==='2d'||mode==='corr')?'flex':'none';
-            document.getElementById('container3d_arch').style.display = mode==='3d'?'block':'none';
-            document.getElementById('cam-arch').style.display = mode==='3d'?'flex':'none';
+            document.getElementById('container3d_arch').style.display = (mode==='3d'||mode==='corr3d')?'block':'none';
+            document.getElementById('cam-arch').style.display = (mode==='3d'||mode==='corr3d')?'flex':'none';
             if(mode==='2d'||mode==='corr') window.redrawCurrentBlueprint(); else window.updateArch3D();
         }
     }
@@ -1049,17 +1051,17 @@
         R1 = 2*F1; 
         if(type==='newton') { K1=-1; R2=0; K2=0; s1="Parabole"; s2="Plan"; hD=0; } 
         else if(F1 > 0) {
-            if(M === 1) { R2 = 0; } else { R2 = (2*Sep*M)/(M-1); }
+            R2 = (2 * (F1 - Sep) * M) / (M - 1);
             
             // INTÉGRATION EXACTE DU CHAMP DE PLEINE LUMIÈRE (CPL)
             const p = F1 - Sep;
             const D2_min = (D * p) / F1; 
-            D2_val = D2_min + CPL * (p / F1);
+            D2_val = D2_min + CPL * (Sep / F);
             hD = (D2_val * B) / (Sep + B) + CPL * (Sep / (Sep + B));
 
             if(type==='cassegrain') { K1=-1; s1="Parabole"; const t=(M+1)/(M-1); K2=-(t*t); s2="Hyperbole"; } 
-            else if(type==='dk') { K2=0; s2="Sphère"; const p_val=Sep+B; const t2=(Math.pow(M,2)-1)/Math.pow(M,3); K1=-1+t2*(p_val/F1); s1="Ellipse Prolate"; }
-            else if(type==='rc' || type==='nasmyth') { K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); K2=-Math.pow((M+1)/(M-1),2)-(4*M*(M+1))/((M-1)*Math.pow(M,2))*((Sep+B)/Sep); s1="Hyperbole"; s2="Hyperbole"; }
+            else if(type==='dk') { K2=0; s2="Sphère"; K1 = -1 + ((Math.pow(M, 2) - 1) / Math.pow(M, 3)) * (1 + B / F1); s1="Ellipse Prolate"; }
+            else if(type==='rc' || type==='nasmyth') { K1=-1-(2*(Sep+B))/(Math.pow(M,3)*Sep); K2=-Math.pow((M+1)/(M-1),2)-(2*M*F1)/(Sep*Math.pow(M-1,3)); s1="Hyperbole"; s2="Hyperbole"; }
             else if(type==='sct') { K1=0; K2=0; s1="Sphère"; s2="Sphère"; }
             else { K1=0; K2=0; s1="Sphère"; s2="Sphère"; }
         }
@@ -1255,6 +1257,11 @@
         const geo = new THREE.LatheGeometry(points, 64); geo.computeVertexNormals();
         const mat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.8, roughness:0.2, side:THREE.DoubleSide });
         grp.add(new THREE.Mesh(geo, mat));
+
+        if (controlsList['an']) {
+            controlsList['an'].target.set(0, thick/2, 0);
+            controlsList['an'].update();
+        }
     }
     window.updateAn3D = updateAn3D;
 
@@ -1289,6 +1296,30 @@
             return new THREE.Mesh(geo, mat);
         }
 
+        if (vizModeArch === 'corr3d') {
+            if (corrData && corrData.lenses && corrData.lenses.length > 0) {
+                const lGrp = new THREE.Group();
+                let curY = -corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0) / 2;
+                corrData.lenses.forEach(l => {
+                    curY += l.d;
+                    const lMesh = createLens3D(corrData.diam, l.r1, l.r2, l.t, matLens);
+                    lMesh.position.y = curY + l.t/2;
+                    curY += l.t;
+                    lGrp.add(lMesh);
+                });
+                let tubeLength = corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0) + 20;
+                let tubeThickness = Math.max(corrData.diam * 0.05, 3);
+                let tubeOuter = corrData.diam + 2 * tubeThickness;
+                const matTube = new THREE.MeshStandardMaterial({color: 0x333344, roughness:0.8, metalness:0.1, side: THREE.DoubleSide, transparent: true, opacity: 0.5});
+                const tubeMesh = new THREE.Mesh(new THREE.CylinderGeometry(tubeOuter/2, tubeOuter/2, tubeLength, 32, 1, true), matTube);
+                tubeMesh.rotation.x = Math.PI/2;
+                lGrp.add(tubeMesh);
+                
+                lGrp.rotation.x = Math.PI/2;
+                grp.add(lGrp);
+            }
+            return;
+        }
 
         if(currentData.type !== 'NEWTON') {
             const opticalHoleR = currentData.Hole / 2; b1_len_val = (currentData.Sep * 0.4); 
@@ -1475,6 +1506,11 @@
             const focGeo = new THREE.CylinderGeometry(25, 25, currentData.B, 16); const focMat = new THREE.MeshStandardMaterial({color: 0x111111}); const foc = new THREE.Mesh(focGeo, focMat); foc.position.set(0, tubeR + currentData.B/2, Sep); grp.add(foc); 
             const camRad = 35; const camLen = 40; const camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32); const camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2}); const cam = new THREE.Mesh(camGeo, camMat); cam.position.set(0, tubeR + currentData.B + camLen/2, Sep); grp.add(cam);
         }
+        
+        if (controlsList['arch']) {
+            controlsList['arch'].target.set(0, 0, currentData.Sep ? currentData.Sep/2 : 500);
+            controlsList['arch'].update();
+        }
     }
 
     // --- EVENTS & INIT ---
@@ -1509,7 +1545,7 @@
                 viewState.scale = newScale;
                 
                 window.redrawCurrentBlueprint();
-            });
+            }, { passive: false });
         }
         if (typeof window.autoCalcZones === 'function') { window.autoCalcZones(); }
         setTimeout(window.runArchitect, 200); 
