@@ -366,17 +366,22 @@
             <div class="chapter">
                 <h2>1. LE TEST DE LA CAUSTIQUE</h2>
                 <h3>Le Problème de l'Aberration Sphérique</h3>
-                <p>Un miroir sphérique focalise tous les rayons en un point unique (le centre de courbure). Mais pour un télescope, nous utilisons souvent des formes <strong>Paraboliques</strong> ou <strong>Hyperboliques</strong> pour corriger les images venues de l'infini.</p>
-                <p>Ces miroirs asphériques n'ont pas un rayon de courbure constant. Le "centre" varie selon la zone du miroir. L'ensemble de ces centres forme une courbe appelée <strong>La Caustique</strong>.</p>
+                <p>Un miroir sphérique focalise tous les rayons en un point unique (le centre de courbure) si la source lumineuse est placée à ce même centre de courbure. Mais pour un télescope, nous utilisons souvent des formes <strong>Paraboliques</strong> ou <strong>Hyperboliques</strong> pour corriger les images venues de l'infini.</p>
+                <p>Cependant, lorsqu'on fabrique ces miroirs à la main et qu'on les teste au centre de courbure avec un appareil de Foucault, ils ne focalisent plus en un seul point. <strong>Chaque zone (chaque anneau) du miroir possède son propre point de convergence.</strong> L'ensemble de ces points forme une courbe géométrique tridimensionnelle appelée la <strong>Caustique</strong>.</p>
                 
-                <h3>La Méthode Platzeck-Gaviola</h3>
-                <p>Ce logiciel utilise les équations dérivées par <em>Cornejo & Malacara (1978)</em> pour calculer où placer l'appareil de contrôle (Foucault) pour chaque zone du miroir.</p>
-                <div class="formula-box">Données d'Entrée : R (Rayon), K (Constante), S (Zone)</div>
+                <p>Le <strong>Test de la Caustique</strong> (inventé par Platzeck et Gaviola en 1939) consiste à mesurer les positions X (transversale) et Y (longitudinale) de convergence pour chaque zone du miroir, et à les comparer aux valeurs théoriques parfaites.</p>
             </div>
 
             <div class="chapter">
-                <h2>2. LES FORMULES MATHÉMATIQUES</h2>
-                <p>Voici comment le logiciel fonctionne "sous le capot". Ces équations sont les solutions analytiques exactes (Corrigées v90).</p>
+                <h2>2. LES FORMULES GÉNÉRALES (Toutes Coniques)</h2>
+                <p>Les équations utilisées par l'Astro Master sont les formules mathématiques exactes de <em>Cornejo et Malacara</em>.</p>
+                
+                <h3>Variables :</h3>
+                <ul>
+                    <li><strong>R</strong> = Rayon de courbure au centre</li>
+                    <li><strong>K</strong> = Constante conique (Sphère=0, Parabole=-1, etc.)</li>
+                    <li><strong>S</strong> = Hauteur de la zone (Distance depuis le centre)</li>
+                </ul>
 
                 <h3>Étape 1 : La Courbure (c)</h3>
                 <div class="formula-box">c = 1 / R</div>
@@ -397,8 +402,8 @@
                     <p><strong>1. Calcul de c :</strong> c = 1 / 6200 ≈ 0.00016129</p>
                     <p><strong>2. Calcul de z :</strong> Pour K = -1, formule simplifiée : z = c * S² / 2 = 250² / (2 * 6200) ≈ <strong>5.0403 mm</strong></p>
                     <p><strong>3. Calcul de A :</strong> Comme K+1 = 0, alors <strong>A = 0</strong>.</p>
-                    <p><strong>4. Calcul de Y :</strong> Y = -(-1) * 5.0403 * [3 + 0] = <strong>15.1209 mm</strong></p>
-                    <p><strong>5. Calcul de X :</strong> X = 500 * (1/6200) * 5.0403 * 2 / 2 (correction) ≈ <strong>0.4064 mm</strong></p>
+                    <p><strong>4. Calcul de Y :</strong> Y = -(-1) * 5.0403 * [3 + 0] = <strong>15.1210 mm</strong></p>
+                    <p><strong>5. Calcul de X :</strong> X = S³ / R² = 250³ / 6200² ≈ <strong>0.4065 mm</strong></p>
                 </div>
             </div>
 
@@ -407,7 +412,7 @@
                 <p>Ce module utilise la théorie de Schwarzschild du 3ème ordre pour calculer les miroirs.</p>
                 <h3>Dall-Kirkham</h3>
                 <p>Pour un DK, on impose un secondaire sphérique (<span class="variable">K2=0</span>). Le primaire doit être une <strong>Ellipse Prolate</strong> pour compenser.</p>
-                <div class="formula-box">K1 = -1 + [ (M² - 1) / M³ ] * (Distance Secondaire-Foyer / Focale Primaire)</div>
+                <div class="formula-box">K1 = -1 + [ (M² - 1) / M³ ] * (1 + B / F1)</div>
             </div>
         </div>
     </div>
@@ -569,17 +574,21 @@
                 let v2_x = cx + (l.t * scaleCorr)/2;
                 
                 let edge_left = v1_x;
-                if (r1_s > 0) {
-                    edge_left = v1_x + Math.abs(r1_s) - Math.sqrt(Math.pow(r1_s, 2) - Math.pow(d_half, 2));
-                } else if (r1_s < 0) {
-                    edge_left = v1_x - Math.abs(r1_s) + Math.sqrt(Math.pow(r1_s, 2) - Math.pow(d_half, 2));
+                if (isFinite(r1_s) && r1_s !== 0) {
+                    if (r1_s > 0) {
+                        edge_left = v1_x + Math.abs(r1_s) - Math.sqrt(Math.pow(r1_s, 2) - Math.pow(d_half, 2));
+                    } else {
+                        edge_left = v1_x - Math.abs(r1_s) + Math.sqrt(Math.pow(r1_s, 2) - Math.pow(d_half, 2));
+                    }
                 }
                 
                 let edge_right = v2_x;
-                if (r2_s < 0) { 
-                    edge_right = v2_x - Math.abs(r2_s) + Math.sqrt(Math.pow(r2_s, 2) - Math.pow(d_half, 2));
-                } else if (r2_s > 0) { 
-                    edge_right = v2_x + Math.abs(r2_s) - Math.sqrt(Math.pow(r2_s, 2) - Math.pow(d_half, 2));
+                if (isFinite(r2_s) && r2_s !== 0) {
+                    if (r2_s < 0) { 
+                        edge_right = v2_x - Math.abs(r2_s) + Math.sqrt(Math.pow(r2_s, 2) - Math.pow(d_half, 2));
+                    } else { 
+                        edge_right = v2_x + Math.abs(r2_s) - Math.sqrt(Math.pow(r2_s, 2) - Math.pow(d_half, 2));
+                    }
                 }
                 
                 edgePositions.push({left: edge_left, right: edge_right});
@@ -649,7 +658,7 @@
             const R_draw = m1Rad * 4; const Rcx = m1X - R_draw; const aO = Math.asin(Math.min(1, m1Rad / R_draw));
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, aO); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
             
-            const tubeR = (D/2)*scale * 1.15; const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); 
+            const tubeR = (D/2)*scale; const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); 
             const m2X = m1X - intercept; const m2Size = (D2*scale); 
             
             ctx.beginPath(); ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
@@ -671,7 +680,7 @@
             ctx.moveTo(x_int_top, y_int_top); ctx.lineTo(m2X, focusY); ctx.moveTo(x_int_bot, y_int_bot); ctx.lineTo(m2X, focusY);
             ctx.stroke();
             
-            dDim("F1", m2X, m1X, axisY+m1Rad+30); dDim("BACK FOCUS", m2X, m2X, focusY - 10);
+            dDim("F1 - L", m2X, m1X, axisY+m1Rad+30); dDim("F1", focusX, m1X, axisY+m1Rad+50); dDim("BACK FOCUS", m2X, m2X, focusY - 10);
 
             // CPL et Correcteur Newton (Horizontal)
             if(CPL > 0) {
@@ -727,7 +736,7 @@
             ctx.beginPath(); ctx.arc(R2cx, axisY, R2d, -aM2, aM2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
             
             if (nasmyth) {
-                const m3_dist_from_m1 = Sep * 0.25; const m3X = m1X - (m3_dist_from_m1 * scale); const m3Size = (D2 * 0.9) * scale; 
+                const m3_dist_from_m1 = Sep * 0.25; const m3X = m1X - (m3_dist_from_m1 * scale); const m3Size = (D2 * 0.8) * scale; 
                 ctx.beginPath(); ctx.moveTo(m3X - m3Size/2, axisY + m3Size/2); ctx.lineTo(m3X + m3Size/2, axisY - m3Size/2); ctx.strokeStyle = C_M3; ctx.lineWidth = 4; ctx.stroke();
                 
                 ctx.strokeStyle=C_RAY; ctx.beginPath(); 
@@ -755,7 +764,7 @@
                 ctx.fillStyle = "#ffaa00"; ctx.fillRect(m3X - (CPL>0 ? CPL*scale/2 : 10*scale), sideFocusY, (CPL>0 ? CPL*scale : 20*scale), 2*scale);
                 ctx.fillStyle = "#ffaa00"; ctx.font = "10px Orbitron"; ctx.textAlign="left"; ctx.fillText("CAPTEUR", m3X + 15*scale, sideFocusY + 12);
                 if(corrData && corrData.pos > 0) {
-                    const corrY = sideFocusY - corrData.pos * scale; // Vers M3
+                    const corrY = sideFocusY + corrData.pos * scale; // Vers M3
                     if (corrData.lenses && corrData.lenses.length > 0) {
                         ctx.save(); ctx.translate(m3X, corrY); ctx.rotate(Math.PI/2);
                         let currentX = -corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0)*scale / 2;
@@ -902,25 +911,46 @@
         
         // Exactement la logique de l'Astro Master
         const K = parseFloat(document.getElementById('an-kfactor').value);
-        const zonesStr = document.getElementById('an-zones').value; 
-        const zones = zonesStr.split(',').map(Number).filter(n=>n);
-
         const tbody = document.getElementById('an-results'); tbody.innerHTML="";
-        const r_cm = (D/2)/10; const h_cm = thick/10; const rh_cm = (holeD/2)/10; const zmax_cm = (R>0)?((D/2)*(D/2)/(2*R))/10 : 0;
-        const vol = (Math.PI*r_cm*r_cm*h_cm) - (Math.PI*rh_cm*rh_cm*h_cm) - (0.5*Math.PI*r_cm*r_cm*zmax_cm);
-        
-        document.getElementById('an-weight').innerText = (vol*2.53/1000).toFixed(2)+" kg";
-        document.getElementById('an-fd').innerText = (D>0 && R>0) ? "f/" + (R/(2*D)).toFixed(1) : "-";
+
+        if (D <= 0 || !isFinite(D)) { tbody.innerHTML="<tr><td colspan='5' style='color:red'>Erreur : Diamètre invalide.</td></tr>"; return; }
+        if (R <= 0 || !isFinite(R)) { tbody.innerHTML="<tr><td colspan='5' style='color:red'>Erreur : Rayon de courbure invalide.</td></tr>"; return; }
+        if (thick <= 0 || !isFinite(thick)) { tbody.innerHTML="<tr><td colspan='5' style='color:red'>Erreur : Épaisseur invalide.</td></tr>"; return; }
+        if (holeD < 0 || holeD >= D || !isFinite(holeD)) { tbody.innerHTML="<tr><td colspan='5' style='color:red'>Erreur : Trou central invalide.</td></tr>"; return; }
+        if (isNaN(K) || !isFinite(K)) { tbody.innerHTML="<tr><td colspan='5' style='color:red'>Erreur : Constante conique (K) invalide.</td></tr>"; return; }
+
+        let vol = 0; const r_out = D/2; const r_in = holeD/2; const steps = 1000; const dr = (r_out - r_in)/steps; const c_val = 1/R;
+        for(let i=0; i<steps; i++) {
+            let r = r_in + i*dr + dr/2;
+            let term = 1 - (K+1)*c_val*c_val*r*r;
+            let sag = (term > 0) ? (c_val*r*r)/(1 + Math.sqrt(term)) : (r*r)/(2*R);
+            vol += 2 * Math.PI * r * (thick - sag) * dr;
+        }
+        document.getElementById('an-weight').innerText = (vol * 2.53 * 1e-6).toFixed(2)+" kg";
+        document.getElementById('an-fd').innerText = "f/" + (R/(2*D)).toFixed(1);
+
+        const zonesStr = document.getElementById('an-zones').value; 
+        const rawZones = zonesStr.split(/[,;]+/).map(s => s.trim().replace(',', '.')).filter(s => s !== "");
+        const zones = [];
+        for (let s of rawZones) {
+            let n = parseFloat(s);
+            if (!isNaN(n) && isFinite(n)) zones.push(n);
+            else { tbody.innerHTML+=`<tr><td colspan='5' style='color:red'>Valeur ignorée : ${s}</td></tr>`; }
+        }
 
         // GÉNÉRATION DU TABLEAU (Priorité absolue)
-        const c = (R>0)?1/R:0;
         zones.forEach((S,i)=>{
-            const term = 1-(K+1)*Math.pow(c*S,2); let err = ""; 
+            const term = 1-(K+1)*Math.pow(c_val*S,2); let err = ""; 
             if(S>D/2) err="HORS MIROIR"; else if(S<holeD/2) err="DANS TROU"; else if(term<0) err="ERR GEOM";
             if(err) { tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`; } 
             else {
-                const z = (c*S*S)/(1+Math.sqrt(term)); const A = c*z*(K+1); const Y = -K*z*(3+A*(A-3)); const X = (-S*c*K*z*(2+A*(A-3)))/(1-A);
-                tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
+                const z = (c_val*S*S)/(1+Math.sqrt(term)); const A = c_val*z*(K+1); const Y = -K*z*(3+A*(A-3));
+                if (Math.abs(1 - A) < 1e-9) { err = "LIMITE POLE (1-A=0)"; }
+                if(err) { tbody.innerHTML+=`<tr><td>${i+1}</td><td>${S}</td><td colspan="3" style="color:red">${err}</td></tr>`; }
+                else {
+                    const X = (-S*c_val*K*z*(2+A*(A-3)))/(1-A);
+                    tbody.innerHTML+=`<tr><td style="color:#00f3ff">Z${i+1}</td><td>${S}</td><td>${z.toFixed(3)}</td><td>${Y.toFixed(3)}</td><td style="color:#00f3ff; font-weight:bold">${X.toFixed(3)}</td></tr>`;
+                }
             }
         });
 
@@ -1048,9 +1078,17 @@
             }
         }
 
-        if(type !== 'newton' && M <= 1) {
-            alert("ERREUR GÉOMÉTRIQUE : Le grandissement M doit être > 1 pour ces configurations.");
-            return;
+        if (D <= 0 || !isFinite(D)) { alert("ERREUR : Le diamètre D doit être strictement positif."); return; }
+        if (F <= 0 || !isFinite(F)) { alert("ERREUR : La focale F doit être strictement positive."); return; }
+        if (CPL < 0 || !isFinite(CPL)) { alert("ERREUR : Le CPL ne peut pas être négatif."); return; }
+
+        if (type === 'newton') {
+            const L = (D/2) + B;
+            if (L <= 0 || L >= F) { alert("ERREUR : Configuration Newton impossible (0 < L < F non vérifié)."); return; }
+        } else {
+            if (F1 <= 0 || !isFinite(F1)) { alert("ERREUR : La focale primaire F1 doit être strictement positive."); return; }
+            if (Sep <= 0 || Sep >= F1 || !isFinite(Sep)) { alert("ERREUR : La séparation doit vérifier 0 < Sep < F1."); return; }
+            if (M <= 1 || !isFinite(M)) { alert("ERREUR GÉOMÉTRIQUE : Le grandissement M doit être > 1 pour ces configurations."); return; }
         }
 
         R1 = 2*F1; 
@@ -1073,6 +1111,7 @@
 
         const baffle_margin = 4; let D_obs = 0;
         if(type === 'newton') { D_obs = Math.abs(D2_val) + baffle_margin; } else { const r2_opt = Math.abs(D2_val) / 2; const b2_baseR = r2_opt + 2; D_obs = b2_baseR * 2; }
+        if (D_obs >= D) { alert("ERREUR : Obstruction totale (D_obs >= D)."); return; }
         const Deff = Math.sqrt(Math.max(0, Math.pow(D, 2) - Math.pow(D_obs, 2))).toFixed(1);
         
         // --- CALCUL DES CORRECTEURS ET VERRES OPTIQUES ---
@@ -1181,7 +1220,7 @@
         document.getElementById('res-corr-glass').innerText = corrGlass;
 
         try {
-            if(vizModeArch === '2d') { window.redrawCurrentBlueprint(); } else { window.updateArch3D(); }
+            if(vizModeArch === '2d' || vizModeArch === 'corr') { window.redrawCurrentBlueprint(); } else { window.updateArch3D(); }
         } catch(e) { console.error(e); }
     }
     window.runArchitect = runArchitect;
@@ -1193,12 +1232,12 @@
     
     function downloadPDF() {
         const { jsPDF } = window.jspdf; const doc = new jsPDF(); const pName = document.getElementById('project-name').value || "Projet Optique";
-        doc.setFontSize(22); doc.text("MONSIEUR ANDRIVET // RAPPORT v2", 20, 20); doc.setFontSize(16); doc.setTextColor(0, 86, 179); doc.text(pName, 20, 30); doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text("Date: "+new Date().toLocaleDateString(), 150, 20);
+        doc.setFontSize(22); doc.text("MONSIEUR ANDRIVET // RAPPORT v2", 20, 20); doc.setFontSize(16); doc.setTextColor(0, 86, 179); doc.text(pName, 20, 30); doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text("Date: "+new Date().toLocaleDateString(), 150, 10);
         const cvs = document.createElement('canvas'); cvs.width=2000; cvs.height=1000; const ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.fillRect(0,0,2000,1000);
         const oldState = {...viewState}; viewState={scale:1, offsetX:0, offsetY:0}; drawBlueprintGeneric(ctx, 2000, 1000, currentData.type.toLowerCase(), currentData.D, currentData.F1, currentData.VizSep || currentData.Sep, currentData.B, currentData.D2, currentData.F, currentData.Hole, currentData.CPL, 'print', currentData.Corrector); viewState = oldState;
-        doc.addImage(cvs.toDataURL("image/png"), 'PNG', 10, 40, 190, 95);
+        doc.addImage(cvs.toDataURL("image/jpeg", 0.7), 'JPEG', 10, 40, 190, 95);
         const y=150; doc.line(10,y,200,y); doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.text("DONNÉES", 10, y-5); doc.setFontSize(10); doc.setFont("helvetica","normal");
-        doc.text(`Diamètre: ${currentData.D} mm`, 15, y+10); doc.text(`Diamètre Pur: ${currentData.Deff} mm`, 15, y+20); doc.text(`Focale: ${currentData.F} mm (f/${(currentData.F/currentData.D).toFixed(1)})`, 15, y+30); doc.text(`PRIMAIRE (R1): ${currentData.R1.toFixed(2)} mm (K=${currentData.K1.toFixed(4)})`, 80, y+10);
+        doc.text(`Diamètre: ${currentData.D} mm`, 15, y+10); doc.text(`Diamètre Équivalent (Surface collectrice): ${currentData.Deff} mm`, 15, y+20); doc.text(`Focale: ${currentData.F} mm (f/${(currentData.F/currentData.D).toFixed(1)})`, 15, y+30); doc.text(`PRIMAIRE (R1): ${currentData.R1.toFixed(2)} mm (K=${currentData.K1.toFixed(4)})`, 80, y+10);
         if(currentData.type!=='NEWTON'){ doc.text(`SECONDAIRE (R2): ${currentData.R2.toFixed(2)} mm (K=${currentData.K2.toFixed(4)})`, 80, y+20); doc.text(`Séparation: ${currentData.Sep.toFixed(2)} mm`, 80, y+30); }
         doc.text(`CORRECTEUR: ${currentData.Corrector.name} | Verres: ${currentData.Corrector.glass}`, 15, y+45);
         doc.save("Rapport_Monsieur_Andrivet.pdf");
@@ -1209,8 +1248,10 @@
         const { jsPDF } = window.jspdf; const doc = new jsPDF();
         const addWrappedText = (text, x, y, maxWidth, lineHeight) => { const lines = doc.splitTextToSize(text, maxWidth); doc.text(lines, x, y); return lines.length * lineHeight; };
         doc.setFontSize(22); doc.setTextColor(0,0,0); doc.text("MONSIEUR ANDRIVET // COURS OPTIQUE", 20, 20); doc.setFontSize(16); doc.setTextColor(0, 86, 179); doc.text("THÉORIE DE LA CAUSTIQUE & ARCHITECTURE", 20, 35); doc.setFontSize(12); doc.setTextColor(100, 100, 100); doc.text("Auteur : Monsieur Andrivet", 20, 45); doc.setFontSize(11); doc.setTextColor(0,0,0);
-        let y = 60; y += addWrappedText("1. LE TEST DE LA CAUSTIQUE (PLATZECK-GAVIOLA)\n\nLes miroirs paraboliques ou hyperboliques ne focalisent pas la lumière en un point unique lorsqu'on les teste depuis leur centre de courbure (contrairement à une sphère). Chaque zone du miroir a un point de convergence différent (la caustique). Ce logiciel calcule les coordonnées (X, Y) pour le test de Foucault.", 20, y, 170, 7);
-        y += 10; doc.setFont("helvetica", "bold"); doc.text("2. FORMULES (Cornejo & Malacara)", 20, y); y+=10; doc.setFont("courier", "normal"); doc.text("c = 1 / R", 25, y); y+=7; doc.text("z = (c * S^2) / (1 + sqrt(1 - (K+1)*c^2*S^2))", 25, y); y+=7; doc.text("Y = -K*z * [3 + c*z*(K+1)*(c*z*(K+1)-3)]", 25, y); y+=7; doc.text("X = -S*c*K*z * [2 + ... ] / (1 - ...)", 25, y); y+=15; doc.setFont("helvetica", "bold"); doc.text("3. ARCHITECTURE (Schwarzschild)", 20, y); y+=10; doc.setFont("helvetica", "normal"); y += addWrappedText("Le module Architecte utilise les equations du 3ème ordre pour éliminer l'aberration sphérique et la coma. Pour un Dall-Kirkham, le primaire est une ellipse prolate compensant un secondaire sphérique.", 20, y, 170, 7);
+        let y = 60; y += addWrappedText("1. LE TEST DE LA CAUSTIQUE (PLATZECK-GAVIOLA)\n\nLes miroirs paraboliques ou hyperboliques ne focalisent pas la lumière en un point unique lorsqu'on les teste depuis leur centre de courbure (la source lumineuse étant à ce centre). Chaque zone du miroir a un point de convergence différent (la caustique). Ce logiciel calcule les coordonnées (X, Y) pour le test de Foucault.", 20, y, 170, 7);
+        y += 10; doc.setFont("helvetica", "bold"); doc.text("2. FORMULES (Cornejo & Malacara)", 20, y); y+=10; doc.setFont("courier", "normal"); doc.text("c = 1 / R", 25, y); y+=7; doc.text("z = (c * S^2) / (1 + sqrt(1 - (K+1)*c^2*S^2))", 25, y); y+=7; doc.text("Y = -K*z * [3 + c*z*(K+1)*(c*z*(K+1)-3)]", 25, y); y+=7; doc.text("X = -S*c*K*z * [2 + c*z*(K+1)*(c*z*(K+1)-3)] / (1 - c*z*(K+1))", 25, y); 
+        y+=15; doc.setFont("helvetica", "bold"); doc.text("EXEMPLE DE CALCUL (R=6200, K=-1, S=250)", 20, y); y+=10; doc.setFont("courier", "normal"); doc.text("z = 5.0403 mm, Y = 15.1210 mm, X = S^3 / R^2 = 0.4065 mm", 25, y);
+        y+=15; doc.setFont("helvetica", "bold"); doc.text("3. ARCHITECTURE (Schwarzschild)", 20, y); y+=10; doc.setFont("helvetica", "normal"); y += addWrappedText("Le module Architecte utilise les equations du 3ème ordre pour éliminer l'aberration sphérique. Pour un Dall-Kirkham, le primaire est une ellipse prolate compensant un secondaire sphérique.", 20, y, 170, 7);
         doc.save("Cours_Optique_Monsieur_Andrivet_v2.pdf");
     }
     window.downloadCoursePDF = downloadCoursePDF;
@@ -1226,7 +1267,10 @@
         if(isNaN(forcedN) || forcedN <= 0) { document.getElementById('an-nb-zones').placeholder = numZones; if(document.getElementById('an-nb-zones').value !== "") { document.getElementById('an-nb-zones').value = ""; } }
         const actualWidth = usefulRadius / numZones; const zoneCenters = [];
         for(let i=0; i<numZones; i++) { const center = radiusHole + (i * actualWidth) + (actualWidth/2); zoneCenters.push(center.toFixed(1)); }
-        document.getElementById('an-zones').value = zoneCenters.join(', '); document.getElementById('an-maxw').innerText = width_mm.toFixed(1) + " mm";
+        document.getElementById('an-zones').value = zoneCenters.join(', '); 
+        let widthText = `${actualWidth.toFixed(1)} mm (Max théorique: ${width_mm.toFixed(1)} mm, selon Texereau)`;
+        if (actualWidth > width_mm * 1.01) widthText = "⚠️ " + widthText;
+        document.getElementById('an-maxw').innerText = widthText;
         window.runAnalyzer();
     }
     window.autoCalcZones = autoCalcZones;
@@ -1312,17 +1356,17 @@
                     curY += l.t;
                     lGrp.add(lMesh);
                 });
-                let tubeLength = corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0) + 20;
+                let tubeLength = corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0) + 30;
                 let tubeThickness = Math.max(corrData.diam * 0.05, 3);
                 let tubeOuter = corrData.diam + 2 * tubeThickness;
                 const matTube = new THREE.MeshStandardMaterial({color: 0x333344, roughness:0.8, metalness:0.1, side: THREE.DoubleSide, transparent: true, opacity: 0.5});
                 const tubeMesh = new THREE.Mesh(new THREE.CylinderGeometry(tubeOuter/2, tubeOuter/2, tubeLength, 32, 1, true), matTube);
-                tubeMesh.rotation.x = Math.PI/2;
                 lGrp.add(tubeMesh);
                 
                 lGrp.rotation.x = Math.PI/2;
                 grp.add(lGrp);
             }
+            if (controlsList['arch']) { controlsList['arch'].target.set(0, 0, 0); controlsList['arch'].update(); }
             return;
         }
 
@@ -1557,7 +1601,7 @@
     });
 
     window.addEventListener('resize', () => {
-        if(vizModeArch === '2d') window.redrawCurrentBlueprint();
+        if(vizModeArch === '2d' || vizModeArch === 'corr') window.redrawCurrentBlueprint();
         if(vizModeAn === '2d') window.runAnalyzer();
         ['an', 'arch'].forEach(type => {
             const container = document.getElementById(type === 'an' ? 'container3d_an' : 'container3d_arch');
