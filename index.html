@@ -254,7 +254,7 @@
             <div id="an-info">
                 <div>F/D: <span id="an-fd">-</span></div>
                 <div>Flèche: <span id="an-sag">-</span></div>
-                <div>Zone Max: <span id="an-maxw" style="color:var(--neon-pink)">-</span></div>
+                <div>Zones : <span id="an-maxw" style="color:var(--neon-pink)">-</span></div>
                 <div style="margin-left:auto;">POIDS EST. (<span id="an-mat-name" style="margin:0; font-family:inherit; color:inherit;">Zerodur</span>): <span id="an-weight" style="color:var(--neon-green); font-size:1.2rem;">- kg</span></div>
             </div>
             <div class="view-tabs">
@@ -327,6 +327,10 @@
             <div class="input-group">
                 <label id="arch-B-label">Back Focus derrière M1 (mm)</label>
                 <input type="number" id="arch-B" value="300">
+            </div>
+            <div class="input-group" id="tube-group" hidden>
+                <label>Diamètre intérieur du tube (mm)</label>
+                <input type="number" id="arch-tube" placeholder="auto : D + 30">
             </div>
             <div class="input-group">
                 <label>Champ de Pleine Lumière CPL (mm)</label>
@@ -444,6 +448,11 @@
                 <p>Cependant, lorsqu'on fabrique ces miroirs à la main et qu'on les teste au centre de courbure avec un appareil de Foucault, ils ne focalisent plus en un seul point. <strong>Chaque zone (chaque anneau) du miroir possède son propre point de convergence.</strong> L'ensemble de ces points forme une courbe géométrique tridimensionnelle appelée la <strong>Caustique</strong>.</p>
                 
                 <p>Le <strong>Test de la Caustique</strong> (inventé par Platzeck et Gaviola en 1939) consiste à mesurer les positions X (transversale) et Y (longitudinale) de convergence pour chaque zone du miroir, et à les comparer aux valeurs théoriques parfaites.</p>
+
+                <h3>Combien de zones ? (critère de Texereau)</h3>
+                <p>Dans une zone de rayon moyen z et de demi-largeur h, l'onde réfléchie s'écarte d'une sphère de |K|·z²·h²/R³. Texereau tolère k = 37 nm (environ λ/15). D'où la demi-largeur maximale et le nombre de zones (d = diamètre du trou central) :</p>
+                <div class="formula-box">h ≤ √(k·R³/|K|) / z<br>n = (D² - d²) / (16·√(k·R³/|K|))</div>
+                <p>Le produit h·z étant constant, les zones sont d'<strong>aire égale</strong> : larges au centre, étroites au bord. Pour un miroir parabolique de 300 mm à f/5 (R = 3000 mm) : 6 zones, de 61 mm au centre à 13 mm au bord.</p>
             </div>
 
             <div class="chapter">
@@ -511,8 +520,8 @@
                 <div class="formula-box">K1 = -1 + [ (M² - 1) / M³ ] * (1 + B / F1)</div>
 
                 <h3>Newton</h3>
-                <p>Primaire parabolique (K1 = -1). Le petit axe du miroir plan diagonal dépend de la distance L entre le diagonal et le foyer (rayon du tube + sortie du foyer).</p>
-                <div class="formula-box">L = D / 2 + B<br>Petit axe = (D - CPL) * L / F + CPL</div>
+                <p>Primaire parabolique (K1 = -1). Le petit axe du miroir plan diagonal dépend de la distance L entre le diagonal et le foyer : rayon intérieur du tube (Dtube / 2) + sortie du foyer hors du tube (B).</p>
+                <div class="formula-box">L = Dtube / 2 + B<br>Petit axe = (D - CPL) * L / F + CPL</div>
 
                 <h3>Pouvoir séparateur</h3>
                 <div class="formula-box">Limite de Dawes = 116 / D  (secondes d'arc, D en mm)</div>
@@ -1101,7 +1110,7 @@
             const R_draw = m1Rad * 4; const Rcx = m1X - R_draw; const aO = Math.asin(Math.min(1, m1Rad / R_draw));
             ctx.beginPath(); ctx.arc(Rcx, axisY, R_draw, -aO, aO); ctx.strokeStyle=C_M1; ctx.lineWidth=3; ctx.stroke();
             
-            const tubeR = (D/2)*scale; const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); 
+            const tubeR = ((currentData.TubeD || D)/2)*scale; const intercept = (Sep > 0) ? Sep*scale : (F1*scale - tubeR - B*scale); 
             const m2X = m1X - intercept; const m2Size = (D2*scale); 
             
             ctx.beginPath(); ctx.moveTo(m2X - m2Size/2, axisY - m2Size/2); ctx.lineTo(m2X + m2Size/2, axisY + m2Size/2); ctx.strokeStyle=C_M2; ctx.lineWidth=3; ctx.stroke();
@@ -1550,6 +1559,7 @@
         const petz = (type === 'petzval');
         if(petz && calculationMode !== 'auto' && calculationMode !== 'f1') window.setCalcMode('auto');
         document.getElementById('petz-ed-group').hidden = !petz;
+        document.getElementById('tube-group').hidden = (type !== 'newton');
         document.getElementById('corr-toggle-group').hidden = petz;
         document.getElementById('mode-sep').style.display = petz ? 'none' : '';
         document.getElementById('mode-free').style.display = petz ? 'none' : '';
@@ -1582,13 +1592,16 @@
         const B = parseFloat(document.getElementById('arch-B').value) || 0;
         const CPL = parseFloat(document.getElementById('arch-CPL').value) || 0;
         let F=0, F1=0, Sep=0, M=0, VizSep=0, R1=0, K1=0, R2=0, K2=0, s1="-", s2="-", D2_val=0, hD=0;
+        // Newton : distance diagonal -> foyer = rayon intérieur du tube + sortie du foyer
+        const tubeIn = parseFloat(document.getElementById('arch-tube').value);
+        const tubeD = (tubeIn > 0) ? tubeIn : D + 30;
 
         if(type === 'newton') {
             const inputF = parseFloat(document.getElementById('arch-F').value) || 0; const inputF1 = parseFloat(document.getElementById('arch-F1').value) || 0;
             if(currentData.type === 'NEWTON') { if (inputF !== currentData.F) { F = inputF; } else if (inputF1 !== currentData.F1) { F = inputF1; } else { F = inputF; } } else { F = inputF; }
             F1 = F; document.getElementById('arch-F').value = F.toFixed(2); document.getElementById('arch-F1').value = F1.toFixed(2);
-            Sep = 0; M = 1; if (F > 0) { let L = (D/2) + B; D2_val = ((D - CPL) * L) / F + CPL; } else { D2_val = 0; }
-            if(D2_val <= 0) D2_val = 10; VizSep = Math.max(0, F - (D/2 + B));
+            Sep = 0; M = 1; if (F > 0) { let L = tubeD/2 + B; D2_val = ((D - CPL) * L) / F + CPL; } else { D2_val = 0; }
+            if(D2_val <= 0) D2_val = 10; VizSep = Math.max(0, F - (tubeD/2 + B));
         } else {
             if(calculationMode === 'free') {
                 F1 = parseFloat(document.getElementById('arch-F1').value)||0; Sep = parseFloat(document.getElementById('arch-Sep').value)||0; VizSep = Sep;
@@ -1627,7 +1640,8 @@
         if (CPL < 0 || !isFinite(CPL)) { archError("ERREUR : Le CPL ne peut pas être négatif."); return; }
 
         if (type === 'newton') {
-            const L = (D/2) + B;
+            if (tubeD <= D) { archError("ERREUR : Le diamètre intérieur du tube doit être supérieur au diamètre du miroir."); return; }
+            const L = tubeD/2 + B;
             if (L <= 0 || L >= F) { archError("ERREUR : Configuration Newton impossible (0 < L < F non vérifié)."); return; }
         } else {
             if (F1 <= 0 || !isFinite(F1)) { archError("ERREUR : La focale primaire F1 doit être strictement positive."); return; }
@@ -1730,7 +1744,7 @@
         archError(null);
         currentData = { 
             type: type.toUpperCase(), D: D, F: F, F1: F1, B: B, Sep: Sep, VizSep: VizSep, M: M, R1: R1, K1: K1, Shape1: s1, Hole: hD, 
-            R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff, CPL: CPL, Obst: D_obs,
+            R2: Math.abs(R2), K2: K2, Shape2: s2, D2: Math.abs(D2_val), Deff: Deff, CPL: CPL, Obst: D_obs, TubeD: tubeD,
             Corrector: { name: corrType, pos: corrPos, diam: corrDiam, glass: corrGlass, lenses: lenses }
         };
 
@@ -1752,7 +1766,7 @@
             document.getElementById('res-sep-out').innerText = "-"; 
             document.getElementById('res-k2').innerText = "-"; 
             document.getElementById('res-d2').innerText = Math.abs(D2_val).toFixed(1); 
-            const L = (D/2) + B;
+            const L = tubeD/2 + B;
             const D2_min_newton = (D * L) / F;
             const cplMargin = Math.abs(D2_val) - D2_min_newton;
             document.getElementById('res-cpl-margin').innerText = cplMargin > 0 ? "+" + cplMargin.toFixed(1) + " mm" : "0 mm";
@@ -1858,7 +1872,7 @@
             ["Trou central (min)", d.Hole > 0 ? `${f(d.Hole, 1)} mm` : "-"]
         ], 110, 138);
         yR = section(isNewton ? "MIROIR DIAGONAL" : "MIROIR SECONDAIRE", isNewton ? [
-            ["Petit axe", `${f(d.D2, 1)} mm`], ["Distance M1 - diagonal", `${f(d.VizSep, 1)} mm`]
+            ["Petit axe", `${f(d.D2, 1)} mm`], ["Distance M1 - diagonal", `${f(d.VizSep, 1)} mm`], ["Diamètre intérieur du tube", `${f(d.TubeD, 1)} mm`]
         ] : [
             ["Rayon R2", `${f(d.R2)} mm`], ["Séparation d", `${f(d.Sep)} mm`],
             ["Constante K2", `${f(d.K2, 5)} (${d.Shape2})`], ["Diamètre optique M2", `${f(d.D2, 1)} mm`]
@@ -1901,6 +1915,9 @@
         title("1. LE TEST DE LA CAUSTIQUE (PLATZECK-GAVIOLA, 1939)");
         para("Les miroirs paraboliques ou hyperboliques ne focalisent pas la lumière en un point unique lorsqu'on les teste depuis leur centre de courbure (la source lumineuse étant à ce centre). Chaque zone du miroir a son propre point de convergence ; l'ensemble de ces points forme la caustique. Le test consiste à mesurer, pour chaque zone, la position longitudinale Y et transversale X de ce point et à la comparer aux valeurs théoriques.");
 
+        para("Nombre de zones (critère de Texereau, tolérance k = 37 nm sur l'onde) : zones d'aire égale.");
+        formulas(["h <= sqrt(k*R^3/|K|) / z   (h = demi-largeur, z = rayon moyen)", "n = (D^2 - d^2) / (16*sqrt(k*R^3/|K|))"]);
+
         title("2. FORMULES (Cornejo & Malacara)");
         para("R = rayon de courbure au sommet, K = constante conique (sphère 0, parabole -1), S = hauteur de la zone.");
         formulas(["c = 1 / R", "z = c*S^2 / (1 + sqrt(1 - (K+1)*c^2*S^2))", "A = c*z*(K+1)", "Y = -K*z * [3 + A*(A-3)]", "X = -S*c*K*z * [2 + A*(A-3)] / (1-A)  =  -S*c*K*z * (2 - A)"]);
@@ -1918,7 +1935,7 @@
         para("Dall-Kirkham : secondaire sphérique, primaire en ellipse prolate.");
         formulas(["K2 = 0", "K1 = -1 + [(M^2 - 1)/M^3] * (1 + B/F1)"]);
         para("Newton : primaire parabolique ; L = distance du diagonal au foyer.");
-        formulas(["L = D/2 + B", "Petit axe = (D - CPL)*L/F + CPL"]);
+        formulas(["L = Dtube/2 + B  (Dtube = diamètre intérieur du tube)", "Petit axe = (D - CPL)*L/F + CPL"]);
         para("Pouvoir séparateur (limite de Dawes) :");
         formulas(["116 / D  (secondes d'arc, D en mm)"]);
 
@@ -1933,21 +1950,36 @@
     }
     window.downloadCoursePDF = downloadCoursePDF;
 
+    // Critère de Texereau : dans une zone de rayon moyen z et de demi-largeur h, l'onde s'écarte d'une sphère de
+    // |K|·z²·h²/R³ ; tolérance k = 37 nm (≈ λ/15). h·z = √(k·R³/|K|) est donc constant : les zones sont d'aire égale,
+    // larges au centre et étroites au bord (vrai aussi pour la zone centrale, où l'écart vaut |K|·r⁴/16R³).
+    const TEXEREAU_K = 37e-6;   // mm
     function autoCalcZones() {
         const D = parseFloat(document.getElementById('an-diameter').value)||0; const holeD = parseFloat(document.getElementById('an-hole').value)||0;
         const R_val = parseFloat(document.getElementById('an-curvature-val').value)||0; const R = (anMode === 'F') ? R_val * 2 : R_val;
-        let forcedN = parseInt(document.getElementById('an-nb-zones').value); if(!D || !R) { window.runAnalyzer(); return; }
-        const width_mm = 4.53 * Math.pow(((R/2)/D) * Math.pow(R/10, 2), 1/3) * 0.1;
-        const radiusMirror = D / 2; const radiusHole = holeD / 2; const usefulRadius = radiusMirror - radiusHole;
-        if(usefulRadius <= 0) { document.getElementById('an-zones').value = ""; window.runAnalyzer(); return; }
-        const numZones = (forcedN > 0) ? forcedN : Math.ceil(usefulRadius / width_mm);
-        if(isNaN(forcedN) || forcedN <= 0) { document.getElementById('an-nb-zones').placeholder = numZones; if(document.getElementById('an-nb-zones').value !== "") { document.getElementById('an-nb-zones').value = ""; } }
-        const actualWidth = usefulRadius / numZones; const zoneCenters = [];
-        for(let i=0; i<numZones; i++) { const center = radiusHole + (i * actualWidth) + (actualWidth/2); zoneCenters.push(center.toFixed(1)); }
-        document.getElementById('an-zones').value = zoneCenters.join(', '); 
-        let widthText = `${actualWidth.toFixed(1)} mm (Max théorique: ${width_mm.toFixed(1)} mm, selon Texereau)`;
-        if (actualWidth > width_mm * 1.01) widthText = "⚠️ " + widthText;
-        document.getElementById('an-maxw').innerText = widthText;
+        const K = parseFloat(document.getElementById('an-kfactor').value);
+        const nbIn = document.getElementById('an-nb-zones');
+        let forcedN = parseInt(nbIn.value); if(!D || !R) { window.runAnalyzer(); return; }
+        const rOut = D / 2, rIn = holeD / 2;
+        if(rOut - rIn <= 0) { document.getElementById('an-zones').value = ""; window.runAnalyzer(); return; }
+        const absK = isFinite(K) ? Math.abs(K) : 1;
+        const hz = (absK > 1e-9) ? Math.sqrt(TEXEREAU_K * R * R * R / absK) : Infinity;   // h·z admissible (mm²)
+        const nTex = isFinite(hz) ? Math.max(2, Math.ceil((rOut * rOut - rIn * rIn) / (4 * hz))) : 2;
+        const n = (forcedN > 0) ? forcedN : nTex;
+        if(isNaN(forcedN) || forcedN <= 0) { nbIn.placeholder = n; if(nbIn.value !== "") nbIn.value = ""; }
+        const bounds = []; for(let j = 0; j <= n; j++) bounds.push(Math.sqrt(rIn * rIn + j * (rOut * rOut - rIn * rIn) / n));
+        // Rayon de mesure : milieu de la zone (convention de Texereau ; Couder prenait la moyenne quadratique)
+        const centers = []; for(let j = 0; j < n; j++) centers.push(((bounds[j] + bounds[j + 1]) / 2).toFixed(1));
+        document.getElementById('an-zones').value = centers.join(', ');
+        const w0 = bounds[1] - bounds[0], wN = bounds[n] - bounds[n - 1];
+        let text;
+        if(!isFinite(hz)) text = `${n} zones d'aire égale (sphère : pas d'aberration à mesurer, aucune contrainte de largeur)`;
+        else {
+            const allowedOuter = 2 * hz / ((bounds[n - 1] + bounds[n]) / 2);
+            text = `${n} zones d'aire égale, de ${w0.toFixed(1)} mm (centre) à ${wN.toFixed(1)} mm (bord ; max ${allowedOuter.toFixed(1)} mm selon Texereau, λ/15)`;
+            if(n < nTex) text = `⚠️ ${text} : trop peu de zones, il en faut ${nTex}`;
+        }
+        document.getElementById('an-maxw').innerText = text;
         window.runAnalyzer();
     }
     window.autoCalcZones = autoCalcZones;
@@ -2496,7 +2528,7 @@
         } else {
             // NEWTON 3D
             const Sep = visualSep; 
-            const tubeR = (R1*1.15); const Y_exit = tubeR + currentData.B; 
+            const tubeR = (currentData.TubeD || currentData.D * 1.15) / 2; const Y_exit = tubeR + currentData.B; 
             
             const m2Group = new THREE.Group(); m2Group.position.z = Sep; m2Group.rotation.x = -3 * Math.PI / 4; 
             const m2 = new THREE.Mesh(new THREE.CircleGeometry(currentData.D2/2, 64), m1Mat); m2.scale.y = 1.414; m2Group.add(m2);
