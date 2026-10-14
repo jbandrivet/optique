@@ -2220,7 +2220,7 @@
     // Vue 3D : lentilles de révolution exactes, tube, rayons tracés
     function buildPetzval3D(grp, lensesOnly) {
         const P = currentData.Petz; if (!P) return; const { spec, sys } = P; const S = sys.surfs; const D = spec.D;
-        const matLens = new THREE.MeshStandardMaterial({ color: 0x66ccff, transparent: true, opacity: 0.5, roughness: 0.1, metalness: 0.1, side: THREE.DoubleSide });
+        const matLens = new THREE.MeshStandardMaterial({ color: 0x66ccff, transparent: true, depthWrite: false, opacity: 0.5, roughness: 0.1, metalness: 0.1, side: THREE.DoubleSide });
         for (let i = 0; i < 5; i++) {
             const a = S[2 * i], b = S[2 * i + 1], h = sys.sd[i], pts = [];
             for (let k = 0; k <= 24; k++) { const r = h * k / 24; pts.push(new THREE.Vector2(r, a.z + sphSag(a.c, r))); }
@@ -2230,7 +2230,7 @@
         const dew = 1.2 * D;
         if (!lensesOnly) {
             const tubeR = D / 2 + 0.1 * D + 3, rFoc = Math.max(sys.sd[3], sys.sd[4]) + 8, zTubeEnd = S[6].z - 0.08 * D;
-            const matTube = new THREE.MeshStandardMaterial({ color: 0x222233, side: THREE.DoubleSide, transparent: true, opacity: 0.25 });
+            const matTube = new THREE.MeshStandardMaterial({ color: 0x222233, side: THREE.DoubleSide, transparent: true, depthWrite: false, opacity: 0.25 });
             [[-dew, zTubeEnd, tubeR], [zTubeEnd, sys.zImage - 4, rFoc]].forEach(([z1, z2, r]) => {
                 const t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z2 - z1, 48, 1, true), matTube); t.rotation.x = Math.PI / 2; t.position.z = (z1 + z2) / 2; grp.add(t);
             });
@@ -2247,7 +2247,7 @@
                 for (let i = 1; i < path.length; i++) segs.push(new THREE.Vector3(...path[i - 1]), new THREE.Vector3(...path[i]));
             }
         });
-        grp.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segs), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.7, transparent: true })));
+        grp.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segs), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.7, transparent: true, depthWrite: false })));
     }
 
     // PDF de la lunette : plan, données, performances, prescription, diagramme de points
@@ -2355,7 +2355,7 @@
         let physicalHoleR = 0; let b1_len_val = 0; let b1_outerR = 0;
         const CPL = currentData.CPL || 0;
         const corrData = currentData.Corrector;
-        const matLens = new THREE.MeshStandardMaterial({color: 0x00ffff, opacity:0.4, transparent:true, roughness: 0.1, metalness:0.1});
+        const matLens = new THREE.MeshStandardMaterial({color: 0x00ffff, opacity:0.4, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.1, metalness:0.1});
 
         function createLens3D(diam, r1, r2, t, mat) {
             const pts = []; const rMax = diam/2; const segments = 16;
@@ -2389,7 +2389,7 @@
                 let tubeLength = corrData.lenses.reduce((acc, l) => acc + l.d + l.t, 0) + 30;
                 let tubeThickness = Math.max(corrData.diam * 0.05, 3);
                 let tubeOuter = corrData.diam + 2 * tubeThickness;
-                const matTube = new THREE.MeshStandardMaterial({color: 0x333344, roughness:0.8, metalness:0.1, side: THREE.DoubleSide, transparent: true, opacity: 0.5});
+                const matTube = new THREE.MeshStandardMaterial({color: 0x333344, roughness:0.8, metalness:0.1, side: THREE.DoubleSide, transparent: true, depthWrite: false, opacity: 0.5});
                 const tubeMesh = new THREE.Mesh(new THREE.CylinderGeometry(tubeOuter/2, tubeOuter/2, tubeLength, 32, 1, true), matTube);
                 lGrp.add(tubeMesh);
                 
@@ -2521,7 +2521,7 @@
                     const side_focus_X = currentData.B + m3_z_pos; ptsAll.push(new THREE.Vector3(x3, y3, z3)); ptsAll.push(new THREE.Vector3(side_focus_X, 0, m3_z_pos)); 
                 } else { ptsAll.push(new THREE.Vector3(x2_ray, y2_ray, Z_m2_ray)); ptsAll.push(new THREE.Vector3(0, 0, Z_foc)); }
             }
-            const lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true })); grp.add(lRays);
+            const lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true, depthWrite: false })); grp.add(lRays);
             
             const camRad = 35; const camLen = 40; const camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32); const camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2}); const cam = new THREE.Mesh(camGeo, camMat);
             if(nasmyth) { cam.rotation.z = -Math.PI/2; const side_focus_X = currentData.B + m3_z_pos; cam.position.set(side_focus_X + camLen/2, 0, m3_z_pos); } 
@@ -2579,9 +2579,9 @@
                 ptsAll.push(new THREE.Vector3(x, y, Z_m1)); ptsAll.push(new THREE.Vector3(xi, yi, zi));
                 ptsAll.push(new THREE.Vector3(xi, yi, zi)); ptsAll.push(new THREE.Vector3(0, Y_exit, Sep));
             }
-            const lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true })); grp.add(lRays);
+            const lRays = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ptsAll), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.6, transparent: true, depthWrite: false })); grp.add(lRays);
 
-            const tubeGeo = new THREE.CylinderGeometry(tubeR, tubeR, Sep + 100, 32, 1, true); const tubeMat = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity:0.3, transparent:true}); const tube = new THREE.Mesh(tubeGeo, tubeMat); tube.rotation.x = Math.PI/2; tube.position.z = Sep/2; grp.add(tube);
+            const tubeGeo = new THREE.CylinderGeometry(tubeR, tubeR, Sep + 100, 32, 1, true); const tubeMat = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity:0.3, transparent: true, depthWrite: false}); const tube = new THREE.Mesh(tubeGeo, tubeMat); tube.rotation.x = Math.PI/2; tube.position.z = Sep/2; grp.add(tube);
             const focGeo = new THREE.CylinderGeometry(25, 25, currentData.B, 16); const focMat = new THREE.MeshStandardMaterial({color: 0x111111}); const foc = new THREE.Mesh(focGeo, focMat); foc.position.set(0, tubeR + currentData.B/2, Sep); grp.add(foc); 
             const camRad = 35; const camLen = 40; const camGeo = new THREE.CylinderGeometry(camRad, camRad, camLen, 32); const camMat = new THREE.MeshStandardMaterial({color: 0xcc0000, metalness:0.6, roughness:0.2}); const cam = new THREE.Mesh(camGeo, camMat); cam.position.set(0, tubeR + currentData.B + camLen/2, Sep); grp.add(cam);
         }
