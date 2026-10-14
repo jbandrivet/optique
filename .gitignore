@@ -1,0 +1,9 @@
+# Dépendances et outils de développement locaux (non publiés sur GitHub Pages)
+node_modules/
+patch*.py
+debug*.js
+test*.js
+test.html
+temp.js
+draw_svg*.js
+lenses*.svg
