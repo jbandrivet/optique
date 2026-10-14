@@ -1345,7 +1345,9 @@
             : { front: [0, 0.001, 1], side: [1, 0, -0.33], default: [0.8, 0.5, 1] };
         const dir = new THREE.Vector3(...(dirs[view] || dirs.default)).normalize();
         cam.position.copy(center).addScaledVector(dir, dist);
-        cam.near = Math.max(dist / 1000, 0.1); cam.far = dist * 20; cam.updateProjectionMatrix();
+        cam.near = Math.max(dist / 1000, 0.1); cam.far = dist * 10; cam.updateProjectionMatrix();
+        // Molette : on ne peut pas reculer au point de perdre l'objet (ni traverser les pièces en avançant)
+        ctr.minDistance = dist * 0.02; ctr.maxDistance = dist * 2.5;
         ctr.target.copy(center); cam.lookAt(center); ctr.update();
     }
 
@@ -1789,11 +1791,22 @@
     window.runArchitect = runArchitect;
 
     // Zoom autour du centre du canevas, mêmes bornes que la molette
-    function zoomBlueprint(factor) {
-        const newScale = Math.min(10, Math.max(0.1, viewState.scale * factor)); const ratio = newScale / viewState.scale;
-        viewState.offsetX *= ratio; viewState.offsetY *= ratio; viewState.scale = newScale;
+    // La vue à l'échelle 1 montre déjà tout le dessin : on ne dézoome pas au-delà de la moitié
+    const ZOOM_MIN = 0.5, ZOOM_MAX = 10;
+    // Zoom autour du point (xs, ys) du canevas ; en dessous de l'échelle 1 le dessin reste centré
+    function zoomAt(factor, xs, ys) {
+        const cvs = document.getElementById('blueprint-canvas'); const W = cvs.clientWidth, H = cvs.clientHeight;
+        const newScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, viewState.scale * factor)); const ratio = newScale / viewState.scale;
+        if(ratio === 1) return;
+        if(newScale <= 1) { viewState.offsetX = 0; viewState.offsetY = 0; }
+        else {
+            viewState.offsetX = xs - W/2 - (xs - W/2 - viewState.offsetX) * ratio;
+            viewState.offsetY = ys - H/2 - (ys - H/2 - viewState.offsetY) * ratio;
+        }
+        viewState.scale = newScale;
         window.redrawCurrentBlueprint();
     }
+    function zoomBlueprint(factor) { const cvs = document.getElementById('blueprint-canvas'); zoomAt(factor, cvs.clientWidth / 2, cvs.clientHeight / 2); }
     window.zoomBlueprint = zoomBlueprint;
     function resetZoom() { viewState.scale = 1; viewState.offsetX = 0; viewState.offsetY = 0; window.redrawCurrentBlueprint(); }
     window.resetZoom = resetZoom;
@@ -2593,25 +2606,10 @@
             });
             cvs.addEventListener('wheel', (e) => {
                 e.preventDefault();
-                let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                
-                let xs = e.offsetX;
-                let ys = e.offsetY;
-                let width = cvs.clientWidth;
-                let height = cvs.clientHeight;
-                
-                let oldScale = viewState.scale;
-                let newScale = oldScale * zoomFactor;
-                if(newScale < 0.1) newScale = 0.1;
-                if(newScale > 10) newScale = 10;
-                
-                let scaleRatio = newScale / oldScale;
-                
-                viewState.offsetX = xs - width/2 - (xs - width/2 - viewState.offsetX) * scaleRatio;
-                viewState.offsetY = ys - height/2 - (ys - height/2 - viewState.offsetY) * scaleRatio;
-                viewState.scale = newScale;
-                
-                window.redrawCurrentBlueprint();
+                // Le facteur suit l'amplitude réelle du défilement : un trackpad ou une molette fine envoie
+                // beaucoup de petits événements, une molette classique un seul gros (~100 px par cran)
+                const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? cvs.clientHeight : 1);
+                zoomAt(Math.min(1.25, Math.max(0.8, Math.exp(-px * 0.0015))), e.offsetX, e.offsetY);
             }, { passive: false });
         }
         document.querySelectorAll('#architect .controls input[type=number]').forEach(inp => {
