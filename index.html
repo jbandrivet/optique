@@ -2552,7 +2552,7 @@
                     if (corrData && corrData.lenses && corrData.lenses.length > 0) {
                         const l = corrData.lenses[0];
                         const lens = createLens3D(currentData.D, l.r1, l.r2, l.t, matLens);
-                        lens.rotation.x = Math.PI/2; lens.position.z = Sep; grp.add(lens);
+                        lens.rotation.x = Math.PI/2; lens.position.z = Sep + thick2 + 8; grp.add(lens);
                     }
                 } else if(corrData && corrData.pos > 0 && corrData.lenses) {
                     const Z_foc = -currentData.B;
@@ -2595,6 +2595,13 @@
             grp.add(cam);
 
             const trussGroup = new THREE.Group(); const boxR = (R1*1.15); const matTruss = new THREE.MeshStandardMaterial({color: 0x222222, roughness:0.9});
+            if(currentData.type === 'SCT') {
+                // SCT : tube fermé, le secondaire est tenu par la lame de Schmidt (pas d'araignée)
+                const zFront = Sep + thick2 + 20, zBack = -25;
+                const tubeMatSct = new THREE.MeshStandardMaterial({color: 0x222222, side: THREE.DoubleSide, opacity: 0.3, transparent: true, depthWrite: false});
+                const tubeSct = new THREE.Mesh(new THREE.CylinderGeometry(boxR, boxR, zFront - zBack, 48, 1, true), tubeMatSct);
+                tubeSct.rotation.x = Math.PI/2; tubeSct.position.z = (zFront + zBack) / 2; grp.add(tubeSct);
+            } else {
             for(let i=0; i<8; i++) {
                 const a1 = (Math.floor(i/2)*90)*(Math.PI/180); const a2 = (i%2===1 ? a1+Math.PI/4 : a1-Math.PI/4);
                 const v1 = new THREE.Vector3(Math.cos(a1)*boxR, Math.sin(a1)*boxR, 0); const v2 = new THREE.Vector3(Math.cos(a2)*boxR, Math.sin(a2)*boxR, Sep); const dist = v1.distanceTo(v2);
@@ -2603,6 +2610,7 @@
             const spiderZ = Sep + thick2 + 7.5; const spiderV = new THREE.Mesh(new THREE.BoxGeometry(4, boxR*2, 20), matTruss); spiderV.position.z = spiderZ; trussGroup.add(spiderV);
             const spiderH = new THREE.Mesh(new THREE.BoxGeometry(boxR*2, 4, 20), matTruss); spiderH.position.z = spiderZ; trussGroup.add(spiderH);
             const cage = new THREE.Mesh(new THREE.TorusGeometry(boxR,5,16,100), matTruss); cage.position.z = Sep; trussGroup.add(cage); grp.add(trussGroup);
+            }
 
         } else {
             // NEWTON 3D
