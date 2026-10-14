@@ -142,6 +142,11 @@
         .stat-val { font-family: 'Orbitron'; font-size: 1.2rem; color: #fff; }
         .error-banner { background: rgba(255, 0, 85, 0.12); border: 1px solid #ff0055; color: #ff7a9c; padding: 12px 16px; margin-bottom: 15px; font-size: 0.95rem; }
         .error-banner[hidden] { display: none; }
+        .arch-grid[hidden] { display: none; }
+        .mirror-card.wide { grid-column: 1 / -1; }
+        .presc-table { margin-top: 0; font-size: 0.85rem; }
+        .presc-table td, .presc-table th { padding: 6px 8px; white-space: nowrap; }
+        .presc-table th:last-child, .presc-table td:last-child { text-align: right; }
         .results-panel.stale .stats-row, .results-panel.stale .arch-grid, .results-panel.stale .blueprint-wrapper { opacity: 0.3; }
         .btn-link { background: transparent; border: 1px dashed var(--neon-orange); color: var(--neon-orange); padding: 8px; font-family: 'Orbitron'; font-size: 0.7rem; cursor: pointer; width: 100%; margin-top: 10px; }
         .btn-link:hover { background: rgba(255, 157, 0, 0.12); }
@@ -287,7 +292,7 @@
     <div id="architect" class="interface-container">
         <div class="controls">
             <div class="brand">ARCHITECT <span>PRO</span></div>
-            <div class="input-group" style="margin-bottom: 5px;">
+            <div class="input-group" id="corr-toggle-group" style="margin-bottom: 5px;">
                 <label>Correcteur <input type="checkbox" id="arch-use-corr" checked style="float:right; transform: scale(1.5); margin-right: 10px;" onchange="window.runArchitect()"></label>
             </div>
             <div class="input-group">
@@ -299,7 +304,17 @@
                     <option value="rc" selected>Ritchey-Chrétien</option>
                     <option value="nasmyth">Nasmyth</option>
                     <option value="sct">SCT (Schmidt-Cassegrain)</option>
+                    <option value="petzval">Lunette Petzval apo (5 lentilles)</option>
                 </select>
+            </div>
+            <div class="input-group" id="petz-ed-group" hidden>
+                <label>Verre ED du triplet</label>
+                <select id="arch-ed" onchange="window.runArchitect()">
+                    <option value="S-FPL53" selected>Ohara S-FPL53 (ED)</option>
+                    <option value="CaF2">Fluorite CaF2</option>
+                    <option value="N-FK58">Schott N-FK58</option>
+                </select>
+                <div class="field-hint">Partenaires : N-KZFS11 + N-SF6. Doublet arrière choisi automatiquement.</div>
             </div>
             <div class="input-group">
                 <label>Diamètre Primaire D (mm)</label>
@@ -328,11 +343,11 @@
             </div>
 
             <div class="input-group">
-                <label>Focale Primaire F1 (mm) <span id="lock-f1">🔒</span></label>
+                <label><span id="arch-F1-text">Focale Primaire F1 (mm)</span> <span id="lock-f1">🔒</span></label>
                 <input type="number" id="arch-F1" value="900">
             </div>
             <div class="input-group">
-                <label>Séparation d (mm) <span id="lock-sep" style="display:none">🔒</span></label>
+                <label><span id="arch-Sep-text">Séparation d (mm)</span> <span id="lock-sep" style="display:none">🔒</span></label>
                 <input type="number" id="arch-Sep" value="650" disabled>
             </div>
             
@@ -373,13 +388,14 @@
             
             <div class="stats-row">
                 <div><div class="stat-label">OUVERTURE</div><div class="stat-val" id="res-fd">-</div></div>
-                <div><div class="stat-label">GRANDISSEMENT</div><div class="stat-val" id="res-mag">-</div></div>
+                <div><div class="stat-label" id="lbl-mag">GRANDISSEMENT</div><div class="stat-val" id="res-mag">-</div></div>
                 <div><div class="stat-label">OBSTRUCTION</div><div class="stat-val" id="res-obst">-</div></div>
-                <div><div class="stat-label">DIAMÈTRE PUR</div><div class="stat-val" style="color:var(--neon-cyan)" id="res-d-eff">-</div></div>
+                <div><div class="stat-label" id="lbl-deff">DIAMÈTRE PUR</div><div class="stat-val" style="color:var(--neon-cyan)" id="res-d-eff">-</div></div>
                 <div><div class="stat-label">RÉSOLUTION</div><div class="stat-val" style="color:var(--neon-pink)" id="res-resol">-</div></div>
             </div>
             
-            <div class="arch-grid">
+            <div class="arch-grid" id="petz-grid" hidden></div>
+            <div class="arch-grid" id="mirror-grid">
                 <div class="mirror-card">
                     <h3 style="color:var(--neon-orange)">MIROIR PRIMAIRE</h3>
                     <div class="result-row"><span>Rayon R1</span><div class="res-val" id="res-r1">-</div></div>
@@ -501,11 +517,340 @@
                 <h3>Pouvoir séparateur</h3>
                 <div class="formula-box">Limite de Dawes = 116 / D  (secondes d'arc, D en mm)</div>
             </div>
+
+            <div class="chapter">
+                <h2>5. LUNETTE APOCHROMATIQUE DE PETZVAL (5 LENTILLES)</h2>
+                <p>La formule Petzval moderne associe un <strong>triplet apochromatique</strong> à l'avant et un <strong>doublet arrière</strong> placé près du foyer. Le triplet forme l'image avec très peu de chromatisme ; le doublet raccourcit la focale (réducteur) et aplanit le champ pour couvrir un grand capteur.</p>
+                <h3>Triplet apochromatique (lentilles minces)</h3>
+                <p>Trois verres de constringences V et de dispersions partielles P (raies g et F) différentes permettent d'annuler à la fois le chromatisme primaire et le spectre secondaire :</p>
+                <div class="formula-box">φ1 + φ2 + φ3 = 1 / F1<br>φ1/V1 + φ2/V2 + φ3/V3 = 0<br>φ1·P1/V1 + φ2·P2/V2 + φ3·P3/V3 = 0</div>
+                <p>Avec S-FPL53 + N-KZFS11 + N-SF6, on obtient φ ≈ (+2,14 ; −1,41 ; +0,27) / F1 : le verre ED porte presque toute la puissance positive.</p>
+                <h3>Courbure de champ (somme de Petzval)</h3>
+                <div class="formula-box">P = Σ φi / ni<br>Rayon de la surface de Petzval = -1 / P</div>
+                <p>Deux groupes positifs ajoutent leurs courbures : c'est le défaut de l'objectif de Petzval d'origine (1840). Le doublet arrière retenu ici est un couple <strong>positif puis négatif, espacés</strong> (type Galilée) : sa puissance totale reste faible, mais il réduit la focale et ramène la somme de Petzval vers zéro.</p>
+                <h3>Optimisation par tracé de rayons</h3>
+                <p>Les rayons de courbure, épaisseurs et espacements ne sont pas tirés de proportions : le logiciel trace des rayons réels (loi de Snell-Descartes en 3D, indices des verres par la formule de Sellmeier) sur 3 champs et 4 longueurs d'onde (g, F, d, C), puis ajuste les 10 courbures et les 2 espacements par la méthode de Levenberg-Marquardt pour réduire la tache image tout en tenant la focale demandée. Les épaisseurs respectent un bord d'au moins 3 % et un centre d'au moins 6 % du diamètre.</p>
+                <p>Le résultat est une <strong>pré-étude</strong> : à valider dans un logiciel de conception optique (tolérances de fabrication, disponibilité des verres) avant de faire tailler les lentilles.</p>
+            </div>
         </div>
     </div>
     
     <div class="footer-brand">JEAN-BAPTISTE ANDRIVET // OPTICAL SUITE v2 (Astro Master)</div>
 </div>
+
+<script id="optics-engine">
+    // ===================== MOTEUR OPTIQUE : LUNETTE PETZVAL APO 5 LENTILLES (tracé de rayons réel) =====================
+    // Verres : coefficients de Sellmeier des catalogues Schott / Ohara (λ en µm), CaF2 d'après Malitson (1963)
+    const GLASS_DB = {
+        'S-FPL53':  { B: [0.983532327, 0.0695688140, 1.11409238], C: [0.00492234955, 0.0193581091, 264.275294] },
+        'CaF2':     { B: [0.5675888, 0.4710914, 3.8484723], C: [0.050263605 ** 2, 0.1003909 ** 2, 34.649040 ** 2] },
+        'N-FK58':   { B: [0.738042712, 0.363371967, 0.989296264], C: [0.00339065607, 0.0117551189, 212.842145] },
+        'N-KZFS11': { B: [1.3322245, 0.28924161, 1.15161734], C: [0.0084029848, 0.034423972, 88.4310532] },
+        'N-SF6':    { B: [1.77931763, 0.338149866, 2.08734474], C: [0.0133714182, 0.0617533621, 174.01759] },
+        'N-SK16':   { B: [1.34317774, 0.241144399, 0.994317969], C: [0.00704687339, 0.0229005, 92.7508526] },
+        'N-LAK22':  { B: [1.14229781, 0.535138441, 1.04088385], C: [0.00585778594, 0.0198546147, 100.834017] },
+        'N-PK52A':  { B: [1.029607, 0.1880506, 0.736488165], C: [0.00516800155, 0.0166658798, 138.964129] }
+    };
+    const WAVES = [0.4358343, 0.4861327, 0.5875618, 0.6562725];   // raies g, F, d, C
+    const WAVE_NAMES = ['g', 'F', 'd', 'C'];
+    const WAVE_W = [0.6, 1, 1, 0.8];                                 // pondération pour un capteur couleur
+    const WD = 2;                                                    // indice de la raie d
+
+    function glassIndex(name, wl) {
+        const g = GLASS_DB[name]; const l2 = wl * wl; let s = 1;
+        for (let i = 0; i < 3; i++) s += g.B[i] * l2 / (l2 - g.C[i]);
+        return Math.sqrt(s);
+    }
+    function glassProps(name) {
+        const [ng, nF, nd, nC] = WAVES.map(w => glassIndex(name, w));
+        return { nd, V: (nd - 1) / (nF - nC), P: (ng - nF) / (nF - nC) };
+    }
+
+    // Triplet apochromatique mince : Σφ = 1, Σφ/V = 0, ΣφP/V = 0 (puissances relatives)
+    function apoSplit(glasses) {
+        const g = glasses.map(glassProps);
+        const A = [[1, 1, 1], g.map(x => 1 / x.V), g.map(x => x.P / x.V)];
+        const det = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+        const D = det(A);
+        return [0, 1, 2].map(j => det(A.map((r, i) => r.map((v, k) => k === j ? [1, 0, 0][i] : v))) / D);
+    }
+
+    // Flèche signée d'une sphère de courbure c à la hauteur h (NaN si la sphère est trop petite)
+    function sphSag(c, h) { const x = 1 - c * c * h * h; return x < 0 ? NaN : c * h * h / (1 + Math.sqrt(x)); }
+
+    // Système épais. lay = { c: courbures (1/mm), e: sommet L1 -> sommet L4 (mm), dr: air L4-L5 (mm) }
+    // nEl = 3 (triplet seul) ou 5. Épaisseurs et jeux d'air déduits des flèches :
+    // bord ≥ 3 % du Ø, centre ≥ 6 % du Ø, air ≥ 0,5 mm au centre comme au bord.
+    // Demi-diamètres : rayon marginal + rayon principal paraxiaux, +4 % et 0,5 mm.
+    function buildSystem(spec, lay, nEl) {
+        nEl = nEl || 5;
+        const glasses = [...spec.front, ...spec.rear];
+        const theta = Math.atan(spec.CPL / 2 / spec.F);
+        let sd = lay.sd || Array(nEl).fill(spec.D / 2 * 1.02 + 0.5);
+        let sys;
+        for (let pass = 0; pass < 2; pass++) {
+            const surfs = []; let z = 0; let bad = 0;
+            for (let i = 0; i < nEl; i++) {
+                const c1 = lay.c[2 * i], c2 = lay.c[2 * i + 1], h = sd[i];
+                let s1 = sphSag(c1, h), s2 = sphSag(c2, h);
+                if (!isFinite(s1) || !isFinite(s2)) { bad += 5; s1 = isFinite(s1) ? s1 : 0; s2 = isFinite(s2) ? s2 : 0; }
+                const tc = Math.max(Math.max(2, 0.06 * 2 * h), Math.max(1.2, 0.03 * 2 * h) + s1 - s2);
+                if (i > 0) {
+                    const prev = surfs[surfs.length - 1]; const hE = Math.min(h, prev.sd);
+                    const need = 0.5 + (sphSag(prev.c, hE) || 0) - (sphSag(c1, hE) || 0);
+                    let gap = (i === 3) ? lay.e - z : (i === 4) ? lay.dr : 0.5;
+                    if (gap < need) { if (i >= 3) bad += (need - gap) / 10; gap = need; }
+                    z += gap;
+                }
+                const nw = WAVES.map(w => glassIndex(glasses[i], w));
+                surfs.push({ z, c: c1, nw, sd: h, el: i, glass: glasses[i] });
+                z += tc;
+                surfs.push({ z, c: c2, nw: [1, 1, 1, 1], sd: h, el: i, glass: null });
+            }
+            sys = { surfs, bad, theta, zLast: z };
+            const m = paraxial(surfs, WD, spec.D / 2, 0), ch = paraxial(surfs, WD, 0, Math.tan(theta));
+            const need = Array(nEl).fill(0);
+            surfs.forEach((s, k) => { need[s.el] = Math.max(need[s.el], (Math.abs(m.ys[k]) + Math.abs(ch.ys[k])) * 1.04 + 0.5); });
+            need[0] = Math.max(need[0], spec.D / 2 + 0.5);
+            if (need.every((x, i) => x <= sd[i] * 1.001)) break;
+            sd = need.map((x, i) => Math.max(x, i < 3 ? spec.D / 2 + 0.5 : 0));
+        }
+        sys.sd = sd;
+        if (nEl === 5) sys.zImage = sys.zLast + spec.B;
+        else { const px = paraxial(sys.surfs, WD); sys.zImage = sys.zLast + px.bfd + (lay.focus || 0); }
+        return sys;
+    }
+
+    // Tracé exact d'un rayon à travers le système ; renvoie {x, y} sur le plan image (ou null si vignetté / réflexion totale)
+    function traceRay(sys, wi, ox, oy, oz, dx, dy, dz, path) {
+        let px = ox, py = oy, pz = oz, n1 = 1; const ns = sys.surfs.length;
+        if (path) path.push([px, py, pz]);
+        for (let k = 0; k < ns; k++) {
+            const s = sys.surfs[k];
+            const qz = pz - s.z, c = s.c;
+            const Bq = dz - c * (px * dx + py * dy + qz * dz);
+            const Cq = c * (px * px + py * py + qz * qz) - 2 * qz;
+            const disc = Bq * Bq - c * Cq; if (disc < 0) return null;
+            const t = Cq / (Bq + Math.sqrt(disc));
+            px += t * dx; py += t * dy; const zl = qz + t * dz; pz = zl + s.z;
+            if (px * px + py * py > s.sd * s.sd * 1.0004) return null;
+            const nx = -c * px, ny = -c * py, nz = 1 - c * zl;
+            const n2 = s.nw[wi], mu = n1 / n2, cosI = dx * nx + dy * ny + dz * nz;
+            const k2 = 1 - mu * mu * (1 - cosI * cosI); if (k2 < 0) return null;
+            const g = Math.sqrt(k2) - mu * cosI;
+            dx = mu * dx + g * nx; dy = mu * dy + g * ny; dz = mu * dz + g * nz; n1 = n2;
+            if (path) path.push([px, py, pz]);
+        }
+        const zEnd = sys.zImage; const t = (zEnd - pz) / dz; const x = px + t * dx, y = py + t * dy;
+        if (path) path.push([x, y, zEnd]);
+        return { x, y, dx, dy, dz };
+    }
+
+    // Tracé paraxial (y, nu) : focale effective et tirage arrière depuis la dernière surface
+    // y0, u0 : hauteur et angle du rayon sur la 1re surface ; renvoie aussi les hauteurs sur chaque surface
+    function paraxial(surfs, wi, y0, u0) {
+        let y = (y0 === undefined) ? 1 : y0, nu = u0 || 0, n = 1, zPrev = surfs[0].z; const ys = [];
+        for (const s of surfs) {
+            y += (s.z - zPrev) * nu / n; zPrev = s.z; ys.push(y);
+            const n2 = s.nw[wi]; nu = nu - y * s.c * (n2 - n); n = n2;
+        }
+        const u = nu / n; return { efl: -1 / u, bfd: -y / u, y, u, ys };
+    }
+
+    // Pupille : centre + 3 anneaux (rayons tracés dans le plan tangent à la 1re surface, qui sert de diaphragme)
+    const PUPIL = (() => { const p = [[0, 0]]; [[0.35, 6], [0.7, 8], [1, 12]].forEach(([r, k]) => { for (let i = 0; i < k; i++) { const a = 2 * Math.PI * (i + 0.5) / k; p.push([r * Math.cos(a), r * Math.sin(a)]); } }); return p; })();
+    const FIELDS = [0, 0.7, 1];
+
+    function spotPoints(sys, D, fieldFrac, pupil) {
+        const th = sys.theta * fieldFrac, dy = Math.sin(th), dz = Math.cos(th); const pts = [];
+        for (let wi = 0; wi < 4; wi++) for (const [a, b] of (pupil || PUPIL)) {
+            const r = traceRay(sys, wi, a * D / 2, b * D / 2 - dy / dz * 5, -5, 0, dy, dz);
+            pts.push(r ? { x: r.x, y: r.y, wi } : null);
+        }
+        return pts;
+    }
+
+    // Résidus d'un faisceau : écarts au barycentre polychromatique, normalisés (5 µm ~ 1)
+    function pushSpotResiduals(res, pts, weight) {
+        let sx = 0, sy = 0, sw = 0;
+        for (const p of pts) if (p) { const w = WAVE_W[p.wi]; sx += p.x * w; sy += p.y * w; sw += w; }
+        const cx = sw ? sx / sw : 0, cy = sw ? sy / sw : 0; const k = weight / 0.005 / Math.sqrt(pts.length);
+        for (const p of pts) { if (!p) { res.push(30, 30); continue; } const w = Math.sqrt(WAVE_W[p.wi]) * k; res.push((p.x - cx) * w, (p.y - cy) * w); }
+    }
+
+    function sumSq(r) { let s = 0; for (const x of r) s += x * x; return s; }
+
+    function solveLinear(M, b) {
+        const n = b.length; const A = M.map((row, i) => [...row, b[i]]);
+        for (let c = 0; c < n; c++) {
+            let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+            if (Math.abs(A[p][c]) < 1e-14) return null; [A[c], A[p]] = [A[p], A[c]];
+            for (let r = 0; r < n; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k <= n; k++) A[r][k] -= f * A[c][k]; }
+        }
+        return A.map((row, i) => row[n] / row[i]);
+    }
+
+    // Levenberg-Marquardt, jacobien par différences finies
+    function lmOptimize(fun0, v0, iters, steps) {
+        const fun = v => fun0(v).slice();   // la fonction peut réutiliser son tampon : on copie
+        let v = v0.slice(); let r = fun(v); let cost = sumSq(r); let lambda = 1e-3; const n = v.length;
+        for (let it = 0; it < iters; it++) {
+            const J = v.map((x, k) => { const h = steps ? steps[k] : 1e-6 * Math.max(1, Math.abs(x)); const vv = v.slice(); vv[k] += h; const r2 = fun(vv); return r2.map((y, i) => (y - r[i]) / h); });
+            const A = J.map(a => J.map(b => { let s = 0; for (let m = 0; m < r.length; m++) s += a[m] * b[m]; return s; }));
+            const g = J.map(a => { let s = 0; for (let m = 0; m < r.length; m++) s += a[m] * r[m]; return s; });
+            let improved = false;
+            for (let tries = 0; tries < 10; tries++) {
+                const M = A.map((row, i) => row.map((x, j) => x + (i === j ? lambda * (A[i][i] + 1e-12) : 0)));
+                const step = solveLinear(M, g.map(x => -x)); if (!step) { lambda *= 10; continue; }
+                const vt = v.map((x, i) => x + step[i]); const rt = fun(vt); const ct = sumSq(rt);
+                if (ct < cost) { const rel = (cost - ct) / cost; v = vt; r = rt; cost = ct; lambda = Math.max(lambda / 4, 1e-9); improved = true; if (rel < 1e-5) it = iters; break; }
+                lambda *= 5;
+            }
+            if (!improved) break;
+        }
+        return { v, cost };
+    }
+
+    // Puissances arrière (premier ordre, lentilles minces) pour une géométrie donnée
+    function firstOrderRear(F, B, fa, e, dr) {
+        const yP = 1 - e / fa, ua = -1 / fa, un = -1 / F, yN = B / F;
+        const up = (yN - yP) / dr;
+        return { phiP: (ua - up) / yP, phiN: (up - un) / yN };
+    }
+    function curvFromPower(phi, X, glass) { const n = glassIndex(glass, WAVES[WD]); return [phi * (X + 1) / (2 * (n - 1)), phi * (X - 1) / (2 * (n - 1))]; }
+
+    // Version rapide (sans allocation) du tracé, utilisée par l'optimiseur
+    function packSystem(sys) {
+        const n = sys.surfs.length; sys.pz = new Float64Array(n); sys.pc = new Float64Array(n); sys.psd2 = new Float64Array(n);
+        sys.pn = [0, 1, 2, 3].map(() => new Float64Array(n));
+        sys.surfs.forEach((s, k) => { sys.pz[k] = s.z; sys.pc[k] = s.c; sys.psd2[k] = s.sd * s.sd * 1.0004; for (let w = 0; w < 4; w++) sys.pn[w][k] = s.nw[w]; });
+        return sys;
+    }
+    // Écrit (x, y) sur le plan image dans out[o], out[o+1] ; NaN si le rayon est perdu
+    function traceFast(sys, wi, px, py, pz, dx, dy, dz, out, o) {
+        const n = sys.pz.length, Z = sys.pz, Cc = sys.pc, SD2 = sys.psd2, N = sys.pn[wi]; let n1 = 1;
+        for (let k = 0; k < n; k++) {
+            const qz = pz - Z[k], c = Cc[k];
+            const Bq = dz - c * (px * dx + py * dy + qz * dz);
+            const Cq = c * (px * px + py * py + qz * qz) - 2 * qz;
+            const disc = Bq * Bq - c * Cq; if (disc < 0) { out[o] = NaN; out[o + 1] = NaN; return; }
+            const t = Cq / (Bq + Math.sqrt(disc));
+            px += t * dx; py += t * dy; const zl = qz + t * dz; pz = zl + Z[k];
+            if (px * px + py * py > SD2[k]) { out[o] = NaN; out[o + 1] = NaN; return; }
+            const nx = -c * px, ny = -c * py, nz = 1 - c * zl;
+            const n2 = N[k], mu = n1 / n2, cosI = dx * nx + dy * ny + dz * nz;
+            const k2 = 1 - mu * mu * (1 - cosI * cosI); if (k2 < 0) { out[o] = NaN; out[o + 1] = NaN; return; }
+            const g = Math.sqrt(k2) - mu * cosI;
+            dx = mu * dx + g * nx; dy = mu * dy + g * ny; dz = mu * dz + g * nz; n1 = n2;
+        }
+        const t = (sys.zImage - pz) / dz; out[o] = px + t * dx; out[o + 1] = py + t * dy;
+    }
+    const PUP_X = new Float64Array(PUPIL.map(p => p[0])), PUP_Y = new Float64Array(PUPIL.map(p => p[1]));
+    const NP = PUPIL.length;
+    const SPOT_BUF = new Float64Array(4 * NP * 2);
+    // Ajoute les résidus d'un champ (écarts au barycentre polychromatique, 5 µm ~ 1) à res[] à partir de l'indice o
+    function fieldResiduals(sys, D, fieldFrac, weight, res, o) {
+        const th = sys.theta * fieldFrac, dy = Math.sin(th), dz = Math.cos(th), y0 = -dy / dz * 5, R = D / 2;
+        for (let wi = 0; wi < 4; wi++) for (let p = 0; p < NP; p++) traceFast(sys, wi, PUP_X[p] * R, PUP_Y[p] * R + y0, -5, 0, dy, dz, SPOT_BUF, (wi * NP + p) * 2);
+        let sx = 0, sy = 0, sw = 0;
+        for (let wi = 0; wi < 4; wi++) { const w = WAVE_W[wi]; for (let p = 0; p < NP; p++) { const i = (wi * NP + p) * 2; const x = SPOT_BUF[i]; if (x === x) { sx += x * w; sy += SPOT_BUF[i + 1] * w; sw += w; } } }
+        const cx = sw ? sx / sw : 0, cy = sw ? sy / sw : 0; const k0 = weight / 0.005 / Math.sqrt(NP * 4);
+        for (let wi = 0; wi < 4; wi++) { const k = Math.sqrt(WAVE_W[wi]) * k0; for (let p = 0; p < NP; p++) { const i = (wi * NP + p) * 2; const x = SPOT_BUF[i];
+            if (x === x) { res[o++] = (x - cx) * k; res[o++] = (SPOT_BUF[i + 1] - cy) * k; } else { res[o++] = 30; res[o++] = 30; } } }
+        return o;
+    }
+    // Conception complète. spec = { D, F, B, CPL, front: [3 verres], rear: [2 verres], kFa: focale du triplet / F (null = automatique) }
+    // A : triplet seul optimisé sur l'axe ; B : couple arrière (positif puis négatif, type « Galilée » réducteur-correcteur)
+    // optimisé sur tout le champ à partir d'une grille de départs ; C : optimisation globale des 10 courbures et des 2 espacements.
+    function designPetzval(spec, opts) {
+        opts = opts || {};
+        const D = spec.D, F = spec.F, split = apoSplit(spec.front);
+        const resBuf = new Float64Array(FIELDS.length * 4 * NP * 2 + 4); let faFix = null;
+        function stageA(fa) {
+            let best = null; const buf = new Float64Array(4 * NP * 2 + 2);
+            for (const X of [[0, 1.6, -1.5], [0, 2, 3], [-0.3, 1.2, 0.5], [0.3, 2.4, -3]]) {
+                const c0 = []; for (let i = 0; i < 3; i++) c0.push(...curvFromPower(split[i] / fa, X[i], spec.front[i]));
+                const fun = v => {
+                    const sys = packSystem(buildSystem(spec, { c: v.slice(0, 6).map(x => x / fa), focus: v[6] * fa / 1000 }, 3));
+                    fieldResiduals(sys, D, 0, 1, buf, 0);
+                    const px = paraxial(sys.surfs, WD); buf[buf.length - 2] = (px.efl - fa) / fa * 200; buf[buf.length - 1] = sys.bad * 20; return buf;
+                };
+                const o = lmOptimize(fun, [...c0.map(c => c * fa), 0], 40);
+                if (!best || o.cost < best.cost) best = o;
+            }
+            return best.v.slice(0, 6).map(x => x / fa);
+        }
+        function fullFun(v, frontC) {
+            const c = frontC ? [...frontC, ...v.slice(0, 4).map(x => x / F)] : v.slice(0, 10).map(x => x / F);
+            const k = frontC ? 4 : 10;
+            const sys = packSystem(buildSystem(spec, { c, e: v[k] * F, dr: v[k + 1] * F }));
+            let o = 0; for (const f of FIELDS) o = fieldResiduals(sys, D, f, f === 0 ? 1.3 : 1, resBuf, o);
+            const px = paraxial(sys.surfs, WD);
+            resBuf[o++] = (px.efl - F) / F * 300; resBuf[o++] = sys.bad * 20; resBuf[o++] = Math.max(0, 0.004 - v[k + 1]) * 2000;
+            resBuf[o++] = faFix ? (paraxial(sys.surfs.slice(0, 6), WD).efl - faFix) / faFix * 300 : 0;
+            return resBuf;
+        }
+        const kList = spec.kFa ? [spec.kFa] : [1.3, 1.45];
+        const cands = [];
+        for (const kFa of kList) {
+            const fa = kFa * F; const frontC = stageA(fa); faFix = spec.kFa ? fa : null;
+            // Départs : pour chaque espacement arrière, position e donnant une puissance modérée à l'élément positif
+            for (const drRel of [0.06, 0.12, 0.19]) for (const target of [1.0, 1.8]) {
+                let eRel = null, bestGap = Infinity, fo = null;
+                for (let x = 0.5; x <= 0.98; x += 0.005) {
+                    const f1 = firstOrderRear(F, spec.B, fa, x * F, drRel * F);
+                    const gap = Math.abs(f1.phiP * F - target);
+                    if (isFinite(gap) && gap < bestGap) { bestGap = gap; eRel = x; fo = f1; }
+                }
+                if (eRel === null || bestGap > 0.3 || Math.abs(fo.phiN * F) > 8) continue;
+                const cr = [...curvFromPower(fo.phiP, 0, spec.rear[0]), ...curvFromPower(fo.phiN, 0, spec.rear[1])];
+                const o = lmOptimize(v => fullFun(v, frontC), [...cr.map(x => x * F), eRel, drRel], 25);
+                cands.push({ v: [...frontC.map(x => x * F), ...o.v], cost: o.cost, kFa });
+            }
+        }
+        cands.sort((a, b) => a.cost - b.cost);
+        let best = null;
+        for (const s of cands.slice(0, opts.finalists || 3)) {
+            const o = lmOptimize(v => fullFun(v), s.v, opts.iters || 50);
+            if (!best || o.cost < best.cost) best = { ...o, kFa: s.kFa };
+        }
+        return { lay: { c: best.v.slice(0, 10).map(x => x / F), e: best.v[10] * F, dr: best.v[11] * F }, kFa: best.kFa, cost: best.cost };
+    }
+
+    // Essaie plusieurs couples de verres pour le doublet arrière et garde la meilleure conception
+    const REAR_PAIRS = [['N-LAK22', 'N-SF6'], ['N-SK16', 'N-KZFS11'], ['N-SK16', 'N-SF6']];
+    function designPetzvalAuto(spec) {
+        let best = null;
+        for (const rear of REAR_PAIRS) {
+            const s = { ...spec, rear };
+            const d = designPetzval(s);
+            if (!best || d.cost < best.cost) best = { ...d, rear };
+        }
+        return best;
+    }
+
+    // Diagnostic : RMS polychromatique (µm) par champ sur une pupille dense, foyers chromatiques, distorsion, Petzval
+    const DENSE_PUPIL = (() => { const p = []; for (let i = -10; i <= 10; i++) for (let j = -10; j <= 10; j++) { const a = i / 10, b = j / 10; if (a * a + b * b <= 1) p.push([a, b]); } return p; })();
+    function spotStats(pts) {
+        let sx = 0, sy = 0, sw = 0; pts.forEach(p => { const w = WAVE_W[p.wi]; sx += p.x * w; sy += p.y * w; sw += w; });
+        const cx = sx / sw, cy = sy / sw; let s = 0; pts.forEach(p => { s += WAVE_W[p.wi] * ((p.x - cx) ** 2 + (p.y - cy) ** 2); });
+        return { cx, cy, rms: Math.sqrt(s / sw) * 1000 };
+    }
+    function petzvalReport(sys, spec) {
+        const rms = FIELDS.map(f => { const pts = spotPoints(sys, spec.D, f, DENSE_PUPIL).filter(Boolean); return pts.length ? spotStats(pts).rms : NaN; });
+        const pd = paraxial(sys.surfs, WD);
+        // Foyer de chaque raie pour la zone à 70 % de la pupille, par rapport à la raie d (µm)
+        const zoneFocus = wi => { const r = traceRay(sys, wi, 0, 0.7 * spec.D / 2, -5, 0, 0, 1); return r ? sys.zImage - r.y / r.dy * r.dz : NaN; };
+        const zd = zoneFocus(WD); const chroma = {}; [0, 1, 3].forEach(wi => { chroma[WAVE_NAMES[wi]] = (zoneFocus(wi) - zd) * 1000; });
+        // Distorsion au bord du champ : hauteur réelle du rayon principal / hauteur idéale F·tanθ
+        const th = sys.theta, ch = traceRay(sys, WD, 0, -Math.tan(th) * 5, -5, 0, Math.sin(th), Math.cos(th));
+        const distortion = ch ? (ch.y / (pd.efl * Math.tan(th)) - 1) * 100 : NaN;
+        // Somme de Petzval : Σ c (n' - n) / (n n')
+        let P = 0, n = 1; sys.surfs.forEach(s => { const n2 = s.nw[WD]; P += s.c * (n2 - n) / (n * n2); n = n2; });
+        const triplet = paraxial(sys.surfs.slice(0, 6), WD).efl;
+        return { rms, efl: pd.efl, bfd: pd.bfd, chroma, distortion, petzvalR: -1 / P, length: sys.zImage, airy: 1.22 * 0.55 * pd.efl / spec.D, triplet };
+    }
+</script>
 
 <script>
     let currentData = {};
@@ -533,6 +878,7 @@
 
     // --- MOTEUR DE DESSIN 2D (BLUEPRINT EXACT) ---
     function drawBlueprintGeneric(ctx, width, height, type, D, F1, Sep, B, D2, F_sys, holeDiam, CPL, theme, corrData) {
+        if (type === 'petzval') { drawPetzvalView(ctx, width, height, theme); return; }
         D = Math.abs(D)||1; F1 = F1||1; Sep = Math.abs(Sep)||0; B = Math.abs(B)||0; D2 = Math.abs(D2)||1; holeDiam = Math.abs(holeDiam)||0; CPL = Math.abs(CPL)||0;
         
         function drawLens(cx, cy, d, r1, r2, t) {
@@ -1178,10 +1524,13 @@
 
     // F1 et mode de calcul d'un Cassegrain, mis de côté pendant qu'on regarde un Newton (où F1 = F)
     let prevArchType = 'rc'; let savedCassF1 = null; let savedCalcMode = 'f1';
+    // Paramètres propres à chaque famille (télescopes à miroirs / lunette), échangés quand on passe de l'une à l'autre
+    const FAMILY_FIELDS = ['arch-D', 'arch-F', 'arch-B', 'arch-CPL', 'arch-F1', 'arch-Sep'];
+    const familyStore = { refr: { 'arch-D': '100', 'arch-F': '550', 'arch-B': '70', 'arch-CPL': '44', 'arch-F1': '', 'arch-Sep': '', mode: 'auto' } };
+    const familyOf = t => (t === 'petzval') ? 'refr' : 'refl';
     function updateArchUI() {
         const type = document.getElementById('arch-type').value;
         const f1In = document.getElementById('arch-F1');
-        if(type === 'newton' && prevArchType !== 'newton') { savedCassF1 = parseFloat(f1In.value); savedCalcMode = calculationMode; }
         if(type !== 'newton' && prevArchType === 'newton') {
             const F = parseFloat(document.getElementById('arch-F').value) || 0;
             let f1 = savedCassF1;
@@ -1189,11 +1538,34 @@
             f1In.value = f1.toFixed(2);
             window.setCalcMode(savedCalcMode);
         }
+        const fromFam = familyOf(prevArchType), toFam = familyOf(type);
+        if(fromFam !== toFam) {
+            familyStore[fromFam] = { mode: calculationMode }; FAMILY_FIELDS.forEach(id => { familyStore[fromFam][id] = document.getElementById(id).value; });
+            const st = familyStore[toFam];
+            if(st) { FAMILY_FIELDS.forEach(id => { document.getElementById(id).value = st[id]; }); window.setCalcMode(st.mode); }
+        }
+        if(type === 'newton' && prevArchType !== 'newton') { savedCassF1 = parseFloat(f1In.value); savedCalcMode = calculationMode; }
         prevArchType = type;
-        document.getElementById('arch-B-label').textContent = (type === 'newton') ? "Sortie du foyer hors du tube (mm)" : "Back Focus derrière M1 (mm)";
+
+        const petz = (type === 'petzval');
+        if(petz && calculationMode !== 'auto' && calculationMode !== 'f1') window.setCalcMode('auto');
+        document.getElementById('petz-ed-group').hidden = !petz;
+        document.getElementById('corr-toggle-group').hidden = petz;
+        document.getElementById('mode-sep').style.display = petz ? 'none' : '';
+        document.getElementById('mode-free').style.display = petz ? 'none' : '';
+        document.getElementById('arch-B-label').textContent = petz ? "Tirage L5 → capteur (mm)" : (type === 'newton') ? "Sortie du foyer hors du tube (mm)" : "Back Focus derrière M1 (mm)";
+        document.getElementById('arch-F1-text').textContent = petz ? "Focale du triplet F1 (mm)" : "Focale Primaire F1 (mm)";
+        document.getElementById('arch-Sep-text').textContent = petz ? "Air triplet → doublet (mm)" : "Séparation d (mm)";
+        document.getElementById('lbl-mag').textContent = petz ? "RÉDUCTION" : "GRANDISSEMENT";
+        document.getElementById('lbl-deff').textContent = petz ? "DIAMÈTRE UTILE" : "DIAMÈTRE PUR";
+        document.getElementById('petz-grid').hidden = !petz;
+        document.getElementById('mirror-grid').hidden = petz;
+        document.getElementById('tab-arch-corr').textContent = petz ? "DIAGRAMME DE POINTS" : "SCHÉMA CORRECTEUR";
+        document.getElementById('tab-arch-corr3d').textContent = petz ? "LENTILLES 3D" : "CORRECTEUR 3D";
         if(type === 'newton') { document.getElementById('calc-mode-container').style.opacity='0.3'; document.getElementById('calc-mode-container').style.pointerEvents='none'; window.setCalcMode('f1'); document.getElementById('sec-card').style.opacity='0.3'; } 
         else { document.getElementById('calc-mode-container').style.opacity='1'; document.getElementById('calc-mode-container').style.pointerEvents='all'; document.getElementById('sec-card').style.opacity='1'; }
         window.runArchitect();
+        if(vizModeArch === '3d' || vizModeArch === 'corr3d') frame3D('arch', 'default');
     }
     window.updateArchUI = updateArchUI;
 
@@ -1205,6 +1577,7 @@
 
     function runArchitect() {
         const type = document.getElementById('arch-type').value;
+        if (type === 'petzval') { runPetzval(); return; }
         const D = parseFloat(document.getElementById('arch-D').value) || 0; 
         const B = parseFloat(document.getElementById('arch-B').value) || 0;
         const CPL = parseFloat(document.getElementById('arch-CPL').value) || 0;
@@ -1445,9 +1818,10 @@
     }
 
     function downloadPDF() {
-        if(!currentData.type || !document.getElementById('arch-error').hidden) {
+        if(!currentData.type || currentData.pending || !document.getElementById('arch-error').hidden) {
             archError("Export impossible : corrigez d'abord les paramètres pour obtenir un calcul valide."); return;
         }
+        if (currentData.type === 'PETZVAL') { downloadPetzvalPDF(); return; }
         const d = currentData; const isNewton = d.type === 'NEWTON'; const c = d.Corrector;
         const { jsPDF } = window.jspdf; const doc = new jsPDF();
         const pName = document.getElementById('project-name').value.trim() || "Projet Optique";
@@ -1548,6 +1922,13 @@
         para("Pouvoir séparateur (limite de Dawes) :");
         formulas(["116 / D  (secondes d'arc, D en mm)"]);
 
+        title("5. LUNETTE APOCHROMATIQUE DE PETZVAL (5 LENTILLES)");
+        para("Un triplet apochromatique avant forme l'image ; un doublet arrière placé près du foyer réduit la focale et aplanit le champ.");
+        para("Triplet apochromatique (puissances phi, constringences V, dispersions partielles P des raies g et F) :");
+        formulas(["phi1 + phi2 + phi3 = 1 / F1", "phi1/V1 + phi2/V2 + phi3/V3 = 0", "phi1*P1/V1 + phi2*P2/V2 + phi3*P3/V3 = 0"]);
+        para("Courbure de champ : somme de Petzval P = somme des phi/n ; rayon de la surface de Petzval = -1/P. Le doublet arrière (positif puis négatif, espacés) ramène P vers zéro.");
+        para("Les courbures et espacements sont optimisés par tracé de rayons réel (Snell-Descartes, indices de Sellmeier, raies g-F-d-C, 3 champs) avec la méthode de Levenberg-Marquardt. Le résultat est une pré-étude à valider dans un logiciel de conception optique avant fabrication.");
+
         doc.save("Cours_Optique_Monsieur_Andrivet_v2.pdf");
     }
     window.downloadCoursePDF = downloadCoursePDF;
@@ -1570,6 +1951,311 @@
         window.runAnalyzer();
     }
     window.autoCalcZones = autoCalcZones;
+
+    // ===================== LUNETTE PETZVAL APO : calcul en tâche de fond, résultats, dessins =====================
+    const petzCache = new Map(); let petzWorker = null; let petzWaiting = null; let lastPetzFramed = null;
+    const WAVE_COLORS = ['#8a2be2', '#0066ff', '#11a811', '#e01010'];   // g, F, d, C
+    const WAVE_LABELS = ['g 436 nm', 'F 486 nm', 'd 588 nm', 'C 656 nm'];
+
+    // Le moteur optique tourne dans un Web Worker (sa source est le script #optics-engine) pour ne pas figer la page
+    function getPetzWorker() {
+        if (petzWorker !== null) return petzWorker;
+        try {
+            const src = document.getElementById('optics-engine').textContent +
+                "\nself.onmessage = e => { try { self.postMessage({ key: e.data.key, d: designPetzvalAuto(e.data.spec) }); }" +
+                " catch (err) { self.postMessage({ key: e.data.key, error: String((err && err.message) || err) }); } };";
+            petzWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+            petzWorker.onmessage = e => { if (e.data.error) petzFailed(e.data.key, e.data.error); else petzDone(e.data.key, e.data.d); };
+        } catch (e) { petzWorker = false; }
+        return petzWorker;
+    }
+
+    function requestPetzDesign(spec, key) {
+        if (petzWaiting === key) return;
+        // Une demande plus ancienne est devenue inutile : on repart d'un worker neuf
+        if (petzWaiting && petzWorker) { petzWorker.terminate(); petzWorker = null; }
+        petzWaiting = key;
+        const w = getPetzWorker();
+        if (w) w.postMessage({ key, spec });
+        else setTimeout(() => { try { petzDone(key, designPetzvalAuto(spec)); } catch (e) { petzFailed(key, e.message); } }, 30);
+    }
+    function petzDone(key, d) {
+        petzCache.set(key, d);
+        if (petzWaiting === key) { petzWaiting = null; if (document.getElementById('arch-type').value === 'petzval') window.runArchitect(); }
+    }
+    function petzFailed(key, msg) { if (petzWaiting === key) { petzWaiting = null; archError("ERREUR : l'optimisation optique a échoué (" + msg + ")."); } }
+
+    function runPetzval() {
+        const num = id => parseFloat(document.getElementById(id).value);
+        const D = num('arch-D'), F = num('arch-F'), B = num('arch-B'), CPL = num('arch-CPL');
+        if (!(D > 0)) { archError("ERREUR : Le diamètre D doit être strictement positif."); return; }
+        if (!(F > 0)) { archError("ERREUR : La focale F doit être strictement positive."); return; }
+        const N = F / D;
+        if (N < 3.5 || N > 12) { archError(`ERREUR : f/${N.toFixed(1)} est hors du domaine de cette formule (de f/3,5 à f/12).`); return; }
+        if (!(B >= 0.04 * F && B <= 0.3 * F)) { archError(`ERREUR : pour F = ${F} mm, le tirage doit être compris entre ${Math.ceil(0.04 * F)} et ${Math.floor(0.3 * F)} mm.`); return; }
+        if (!(CPL > 0 && CPL <= 0.15 * F)) { archError(`ERREUR : pour F = ${F} mm, le champ (CPL) doit être compris entre 0 et ${Math.floor(0.15 * F)} mm.`); return; }
+        let kFa = null;
+        if (calculationMode === 'f1') {
+            const F1 = num('arch-F1');
+            if (!(F1 >= 1.05 * F && F1 <= 1.8 * F)) { archError(`ERREUR : en mode FIXER F1, la focale du triplet doit être comprise entre ${Math.ceil(1.05 * F)} et ${Math.floor(1.8 * F)} mm (1,05 à 1,8 F).`); return; }
+            kFa = F1 / F;
+        }
+        const spec = { D, F, B, CPL, front: [document.getElementById('arch-ed').value, 'N-KZFS11', 'N-SF6'], kFa };
+        const key = JSON.stringify(spec);
+        const hit = petzCache.get(key);
+        archError(null);
+        if (!hit) {
+            currentData = { type: 'PETZVAL', pending: true, D, F, B, CPL };
+            ['res-fd', 'res-mag', 'res-obst', 'res-d-eff', 'res-resol'].forEach(id => document.getElementById(id).innerText = "…");
+            document.getElementById('petz-grid').innerHTML = `<div class="mirror-card wide"><h3 style="color:var(--neon-cyan)">OPTIMISATION EN COURS…</h3><p style="margin:0; color:var(--text-dim)">Tracé de rayons réel sur 3 champs × 4 longueurs d'onde, 3 combinaisons de verres pour le doublet arrière. Comptez une à deux secondes.</p></div>`;
+            requestPetzDesign(spec, key);
+            refreshArchViews();
+            return;
+        }
+        const s2 = { ...spec, rear: hit.rear };
+        const sys = buildSystem(s2, hit.lay); const rep = petzvalReport(sys, s2);
+        const gap = sys.surfs[6].z - sys.surfs[5].z;
+        if (calculationMode !== 'f1') document.getElementById('arch-F1').value = rep.triplet.toFixed(1);
+        document.getElementById('arch-Sep').value = gap.toFixed(1);
+        currentData = { type: 'PETZVAL', D, F: rep.efl, B, CPL, F1: rep.triplet, Sep: gap, M: rep.efl / rep.triplet, Deff: D.toFixed(1), Obst: 0, Hole: 0,
+                        Petz: { spec: s2, sys, rep } };
+        renderPetzResults();
+        refreshArchViews();
+        if (key !== lastPetzFramed && (vizModeArch === '3d' || vizModeArch === 'corr3d')) { frame3D('arch', 'default'); lastPetzFramed = key; }
+    }
+
+    function refreshArchViews() {
+        try { if(vizModeArch === '2d' || vizModeArch === 'corr') window.redrawCurrentBlueprint(); else window.updateArch3D(); } catch(e) { console.error(e); }
+    }
+
+    function renderPetzResults() {
+        const { spec, sys, rep } = currentData.Petz; const S = sys.surfs;
+        const f1 = x => x.toFixed(1), rT = c => Math.abs(c) < 1e-9 ? "plan" : (1 / c).toFixed(2);
+        document.getElementById('res-fd').innerText = "f/" + (rep.efl / spec.D).toFixed(1);
+        document.getElementById('res-mag').innerText = "×" + (rep.efl / rep.triplet).toFixed(3);
+        document.getElementById('res-obst').innerText = "0 %";
+        document.getElementById('res-d-eff').innerText = f1(spec.D) + " mm";
+        document.getElementById('res-resol').innerText = (116 / spec.D).toFixed(2) + '"';
+        const rmsCell = v => `<span style="color:${v <= rep.airy * 1.5 ? 'var(--neon-green)' : v <= rep.airy * 3 ? 'var(--neon-orange)' : '#ff4d6d'}">${f1(v)} µm</span>`;
+        const row = (k, v, style) => `<div class="result-row"><span>${k}</span><div class="res-val"${style ? ` style="${style}"` : ""}>${v}</div></div>`;
+        const elDiam = i => f1(2 * sys.sd[i]);
+        const presc = S.map((s, k) => {
+            const next = k + 1 < S.length ? S[k + 1].z - s.z : sys.zImage - s.z;
+            const g = s.glass ? `${s.glass} (${s.nw[WD].toFixed(4)} / ${glassProps(s.glass).V.toFixed(1)})` : "air";
+            return `<tr><td>${k + 1}${k % 2 === 0 ? ` <span style="color:var(--text-dim)">L${s.el + 1}</span>` : ""}</td><td>${rT(s.c)}</td><td>${next.toFixed(2)}</td><td>${g}</td><td>${elDiam(s.el)}</td></tr>`;
+        }).join("") + `<tr><td>Image</td><td>plan</td><td>-</td><td>-</td><td>${f1(spec.CPL)}</td></tr>`;
+        document.getElementById('petz-grid').innerHTML = `
+            <div class="mirror-card">
+                <h3 style="color:var(--neon-orange)">TRIPLET AVANT (APO)</h3>
+                ${row("Focale du triplet", f1(rep.triplet) + " mm")}
+                ${row("Verres", spec.front.join(" / "), "font-size:0.8rem")}
+                ${row("Ø des lentilles", elDiam(0) + " mm")}
+                ${row("Longueur L1 → L3", f1(S[5].z - S[0].z) + " mm")}
+            </div>
+            <div class="mirror-card">
+                <h3 style="color:var(--neon-green)">DOUBLET ARRIÈRE (RÉDUCTEUR-CORRECTEUR)</h3>
+                ${row("Verres", spec.rear.join(" / "), "font-size:0.8rem")}
+                ${row("Air triplet → L4", f1(S[6].z - S[5].z) + " mm")}
+                ${row("Air L4 → L5", f1(S[8].z - S[7].z) + " mm")}
+                ${row("Diamètres L4 / L5", elDiam(3) + " / " + elDiam(4) + " mm")}
+                ${row("Tirage L5 → capteur", f1(sys.zImage - S[9].z) + " mm")}
+            </div>
+            <div class="mirror-card">
+                <h3 style="color:#0088ff">PERFORMANCES (TRACÉ DE RAYONS)</h3>
+                ${row("RMS centre", rmsCell(rep.rms[0]))}
+                ${row(`RMS 0,7 champ (${f1(0.7 * spec.CPL / 2)} mm)`, rmsCell(rep.rms[1]))}
+                ${row(`RMS bord (${f1(spec.CPL / 2)} mm)`, rmsCell(rep.rms[2]))}
+                ${row("Rayon d'Airy (550 nm)", rep.airy.toFixed(1) + " µm")}
+                ${row("Distorsion au bord", rep.distortion.toFixed(2) + " %")}
+                ${row("Foyers g / F / C (zone 70 %)", ['g', 'F', 'C'].map(w => rep.chroma[w].toFixed(0)).join(" / ") + " µm", "font-size:0.8rem")}
+                ${row("Longueur optique", f1(rep.length) + " mm")}
+            </div>
+            <div class="mirror-card wide">
+                <h3 style="color:var(--neon-cyan)">PRESCRIPTION (mm, raie d)</h3>
+                <div class="table-scroll"><table class="data-table presc-table">
+                    <thead><tr><th>SURF.</th><th>RAYON R</th><th>ÉP. / AIR</th><th>VERRE (nd / νd)</th><th>Ø UTILE</th></tr></thead>
+                    <tbody>${presc}</tbody>
+                </table></div>
+                <div class="corr-note">Pré-étude optimisée automatiquement par tracé de rayons réel (verres Sellmeier, 3 champs, raies g-F-d-C). À valider dans un logiciel de conception optique (tolérances, disponibilité des verres) avant toute fabrication.</div>
+            </div>`;
+    }
+
+    // Plan 2D de la lunette : lentilles réelles, tube, rayons tracés (raie d), cotes
+    function drawPetzvalPlan(ctx, W, H, theme) {
+        const P = currentData.Petz; const { spec, sys, rep } = P; const S = sys.surfs; const D = spec.D;
+        const dew = 1.2 * D, tubeR = D / 2 + 0.1 * D + 3, rFoc = Math.max(sys.sd[3], sys.sd[4]) + 8;
+        const zMin = -dew - 10, zMax = sys.zImage + 0.3 * D;
+        const sc = Math.min((W - 80) / (zMax - zMin), (H - 130) / (2 * tubeR));
+        const top = Math.max(10, (H - (2 * tubeR * sc + 80)) / 2);
+        const X = z => 40 + (z - zMin) * sc, axisY = top + 24 + tubeR * sc, Y = y => axisY - y * sc;
+        const lw = theme === 'screen' ? 1 / viewState.scale : 1;
+        ctx.beginPath(); ctx.moveTo(-1000, axisY); ctx.lineTo(W + 1000, axisY); ctx.setLineDash([5, 5]); ctx.strokeStyle = "#cccccc"; ctx.lineWidth = lw; ctx.stroke(); ctx.setLineDash([]);
+        // Tube, pare-buée, porte-oculaire et caméra
+        const zTubeEnd = S[6].z - 0.08 * D;
+        ctx.fillStyle = "rgba(60,60,80,0.08)"; ctx.strokeStyle = "#888"; ctx.lineWidth = lw;
+        [[-dew, zTubeEnd, tubeR], [zTubeEnd, sys.zImage - 4, rFoc]].forEach(([a, b, r]) => {
+            ctx.fillRect(X(a), Y(r), (b - a) * sc, 2 * r * sc); ctx.strokeRect(X(a), Y(r), (b - a) * sc, 2 * r * sc);
+        });
+        ctx.fillStyle = "#555"; ctx.fillRect(X(sys.zImage), Y(rFoc + 6), 0.3 * D * sc, 2 * (rFoc + 6) * sc);
+        // Rayons (raie d) : centre du champ en vert, bord du champ en rouge
+        [[0, "rgba(0,160,0,0.75)"], [1, "rgba(220,0,0,0.75)"], [-1, "rgba(0,90,255,0.6)"]].forEach(([f, col]) => {
+            const th = sys.theta * f, dy = Math.sin(th), dz = Math.cos(th);
+            [-1, -0.5, 0, 0.5, 1].forEach(p => {
+                const path = []; const r = traceRay(sys, WD, 0, p * D / 2 - dy / dz * 5, -5, 0, dy, dz, path); if (!r) return;
+                const k = (dew - 5) / dz; path[0] = [0, path[0][1] - dy * k, path[0][2] - dz * k];
+                ctx.beginPath(); path.forEach(([, y, z], i) => i ? ctx.lineTo(X(z), Y(y)) : ctx.moveTo(X(z), Y(y)));
+                ctx.strokeStyle = col; ctx.lineWidth = 0.8 * lw; ctx.stroke();
+            });
+        });
+        // Lentilles
+        for (let i = 0; i < 5; i++) {
+            const a = S[2 * i], b = S[2 * i + 1], h = sys.sd[i]; ctx.beginPath();
+            for (let k = 0; k <= 30; k++) { const y = -h + 2 * h * k / 30; ctx[k ? 'lineTo' : 'moveTo'](X(a.z + sphSag(a.c, y)), Y(y)); }
+            for (let k = 30; k >= 0; k--) { const y = -h + 2 * h * k / 30; ctx.lineTo(X(b.z + sphSag(b.c, y)), Y(y)); }
+            ctx.closePath(); ctx.fillStyle = "rgba(0,200,255,0.35)"; ctx.fill(); ctx.strokeStyle = "#0088ff"; ctx.lineWidth = lw; ctx.stroke();
+            if (i >= 3) { ctx.fillStyle = "#000"; ctx.font = "10px Orbitron"; ctx.textAlign = "center"; ctx.fillText(`L${i + 1}`, X((a.z + b.z) / 2), Y(rFoc) - 18); }
+        }
+        ctx.fillStyle = "#000"; ctx.font = "10px Orbitron"; ctx.textAlign = "center"; ctx.fillText("L1-L3", X((S[0].z + S[5].z) / 2), Y(tubeR) - 18);
+        ctx.fillStyle = "#0088ff";
+        ctx.fillText(spec.front.join(" / "), X((S[0].z + S[5].z) / 2), Y(tubeR) - 6);
+        ctx.fillText(spec.rear.join(" / "), X((S[6].z + S[9].z) / 2), Y(rFoc) - 6);
+        // Capteur
+        ctx.beginPath(); ctx.moveTo(X(sys.zImage), Y(spec.CPL / 2)); ctx.lineTo(X(sys.zImage), Y(-spec.CPL / 2));
+        ctx.strokeStyle = "rgba(255,0,255,0.9)"; ctx.lineWidth = 2 * lw; ctx.stroke();
+        ctx.fillStyle = "rgba(255,0,255,1)"; ctx.textAlign = "center"; ctx.fillText(`CAPTEUR Ø${spec.CPL}`, X(sys.zImage), Y(-rFoc - 6) + 14);
+        // Cotes
+        const dim = (label, z1, z2, y) => {
+            ctx.beginPath(); ctx.moveTo(X(z1), y); ctx.lineTo(X(z2), y); ctx.moveTo(X(z1), y - 5); ctx.lineTo(X(z1), y + 5); ctx.moveTo(X(z2), y - 5); ctx.lineTo(X(z2), y + 5);
+            ctx.strokeStyle = "#0000ff"; ctx.lineWidth = lw; ctx.stroke(); ctx.fillStyle = "#000"; ctx.font = theme === 'print' ? "10px Helvetica" : "11px Orbitron"; ctx.textAlign = "center"; ctx.fillText(label, (X(z1) + X(z2)) / 2, y - 5);
+        };
+        const yd = Y(-tubeR);
+        dim(`AIR TRIPLET / DOUBLET ${(S[6].z - S[5].z).toFixed(1)}`, S[5].z, S[6].z, yd + 22);
+        dim(`TIRAGE ${(sys.zImage - S[9].z).toFixed(1)}`, S[9].z, sys.zImage, yd + 40);
+        dim(`LONGUEUR OPTIQUE ${rep.length.toFixed(1)} mm`, S[0].z, sys.zImage, yd + 62);
+    }
+
+    // Diagramme de points : 3 champs, 4 raies, disque d'Airy
+    function drawSpotDiagram(ctx, W, H, theme) {
+        const { spec, sys, rep } = currentData.Petz;
+        const pupil = []; for (let i = -7; i <= 7; i++) for (let j = -7; j <= 7; j++) { const a = i / 7, b = j / 7; if (a * a + b * b <= 1) pupil.push([a, b]); }
+        const fields = FIELDS.map(f => { const pts = spotPoints(sys, spec.D, f, pupil).filter(Boolean); const st = spotStats(pts); return { f, pts, st }; });
+        let ext = rep.airy * 1.3;
+        fields.forEach(fd => fd.pts.forEach(p => { ext = Math.max(ext, Math.abs(p.x - fd.st.cx) * 1000, Math.abs(p.y - fd.st.cy) * 1000); }));
+        const cellW = W / 3, R = Math.max(20, Math.min(cellW, H - 120) / 2 - 12), k = R / ext, cyy = 40 + R + 10;
+        const lw = theme === 'screen' ? 1 / viewState.scale : 1;
+        fields.forEach((fd, i) => {
+            const cx = cellW * (i + 0.5);
+            ctx.strokeStyle = "#ddd"; ctx.lineWidth = lw; ctx.strokeRect(cx - R, cyy - R, 2 * R, 2 * R);
+            ctx.beginPath(); ctx.moveTo(cx - R, cyy); ctx.lineTo(cx + R, cyy); ctx.moveTo(cx, cyy - R); ctx.lineTo(cx, cyy + R); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cyy, rep.airy * k, 0, 2 * Math.PI); ctx.setLineDash([4, 3]); ctx.strokeStyle = "#333"; ctx.stroke(); ctx.setLineDash([]);
+            fd.pts.forEach(p => { ctx.fillStyle = WAVE_COLORS[p.wi]; ctx.fillRect(cx + (p.x - fd.st.cx) * 1000 * k - 1, cyy - (p.y - fd.st.cy) * 1000 * k - 1, 2, 2); });
+            ctx.fillStyle = "#000"; ctx.font = "12px Orbitron"; ctx.textAlign = "center";
+            ctx.fillText(["CENTRE", "0,7 CHAMP", "BORD"][i] + ` (${(fd.f * spec.CPL / 2).toFixed(1)} mm)`, cx, 28);
+            ctx.fillText(`RMS ${fd.st.rms.toFixed(1)} µm`, cx, cyy + R + 20);
+        });
+        // Échelle et légende
+        const nice = [1, 2, 5, 10, 20, 50, 100, 200].find(v => v * k >= 40) || 200;
+        const y0 = H - 22; ctx.beginPath(); ctx.moveTo(20, y0); ctx.lineTo(20 + nice * k, y0); ctx.moveTo(20, y0 - 4); ctx.lineTo(20, y0 + 4); ctx.moveTo(20 + nice * k, y0 - 4); ctx.lineTo(20 + nice * k, y0 + 4);
+        ctx.strokeStyle = "#000"; ctx.lineWidth = lw; ctx.stroke(); ctx.fillStyle = "#000"; ctx.font = "11px Orbitron"; ctx.textAlign = "left"; ctx.fillText(`${nice} µm`, 25 + nice * k, y0 + 4);
+        let lx = W - 140; ctx.textAlign = "right";
+        for (let wi = 3; wi >= 0; wi--) { ctx.fillStyle = WAVE_COLORS[wi]; ctx.fillText(WAVE_LABELS[wi], lx, y0 + 4); lx -= ctx.measureText(WAVE_LABELS[wi]).width + 18; }
+        ctx.fillStyle = "#555"; ctx.fillText("- - - disque d'Airy", lx, y0 + 4);
+    }
+
+    function drawPetzvalView(ctx, W, H, theme) {
+        ctx.clearRect(0, 0, W, H); ctx.save();
+        if (theme === 'screen' || theme === 'corr') { ctx.translate(viewState.offsetX, viewState.offsetY); ctx.translate(W / 2, H / 2); ctx.scale(viewState.scale, viewState.scale); ctx.translate(-W / 2, -H / 2); }
+        if (!currentData.Petz) {
+            ctx.fillStyle = "#333"; ctx.font = "18px Orbitron"; ctx.textAlign = "center"; ctx.fillText("OPTIMISATION OPTIQUE EN COURS…", W / 2, H / 2);
+        } else if (theme === 'corr') drawSpotDiagram(ctx, W, H, theme);
+        else drawPetzvalPlan(ctx, W, H, theme === 'corr' ? 'screen' : theme);
+        ctx.restore();
+    }
+
+    // Vue 3D : lentilles de révolution exactes, tube, rayons tracés
+    function buildPetzval3D(grp, lensesOnly) {
+        const P = currentData.Petz; if (!P) return; const { spec, sys } = P; const S = sys.surfs; const D = spec.D;
+        const matLens = new THREE.MeshStandardMaterial({ color: 0x66ccff, transparent: true, opacity: 0.5, roughness: 0.1, metalness: 0.1, side: THREE.DoubleSide });
+        for (let i = 0; i < 5; i++) {
+            const a = S[2 * i], b = S[2 * i + 1], h = sys.sd[i], pts = [];
+            for (let k = 0; k <= 24; k++) { const r = h * k / 24; pts.push(new THREE.Vector2(r, a.z + sphSag(a.c, r))); }
+            for (let k = 24; k >= 0; k--) { const r = h * k / 24; pts.push(new THREE.Vector2(r, b.z + sphSag(b.c, r))); }
+            const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 64), matLens); m.rotation.x = Math.PI / 2; grp.add(m);
+        }
+        const dew = 1.2 * D;
+        if (!lensesOnly) {
+            const tubeR = D / 2 + 0.1 * D + 3, rFoc = Math.max(sys.sd[3], sys.sd[4]) + 8, zTubeEnd = S[6].z - 0.08 * D;
+            const matTube = new THREE.MeshStandardMaterial({ color: 0x222233, side: THREE.DoubleSide, transparent: true, opacity: 0.25 });
+            [[-dew, zTubeEnd, tubeR], [zTubeEnd, sys.zImage - 4, rFoc]].forEach(([z1, z2, r]) => {
+                const t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z2 - z1, 48, 1, true), matTube); t.rotation.x = Math.PI / 2; t.position.z = (z1 + z2) / 2; grp.add(t);
+            });
+            const cam = new THREE.Mesh(new THREE.CylinderGeometry(rFoc + 6, rFoc + 6, 0.3 * D, 32), new THREE.MeshStandardMaterial({ color: 0xcc0000, metalness: 0.6, roughness: 0.2 }));
+            cam.rotation.x = Math.PI / 2; cam.position.z = sys.zImage + 0.15 * D; grp.add(cam);
+        }
+        const segs = [];
+        [0, 1].forEach(f => {
+            const th = sys.theta * f, dy = Math.sin(th), dz = Math.cos(th);
+            for (let k = 0; k < 8; k++) {
+                const a = 2 * Math.PI * k / 8, path = [];
+                const r = traceRay(sys, WD, Math.cos(a) * D / 2 * 0.98, Math.sin(a) * D / 2 * 0.98 - dy / dz * 5, -5, 0, dy, dz, path); if (!r) continue;
+                const kk = (dew - 5) / dz; path[0] = [path[0][0], path[0][1] - dy * kk, path[0][2] - dz * kk];
+                for (let i = 1; i < path.length; i++) segs.push(new THREE.Vector3(...path[i - 1]), new THREE.Vector3(...path[i]));
+            }
+        });
+        grp.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segs), new THREE.LineBasicMaterial({ color: 0xaa00ff, opacity: 0.7, transparent: true })));
+    }
+
+    // PDF de la lunette : plan, données, performances, prescription, diagramme de points
+    function downloadPetzvalPDF() {
+        const { spec, sys, rep } = currentData.Petz; const S = sys.surfs;
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        const pName = document.getElementById('project-name').value.trim() || "Projet Optique";
+        const f = (v, n = 1) => (isFinite(v) ? Number(v).toFixed(n) : "-");
+        const section = (title, rows, x, y) => {
+            doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 86, 179); doc.text(title, x, y);
+            doc.setDrawColor(0, 86, 179); doc.line(x, y + 1.5, x + 85, y + 1.5);
+            doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(0);
+            rows.forEach(([k, v], i) => { doc.text(k, x, y + 8 + i * 6); doc.text(String(v), x + 85, y + 8 + i * 6, { align: 'right' }); });
+            return y + 8 + rows.length * 6 + 4;
+        };
+        doc.setFontSize(9); doc.setTextColor(120); doc.text("Date : " + new Date().toLocaleDateString('fr-FR'), 195, 10, { align: 'right' });
+        doc.setFontSize(18); doc.setTextColor(0); doc.text("MONSIEUR ANDRIVET // RAPPORT v2", 15, 18);
+        doc.setFontSize(13); doc.setTextColor(0, 86, 179); doc.text(`${pName} - Lunette Petzval apochromatique 5 lentilles`, 15, 26);
+        doc.addImage(renderPlanImage('print', 1000, 360, 2), 'PNG', 10, 31, 190, 68.4, 'plan', 'FAST');
+        doc.setDrawColor(180); doc.rect(10, 31, 190, 68.4);
+        const yL = section("SYSTÈME", [
+            ["Diamètre D", `${f(spec.D)} mm`], ["Focale F", `${f(rep.efl)} mm (f/${f(rep.efl / spec.D)})`],
+            ["Focale du triplet", `${f(rep.triplet)} mm`], ["Tirage L5 - capteur", `${f(sys.zImage - S[9].z)} mm`],
+            ["Champ (CPL)", `${f(spec.CPL)} mm`], ["Longueur optique", `${f(rep.length)} mm`],
+            ["Verres triplet", spec.front.join(" / ")], ["Verres doublet", spec.rear.join(" / ")]
+        ], 15, 110);
+        section("PERFORMANCES (tracé de rayons)", [
+            ["RMS centre", `${f(rep.rms[0])} µm`], [`RMS 0,7 champ`, `${f(rep.rms[1])} µm`], ["RMS bord", `${f(rep.rms[2])} µm`],
+            ["Rayon d'Airy (550 nm)", `${f(rep.airy)} µm`], ["Distorsion au bord", `${f(rep.distortion, 2)} %`],
+            ["Foyers g / F / C (zone 70 %)", ['g', 'F', 'C'].map(w => f(rep.chroma[w], 0)).join(" / ") + " µm"],
+            ["Résolution (Dawes)", `${f(116 / spec.D, 2)}"`]
+        ], 110, 110);
+        doc.setFontSize(8.5); doc.setTextColor(150, 90, 0);
+        doc.text(doc.splitTextToSize("Pré-étude optimisée automatiquement par tracé de rayons réel (verres Sellmeier, 3 champs, raies g-F-d-C). À valider dans un logiciel de conception optique (tolérances, disponibilité des verres) avant toute fabrication.", 180), 15, yL + 4);
+
+        doc.addPage();
+        doc.setFontSize(14); doc.setTextColor(0, 86, 179); doc.text(`${pName} - Prescription (mm, raie d)`, 15, 18);
+        doc.setFontSize(9); doc.setTextColor(0); doc.setFont("helvetica", "bold");
+        const cols = [15, 40, 75, 105, 175]; ["Surface", "Rayon R", "Ép. / air", "Verre (nd / Vd)", "Ø utile"].forEach((t, i) => doc.text(t, cols[i], 28));
+        doc.setFont("helvetica", "normal");
+        S.forEach((s, k) => {
+            const y = 35 + k * 6; const next = k + 1 < S.length ? S[k + 1].z - s.z : sys.zImage - s.z;
+            const g = s.glass ? `${s.glass} (${s.nw[WD].toFixed(4)} / ${glassProps(s.glass).V.toFixed(1)})` : "air";
+            [`${k + 1}${k % 2 === 0 ? `  (L${s.el + 1})` : ""}`, Math.abs(s.c) < 1e-9 ? "plan" : (1 / s.c).toFixed(2), next.toFixed(2), g, f(2 * sys.sd[s.el])].forEach((t, i) => doc.text(String(t), cols[i], y));
+        });
+        doc.text("Image", cols[0], 35 + S.length * 6); doc.text("plan", cols[1], 35 + S.length * 6); doc.text(f(spec.CPL), cols[4], 35 + S.length * 6);
+        const ySpot = 35 + S.length * 6 + 10;
+        doc.setFontSize(11); doc.setTextColor(0, 86, 179); doc.text("Diagramme de points", 15, ySpot);
+        doc.addImage(renderPlanImage('corr', 1000, 420, 2), 'PNG', 10, ySpot + 4, 190, 80, 'spots', 'FAST');
+        doc.setDrawColor(180); doc.rect(10, ySpot + 4, 190, 80);
+        const slug = pName.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') || "Projet";
+        doc.save(`Plan_${slug}.pdf`);
+    }
 
     // --- 3D ENGINE ---
     function init3D(type) {
@@ -1618,6 +2304,7 @@
         if(!currentData.type) return;
 
         meshes.archGroup = new THREE.Group(); sc.add(meshes.archGroup); const grp = meshes.archGroup;
+        if (currentData.type === 'PETZVAL') { buildPetzval3D(grp, vizModeArch === 'corr3d'); return; }
         let visualSep = currentData.VizSep || currentData.Sep; if (visualSep > currentData.F1) visualSep = currentData.F1 * 0.95;
 
         let physicalHoleR = 0; let b1_len_val = 0; let b1_outerR = 0;
