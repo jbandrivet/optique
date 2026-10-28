@@ -51,6 +51,9 @@
             clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
             text-align: center;
         }
+        .tab-lien { text-decoration: none; color: var(--neon-pink); border-color: var(--neon-pink); }
+        .tab-lien:hover { background: var(--neon-pink); color: #000; }
+        .lien-suite { color: var(--neon-cyan); }
         .tab-btn.active { background: var(--neon-cyan); color: #000; font-weight: bold; box-shadow: 0 0 20px rgba(0, 243, 255, 0.3); }
         button.tab-btn, button.view-tab, button.mode-option, button.zoom-btn { font-family: 'Orbitron', sans-serif; }
         button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--neon-cyan); outline-offset: 2px; }
@@ -184,6 +187,7 @@
         <button type="button" class="tab-btn active" onclick="switchTab('analyzer')">ANALYSEUR CAUSTIQUE</button>
         <button type="button" class="tab-btn" onclick="switchTab('architect')">ARCHITECTE OPTIQUE</button>
         <button type="button" class="tab-btn" onclick="switchTab('course')">COURS & THÉORIE</button>
+        <a class="tab-btn tab-lien" href="https://jbandrivet.github.io/freeoptical/" target="_blank" rel="noopener" title="FreeOptical : logiciel libre de conception optique (tracé de rayons, front d'onde, FTM, optimisation)">ALLER PLUS LOIN : FREEOPTICAL ↗</a>
     </div>
 
     <!-- MODULE 1 : CAUSTIQUE -->
@@ -544,12 +548,25 @@
                 <p>Deux groupes positifs ajoutent leurs courbures : c'est le défaut de l'objectif de Petzval d'origine (1840). Le doublet arrière retenu ici est un couple <strong>positif puis négatif, espacés</strong> (type Galilée) : sa puissance totale reste faible, mais il réduit la focale et ramène la somme de Petzval vers zéro.</p>
                 <h3>Optimisation par tracé de rayons</h3>
                 <p>Les rayons de courbure, épaisseurs et espacements ne sont pas tirés de proportions : le logiciel trace des rayons réels (loi de Snell-Descartes en 3D, indices des verres par la formule de Sellmeier) sur 3 champs et 4 longueurs d'onde (g, F, d, C), puis ajuste les 10 courbures et les 2 espacements par la méthode de Levenberg-Marquardt pour réduire la tache image tout en tenant la focale demandée. Les épaisseurs respectent un bord d'au moins 3 % et un centre d'au moins 6 % du diamètre.</p>
-                <p>Le résultat est une <strong>pré-étude</strong> : à valider dans un logiciel de conception optique (tolérances de fabrication, disponibilité des verres) avant de faire tailler les lentilles.</p>
+                <p>Le résultat est une <strong>pré-étude</strong> : à valider dans un logiciel de conception optique (tolérances de fabrication, disponibilité des verres) avant de faire tailler les lentilles, par exemple <a class="lien-suite" href="https://jbandrivet.github.io/freeoptical/" target="_blank" rel="noopener">FreeOptical</a>.</p>
+            </div>
+            <div class="chapter">
+                <h2>6. POUR ALLER PLUS LOIN : FREEOPTICAL</h2>
+                <p>Cette suite donne les formules et les pré-études. Pour concevoir et vérifier un instrument complet, <a class="lien-suite" href="https://jbandrivet.github.io/freeoptical/" target="_blank" rel="noopener"><strong>FreeOptical</strong></a> est un logiciel libre et gratuit de conception optique pour Linux, dans l'esprit des grands logiciels professionnels :</p>
+                <ul>
+                    <li>tracé de rayons exact en 3D : miroirs, lentilles, asphériques, surfaces basculées et décentrées, obstructions, réseaux de diffraction ;</li>
+                    <li>vrais verres (formules de Sellmeier, catalogues Schott, Ohara, CDGM) ;</li>
+                    <li>spot diagram, front d'onde et polynômes de Zernike, rapport de Strehl, PSF, FTM, coefficients de Seidel, courbure de champ et distorsion ;</li>
+                    <li>optimisation sur tous les champs et toutes les couleurs ;</li>
+                    <li>télescopes, lunettes, spectrographes, oculaires, microscopes ;</li>
+                    <li>interface en français, anglais et allemand.</li>
+                </ul>
+                <p><a class="lien-suite" href="https://jbandrivet.github.io/freeoptical/" target="_blank" rel="noopener">jbandrivet.github.io/freeoptical</a></p>
             </div>
         </div>
     </div>
     
-    <div class="footer-brand">JEAN-BAPTISTE ANDRIVET // OPTICAL SUITE v2 (Astro Master)</div>
+    <div class="footer-brand">JEAN-BAPTISTE ANDRIVET // OPTICAL SUITE v2 (Astro Master) // <a href="https://jbandrivet.github.io/freeoptical/" style="color:inherit">ALLER PLUS LOIN : FREEOPTICAL</a></div>
 </div>
 
 <script id="optics-engine">
@@ -1299,7 +1316,7 @@
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         const btns = document.querySelectorAll('.tab-btn');
-        btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
+        btns.forEach(b => { if((b.getAttribute('onclick') || '').includes(tabId)) b.classList.add('active'); });
         // La fenêtre a pu être redimensionnée pendant que l'onglet était caché
         if(tabId === 'architect') setTimeout(() => { window.runArchitect(); resize3D(); }, 100);
         if(tabId === 'analyzer') setTimeout(() => { window.runAnalyzer(); resize3D(); }, 50);
