@@ -549,7 +549,10 @@
                 <div class="formula-box">P = Σ φi / ni<br>Rayon de la surface de Petzval = -1 / P</div>
                 <p>Deux groupes positifs ajoutent leurs courbures : c'est le défaut de l'objectif de Petzval d'origine (1840). Le doublet arrière retenu ici est un couple <strong>positif puis négatif, espacés</strong> (type Galilée) : sa puissance totale reste faible, mais il réduit la focale et ramène la somme de Petzval vers zéro.</p>
                 <h3>Optimisation par tracé de rayons</h3>
-                <p>Les rayons de courbure, épaisseurs et espacements ne sont pas tirés de proportions : le logiciel trace des rayons réels (loi de Snell-Descartes en 3D, indices des verres par la formule de Sellmeier) sur 3 champs et 4 longueurs d'onde (g, F, d, C), puis ajuste les 10 courbures et les 2 espacements par la méthode de Levenberg-Marquardt pour réduire la tache image tout en tenant la focale demandée. Les épaisseurs respectent un bord d'au moins 3 % et un centre d'au moins 6 % du diamètre.</p>
+                <p>Les rayons de courbure, épaisseurs et espacements ne sont pas tirés de proportions : le logiciel trace des rayons réels (loi de Snell-Descartes en 3D, indices des verres par la formule de Sellmeier) sur 3 champs et 4 longueurs d'onde (g, F, d, C), puis ajuste les 10 courbures et les 2 espacements par la méthode de Levenberg-Marquardt tout en tenant la focale demandée. Les épaisseurs respectent un bord d'au moins 3 % et un centre d'au moins 6 % du diamètre.</p>
+                <p>Le critère est le <strong>front d'onde de chaque couleur</strong> (différence de marche rapportée à la sphère centrée sur l'image de la raie d, dans le plan du capteur : la couleur latérale compte) et non la seule taille de la tache : quand la tache approche de la tache d'Airy, deux couleurs mises au point à 0,2 mm l'une de l'autre donnent encore une petite tache géométrique, mais une image floue. La qualité s'exprime par le <strong>rapport de Strehl polychromatique</strong> (critère de Maréchal, S ≈ exp(−(2πσ)²) pour un front d'onde d'écart type σ en longueurs d'onde) :</p>
+                <div class="formula-box">Strehl ≥ 0,8 (σ ≤ λ/14) pour toutes les couleurs, du centre au bord : lunette apochromatique</div>
+                <p>Le doublet arrière, loin du diaphragme, produit de la couleur latérale : son négatif est en N-KZFS11, un flint court à dispersion partielle anormale. Avec un seul verre ED dans le triplet, la formule est apochromatique sur tout un champ de 44 mm à partir de f/6,5 environ (100 mm) ; à f/5,5 elle l'est au centre, la couleur latérale dégradant le bord. Plus ouverte, il faudrait davantage de verres ED.</p>
                 <p>Le résultat est une <strong>pré-étude</strong> : à valider dans un logiciel de conception optique (tolérances de fabrication, disponibilité des verres) avant de faire tailler les lentilles, par exemple <a class="lien-suite" href="https://jbandrivet.github.io/freeoptical/" target="_blank" rel="noopener">FreeOptical</a>.</p>
             </div>
             <div class="chapter">
@@ -694,6 +697,7 @@
     // Pupille : centre + 3 anneaux (rayons tracés dans le plan tangent à la 1re surface, qui sert de diaphragme)
     const PUPIL = (() => { const p = [[0, 0]]; [[0.35, 6], [0.7, 8], [1, 12]].forEach(([r, k]) => { for (let i = 0; i < k; i++) { const a = 2 * Math.PI * (i + 0.5) / k; p.push([r * Math.cos(a), r * Math.sin(a)]); } }); return p; })();
     const FIELDS = [0, 0.7, 1];
+    const SPOT_WEIGHT = 0.7;    // poids de la tache géométrique face au front d'onde
 
     function spotPoints(sys, D, fieldFrac, pupil) {
         const th = sys.theta * fieldFrac, dy = Math.sin(th), dz = Math.cos(th); const pts = [];
@@ -793,13 +797,74 @@
             if (x === x) { res[o++] = (x - cx) * k; res[o++] = (SPOT_BUF[i + 1] - cy) * k; } else { res[o++] = 30; res[o++] = 30; } } }
         return o;
     }
+    // Front d'onde : même tracé, avec le chemin optique ; écrit x, y, chemin (mm) et direction finale
+    function traceFastOPL(sys, wi, px, py, pz, dx, dy, dz, out) {
+        const n = sys.pz.length, Z = sys.pz, Cc = sys.pc, SD2 = sys.psd2, N = sys.pn[wi]; let n1 = 1, L = 0;
+        for (let k = 0; k < n; k++) {
+            const qz = pz - Z[k], c = Cc[k];
+            const Bq = dz - c * (px * dx + py * dy + qz * dz);
+            const Cq = c * (px * px + py * py + qz * qz) - 2 * qz;
+            const disc = Bq * Bq - c * Cq; if (disc < 0) return false;
+            const t = Cq / (Bq + Math.sqrt(disc));
+            L += n1 * t; px += t * dx; py += t * dy; const zl = qz + t * dz; pz = zl + Z[k];
+            if (px * px + py * py > SD2[k]) return false;
+            const nx = -c * px, ny = -c * py, nz = 1 - c * zl;
+            const n2 = N[k], mu = n1 / n2, cosI = dx * nx + dy * ny + dz * nz;
+            const k2 = 1 - mu * mu * (1 - cosI * cosI); if (k2 < 0) return false;
+            const g = Math.sqrt(k2) - mu * cosI;
+            dx = mu * dx + g * nx; dy = mu * dy + g * ny; dz = mu * dz + g * nz; n1 = n2;
+        }
+        const t = (sys.zImage - pz) / dz; L += n1 * t;
+        out[0] = px + t * dx; out[1] = py + t * dy; out[2] = L; out[3] = dx; out[4] = dy; out[5] = dz;
+        return true;
+    }
+    // Pupille du critère de front d'onde : centre et 4 anneaux (37 rayons) ; grille dense pour le rapport
+    const PUP_W = (() => { const p = [[0, 0]]; [[0.3, 6], [0.6, 8], [0.83, 10], [1, 12]].forEach(([r, k]) => { for (let i = 0; i < k; i++) { const a = 2 * Math.PI * (i + 0.25) / k; p.push([r * Math.cos(a), r * Math.sin(a)]); } }); return p; })();
+    const PUP_GRILLE = (() => { const p = [], n = 24; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const a = -1 + (2 * i + 1) / n, b = -1 + (2 * j + 1) / n; if (a * a + b * b <= 1) p.push([a, b]); } return p; })();
+    const NW = PUP_W.length, OPD_BUF = new Float64Array(PUP_GRILLE.length), RAY_BUF = new Float64Array(6), CHIEF_BUF = new Float64Array(6);
+    // Différence de marche (ondes) de la couleur wi aux points de la pupille, rapportée à la sphère centrée
+    // sur l'image du rayon principal de la raie d dans le plan du capteur, comme dans FreeOptical : toutes
+    // les couleurs visent le même point, la défocalisation, le chromatisme axial et la couleur latérale
+    // comptent. Écrit out[p] (NaN si le rayon est perdu), renvoie la moyenne (piston) ou NaN si un rayon
+    // principal est perdu. sys doit être « packé ».
+    function opdPupil(sys, D, fieldFrac, wi, pupil, out) {
+        const th = sys.theta * fieldFrac, d0y = Math.sin(th), d0z = Math.cos(th), y0 = -d0y / d0z * 5, R = D / 2;
+        const Rr = sys.zImage - sys.pz[sys.pz.length - 1], lam = WAVES[wi] * 1e-3;
+        if (!traceFastOPL(sys, WD, 0, y0, -5, 0, d0y, d0z, CHIEF_BUF)) return NaN;
+        const cx = CHIEF_BUF[0], cy = CHIEF_BUF[1];
+        if (wi !== WD && !traceFastOPL(sys, wi, 0, y0, -5, 0, d0y, d0z, CHIEF_BUF)) return NaN;
+        const surSphere = (q, depart) => { const wx = q[0] - cx, wy = q[1] - cy, b = wx * q[3] + wy * q[4]; return q[2] - b - Math.sqrt(Math.max(0, b * b - wx * wx - wy * wy + Rr * Rr)) + depart; };
+        const ref = surSphere(CHIEF_BUF, y0 * d0y);
+        let m = 0, nb = 0;
+        for (let p = 0; p < pupil.length; p++) {
+            const yy = pupil[p][1] * R + y0;
+            if (traceFastOPL(sys, wi, pupil[p][0] * R, yy, -5, 0, d0y, d0z, RAY_BUF)) { out[p] = (surSphere(RAY_BUF, yy * d0y) - ref) / lam; m += out[p]; nb++; }
+            else out[p] = NaN;
+        }
+        return nb ? m / nb : NaN;
+    }
+    // Résidus du front d'onde de toutes les couleurs pour un champ : écarts au piston, 0,05 λ ~ 1
+    function fieldWaveResiduals(sys, D, fieldFrac, weight, res, o) {
+        const k0 = weight / 0.05 / Math.sqrt(NW * 4);
+        for (let wi = 0; wi < 4; wi++) {
+            const k = Math.sqrt(WAVE_W[wi]) * k0, m = opdPupil(sys, D, fieldFrac, wi, PUP_W, OPD_BUF);
+            for (let p = 0; p < NW; p++) { const v = OPD_BUF[p]; res[o++] = (v === v && m === m) ? (v - m) * k : 30; }
+        }
+        return o;
+    }
+    // Front d'onde RMS (ondes) d'un champ et d'une couleur, sur la grille dense
+    function waveRms(sys, D, fieldFrac, wi) {
+        const m = opdPupil(sys, D, fieldFrac, wi, PUP_GRILLE, OPD_BUF); if (m !== m) return NaN;
+        let s = 0, n = 0; for (let p = 0; p < PUP_GRILLE.length; p++) { const v = OPD_BUF[p]; if (v === v) { s += (v - m) * (v - m); n++; } }
+        return Math.sqrt(s / n);
+    }
     // Conception complète. spec = { D, F, B, CPL, front: [3 verres], rear: [2 verres], kFa: focale du triplet / F (null = automatique) }
     // A : triplet seul optimisé sur l'axe ; B : couple arrière (positif puis négatif, type « Galilée » réducteur-correcteur)
     // optimisé sur tout le champ à partir d'une grille de départs ; C : optimisation globale des 10 courbures et des 2 espacements.
     function designPetzval(spec, opts) {
         opts = opts || {};
         const D = spec.D, F = spec.F, split = apoSplit(spec.front);
-        const resBuf = new Float64Array(FIELDS.length * 4 * NP * 2 + 4); let faFix = null;
+        const resBuf = new Float64Array(FIELDS.length * 4 * (NP * 2 + NW) + 4); let faFix = null;
         function stageA(fa) {
             let best = null; const buf = new Float64Array(4 * NP * 2 + 2);
             for (const X of [[0, 1.6, -1.5], [0, 2, 3], [-0.3, 1.2, 0.5], [0.3, 2.4, -3]]) {
@@ -818,7 +883,10 @@
             const c = frontC ? [...frontC, ...v.slice(0, 4).map(x => x / F)] : v.slice(0, 10).map(x => x / F);
             const k = frontC ? 4 : 10;
             const sys = packSystem(buildSystem(spec, { c, e: v[k] * F, dr: v[k + 1] * F }));
-            let o = 0; for (const f of FIELDS) o = fieldResiduals(sys, D, f, f === 0 ? 1.3 : 1, resBuf, o);
+            // Critère principal : front d'onde de chaque couleur ; la tache polychromatique (poids réduit)
+            // tient la couleur latérale et le centrage des couleurs
+            let o = 0;
+            for (const f of FIELDS) { const w = f === 0.7 ? 1.2 : 1; o = fieldWaveResiduals(sys, D, f, w, resBuf, o); o = fieldResiduals(sys, D, f, SPOT_WEIGHT * w, resBuf, o); }
             const px = paraxial(sys.surfs, WD);
             resBuf[o++] = (px.efl - F) / F * 300; resBuf[o++] = sys.bad * 20; resBuf[o++] = Math.max(0, 0.004 - v[k + 1]) * 2000;
             resBuf[o++] = faFix ? (paraxial(sys.surfs.slice(0, 6), WD).efl - faFix) / faFix * 300 : 0;
@@ -852,7 +920,9 @@
     }
 
     // Essaie plusieurs couples de verres pour le doublet arrière et garde la meilleure conception
-    const REAR_PAIRS = [['N-LAK22', 'N-SF6'], ['N-SK16', 'N-KZFS11'], ['N-SK16', 'N-SF6']];
+    // Négatif en N-KZFS11 (flint court, dispersion partielle anormale) : indispensable pour corriger la
+    // couleur latérale ; les couples avec N-SF6 la laissent trop forte
+    const REAR_PAIRS = [['S-FPL53', 'N-KZFS11'], ['N-PK52A', 'N-KZFS11'], ['N-SK16', 'N-KZFS11'], ['N-LAK22', 'N-KZFS11']];
     function designPetzvalAuto(spec) {
         let best = null;
         for (const rear of REAR_PAIRS) {
@@ -882,7 +952,11 @@
         // Somme de Petzval : Σ c (n' - n) / (n n')
         let P = 0, n = 1; sys.surfs.forEach(s => { const n2 = s.nw[WD]; P += s.c * (n2 - n) / (n * n2); n = n2; });
         const triplet = paraxial(sys.surfs.slice(0, 6), WD).efl;
-        return { rms, efl: pd.efl, bfd: pd.bfd, chroma, distortion, petzvalR: -1 / P, length: sys.zImage, airy: 1.22 * 0.55 * pd.efl / spec.D, triplet };
+        // Front d'onde RMS par champ et par couleur, Strehl polychromatique (Maréchal, pondéré comme la tache)
+        packSystem(sys);
+        const wave = FIELDS.map(f => [0, 1, 2, 3].map(wi => waveRms(sys, spec.D, f, wi)));
+        const strehl = wave.map(l => { let s = 0, w = 0; l.forEach((x, wi) => { s += WAVE_W[wi] * Math.exp(-Math.pow(2 * Math.PI * x, 2)); w += WAVE_W[wi]; }); return s / w; });
+        return { rms, efl: pd.efl, bfd: pd.bfd, chroma, distortion, petzvalR: -1 / P, length: sys.zImage, airy: 1.22 * 0.55 * pd.efl / spec.D, triplet, wave, strehl };
     }
 </script>
 
@@ -1563,7 +1637,7 @@
     let prevArchType = 'rc'; let savedCassF1 = null; let savedCalcMode = 'f1';
     // Paramètres propres à chaque famille (télescopes à miroirs / lunette), échangés quand on passe de l'une à l'autre
     const FAMILY_FIELDS = ['arch-D', 'arch-F', 'arch-B', 'arch-CPL', 'arch-F1', 'arch-Sep'];
-    const familyStore = { refr: { 'arch-D': '100', 'arch-F': '550', 'arch-B': '70', 'arch-CPL': '44', 'arch-F1': '', 'arch-Sep': '', mode: 'auto' } };
+    const familyStore = { refr: { 'arch-D': '100', 'arch-F': '650', 'arch-B': '70', 'arch-CPL': '44', 'arch-F1': '', 'arch-Sep': '', mode: 'auto' } };
     const familyOf = t => (t === 'petzval') ? 'refr' : 'refl';
     function updateArchUI() {
         const type = document.getElementById('arch-type').value;
@@ -2242,7 +2316,7 @@
         if (!hit) {
             currentData = { type: 'PETZVAL', pending: true, D, F, B, CPL };
             ['res-fd', 'res-mag', 'res-obst', 'res-d-eff', 'res-resol'].forEach(id => document.getElementById(id).innerText = "…");
-            document.getElementById('petz-grid').innerHTML = `<div class="mirror-card wide"><h3 style="color:var(--neon-cyan)">OPTIMISATION EN COURS…</h3><p style="margin:0; color:var(--text-dim)">Tracé de rayons réel sur 3 champs × 4 longueurs d'onde, 3 combinaisons de verres pour le doublet arrière. Comptez une à deux secondes.</p></div>`;
+            document.getElementById('petz-grid').innerHTML = `<div class="mirror-card wide"><h3 style="color:var(--neon-cyan)">OPTIMISATION EN COURS…</h3><p style="margin:0; color:var(--text-dim)">Tracé de rayons réel sur 3 champs × 4 longueurs d'onde : le front d'onde de chaque couleur est minimisé, 4 combinaisons de verres sont essayées pour le doublet arrière. Comptez environ quatre secondes.</p></div>`;
             requestPetzDesign(spec, key);
             refreshArchViews();
             return;
@@ -2272,6 +2346,10 @@
         document.getElementById('res-d-eff').innerText = f1(spec.D) + " mm";
         document.getElementById('res-resol').innerText = (116 / spec.D).toFixed(2) + '"';
         const rmsCell = v => `<span style="color:${v <= rep.airy * 1.5 ? 'var(--neon-green)' : v <= rep.airy * 3 ? 'var(--neon-orange)' : '#ff4d6d'}">${f1(v)} µm</span>`;
+        const strehlCell = v => `<span style="color:${v >= 0.8 ? 'var(--neon-green)' : v >= 0.5 ? 'var(--neon-orange)' : '#ff4d6d'}">${v.toFixed(2)}</span>`;
+        // Critère de Maréchal : Strehl polychromatique ≥ 0,8 du centre au bord du champ
+        const apo = rep.strehl.every(x => x >= 0.8);
+        const conseil = "couleur latérale ou spectre secondaire trop forts : visez f/6,5 ou plus, ou un champ plus petit";
         const row = (k, v, style) => `<div class="result-row"><span>${k}</span><div class="res-val"${style ? ` style="${style}"` : ""}>${v}</div></div>`;
         const elDiam = i => f1(2 * sys.sd[i]);
         const presc = S.map((s, k) => {
@@ -2301,6 +2379,9 @@
                 ${row(`RMS 0,7 champ (${f1(0.7 * spec.CPL / 2)} mm)`, rmsCell(rep.rms[1]))}
                 ${row(`RMS bord (${f1(spec.CPL / 2)} mm)`, rmsCell(rep.rms[2]))}
                 ${row("Rayon d'Airy (550 nm)", rep.airy.toFixed(1) + " µm")}
+                ${row("Strehl polychr. centre / 0,7 / bord", rep.strehl.map(strehlCell).join(" / "), "font-size:0.85rem")}
+                ${row("Front d'onde centre g / F / d / C", rep.wave[0].map(x => x.toFixed(3)).join(" / ") + " λ", "font-size:0.8rem")}
+                ${row("Apochromatique", apo ? "OUI (Strehl ≥ 0,8 partout)" : "NON — " + conseil, `color:${apo ? 'var(--neon-green)' : '#ff4d6d'}; font-size:0.8rem`)}
                 ${row("Distorsion au bord", rep.distortion.toFixed(2) + " %")}
                 ${row("Foyers g / F / C (zone 70 %)", ['g', 'F', 'C'].map(w => rep.chroma[w].toFixed(0)).join(" / ") + " µm", "font-size:0.8rem")}
                 ${row("Longueur optique", f1(rep.length) + " mm")}
@@ -2311,7 +2392,7 @@
                     <thead><tr><th>SURF.</th><th>RAYON R</th><th>ÉP. / AIR</th><th>VERRE (nd / νd)</th><th>Ø UTILE</th></tr></thead>
                     <tbody>${presc}</tbody>
                 </table></div>
-                <div class="corr-note">Pré-étude optimisée automatiquement par tracé de rayons réel (verres Sellmeier, 3 champs, raies g-F-d-C). À valider dans un logiciel de conception optique (tolérances, disponibilité des verres) avant toute fabrication.</div>
+                <div class="corr-note">Pré-étude optimisée automatiquement par tracé de rayons réel (verres Sellmeier, 3 champs, front d'onde des raies g-F-d-C). À valider dans un logiciel de conception optique (tolérances, disponibilité des verres) avant toute fabrication.</div>
             </div>`;
     }
 
@@ -2467,11 +2548,13 @@
         section("PERFORMANCES (tracé de rayons)", [
             ["RMS centre", `${f(rep.rms[0])} µm`], [`RMS 0,7 champ`, `${f(rep.rms[1])} µm`], ["RMS bord", `${f(rep.rms[2])} µm`],
             ["Rayon d'Airy (550 nm)", `${f(rep.airy)} µm`], ["Distorsion au bord", `${f(rep.distortion, 2)} %`],
+            ["Strehl polychromatique", rep.strehl.map(x => f(x, 2)).join(" / ") + " (centre / 0,7 / bord)"],
+            ["Apochromatique", rep.strehl.every(x => x >= 0.8) ? "oui (Strehl >= 0,8 partout)" : "non (Strehl < 0,8)"],
             ["Foyers g / F / C (zone 70 %)", ['g', 'F', 'C'].map(w => f(rep.chroma[w], 0)).join(" / ") + " µm"],
             ["Résolution (Dawes)", `${f(116 / spec.D, 2)}"`]
         ], 110, 110);
         doc.setFontSize(8.5); doc.setTextColor(150, 90, 0);
-        doc.text(doc.splitTextToSize("Pré-étude optimisée automatiquement par tracé de rayons réel (verres Sellmeier, 3 champs, raies g-F-d-C). À valider dans un logiciel de conception optique (tolérances, disponibilité des verres) avant toute fabrication.", 180), 15, yL + 4);
+        doc.text(doc.splitTextToSize("Pré-étude optimisée automatiquement par tracé de rayons réel (verres Sellmeier, 3 champs, front d'onde des raies g-F-d-C). À valider dans un logiciel de conception optique (tolérances, disponibilité des verres) avant toute fabrication.", 180), 15, yL + 4);
 
         doc.addPage();
         doc.setFontSize(14); doc.setTextColor(0, 86, 179); doc.text(`${pName} - Prescription (mm, raie d)`, 15, 18);
