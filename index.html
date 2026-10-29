@@ -367,6 +367,8 @@
                     <input type="text" id="project-name" placeholder="Ex: Mon DK 300">
                 </div>
                 <button class="btn-pdf" onclick="downloadPDF()">TÉLÉCHARGER LE PLAN (PDF)</button>
+                <button class="btn-pdf" onclick="exportFreeOptical()" title="Fichier système .json à ouvrir dans FreeOptical (glisser-déposer sur la fenêtre, ou freeoptical --fichier projet.json) pour l'analyser et l'optimiser : spot, front d'onde, FTM, tolérances de mise au point…">EXPORTER VERS FREEOPTICAL (.JSON)</button>
+                <div class="corr-note" style="margin-top:6px">Le fichier s'ouvre dans <a href="https://jbandrivet.github.io/freeoptical/" target="_blank" rel="noopener" style="color:var(--neon-cyan)">FreeOptical</a> 0.9 ou plus récent (glisser-déposer sur la fenêtre) : tracé de rayons exact, front d'onde, FTM, optimisation. Les correcteurs « schéma de principe » ne sont pas exportés.</div>
             </div>
         </div>
         
@@ -1618,7 +1620,9 @@
         return `Face asphérique : z(r) = A·(r⁴ − 1,5·r0²·r²)<br>A = ${p.A.toExponential(4)} mm⁻³ (N-BK7, n = ${p.n.toFixed(4)})`
             + `<table class="data-table presc-table" style="margin-top:8px"><thead><tr><th>r (mm)</th><th>creux (µm)</th></tr></thead><tbody>`
             + pts.map(([r, z], i) => `<tr><td>${r.toFixed(1)}${i === 4 ? " (zone neutre)" : ""}</td><td>${z.toFixed(1)}</td></tr>`).join("")
-            + `</tbody></table><div class="corr-note">Calcul au 3e ordre : corrige l'aberration sphérique des deux miroirs sphériques ; la coma de la formule SCT classique subsiste. Épaisseur indicative ${p.t.toFixed(1)} mm (D/50).</div>`;
+            + `</tbody></table>`
+            + `<div class="corr-note">Puissance de la lame (terme en r²) : focale ${(p.fLame / 1000).toFixed(0)} m. Avec la lame, la focale vaut <b>${p.Feff.toFixed(1)} mm</b> (f/${(p.Feff / (2 * p.r0)).toFixed(2)}) et le foyer se forme ${p.decalage.toFixed(1)} mm plus près du secondaire, soit ${(p.foyerM2 - p.sep).toFixed(1)} mm derrière M1 ; on le ramène en déplaçant le primaire. Pour éclairer tout le champ de pleine lumière, le primaire doit faire ${p.D1.toFixed(1)} mm.</div>`
+            + `<div class="corr-note">Calcul au 3e ordre : corrige l'aberration sphérique des deux miroirs sphériques ; la coma de la formule SCT classique subsiste. Épaisseur indicative ${p.t.toFixed(1)} mm (D/50).</div>`;
     }
     function drawSchmidtProfile(ctx, W, H, p, theme) {
         const r0 = p.r0, pts = []; let zmin = 0, zmax = 0;
@@ -1812,6 +1816,13 @@
             const Keq = 1 - ((M * M - 1) / Math.pow(M, 3)) * (1 + B / F1);
             const A = Keq / (4 * (nPlate - 1) * Math.pow(R1p, 3));
             plate = { A, Keq, n: nPlate, r0, t: Math.max(4, D / 50), z: r => A * (Math.pow(r, 4) - 1.5 * r0 * r0 * r * r) };
+            // Le terme en r² donne à la lame une faible puissance (lentille mince de courbure −3·A·r0²) :
+            // tracé paraxial déplié lame → M1 → M2 pour la focale et le foyer réels
+            const phiP = 3 * (nPlate - 1) * A * r0 * r0, phi2 = -2 * (M - 1) / (2 * (F1 - Sep) * M);
+            let y = 1, u = 0;
+            [[phiP, Sep], [1 / F1, Sep], [phi2, 0]].forEach(([phi, e]) => { u -= y * phi; y += e * u; });
+            plate.Feff = -1 / u; plate.foyerM2 = -y / u; plate.decalage = (Sep + B) - plate.foyerM2;
+            plate.fLame = 1 / phiP; plate.D1 = D + 2 * Sep * CPL / 2 / F; plate.sep = Sep;
             lenses = [
                 {r1: Infinity, r2: Infinity, t: plate.t, d: 0, glass: "N-BK7", special: "schmidt"}
             ];
@@ -1993,6 +2004,102 @@
         doc.save(`Plan_${slug}.pdf`);
     }
     window.downloadPDF = downloadPDF;
+
+    // Système au format FreeOptical (fichier .json) : conventions de Zemax, lumière vers +Z,
+    // rayons des miroirs concaves et convexes d'un Cassegrain négatifs, épaisseurs négatives après
+    // un nombre impair de miroirs, miroirs plans à 45° entre deux ruptures de repère (COORDBRK).
+    // Les correcteurs « schéma de principe » ne sont pas exportés ; la lame de Schmidt l'est.
+    function freeOpticalSystem() {
+        const d = currentData;
+        if (!d.type || d.pending) return null;
+        const pName = document.getElementById('project-name').value.trim() || "Projet Optique";
+        const S = o => Object.assign({ commentaire: "", type_surface: "Spherique", rayon: null, epaisseur: 0, verre: "AIR", semi_diametre: 10, conique: 0 }, o);
+        const rupture = ep => S({ commentaire: "Rupture de repère 45°", type_surface: "CoupureRepere", epaisseur: ep, inclinaison_deg: [45, 0], semi_diametre: 1 });
+        const image = sd => S({ commentaire: "Plan image (capteur)", type_surface: "Plane", semi_diametre: Math.max(sd, 1) });
+        const miroir = (comm, R, K, ep, sd, extra) => S(Object.assign({ commentaire: comm, type_surface: K !== 0 ? "Conique" : "Spherique", rayon: -R, conique: K, epaisseur: ep, verre: "MIROIR", semi_diametre: sd }, extra || {}));
+        const theta = d.F > 0 && d.CPL > 0 ? Math.atan(d.CPL / 2 / d.F) * 180 / Math.PI : 0;
+        let champs = theta > 0 ? [[0, 0], [0, 0.7 * theta], [0, theta]] : [[0, 0]];
+        let longueurs = [[486.1327, 1, "F"], [587.5618, 1, "d"], [656.2725, 1, "C"]];
+        const verres = {};
+        const verreSellmeier = nom => {
+            const g = GLASS_DB[nom], p = glassProps(nom), cle = nom.toUpperCase();
+            verres[cle] = { nom: cle, kind: { Verre: { nom: cle, nd: p.nd, vd: p.V, formule: { numero: 2, coefficients: [g.B[0], g.C[0], g.B[1], g.C[1], g.B[2], g.C[2]] } } }, catalogue: nom.startsWith("S-") ? "Ohara" : nom === "CaF2" ? "Malitson" : "Schott" };
+            return cle;
+        };
+        let surfaces = [], note = "";
+        const obst = d.Obst > 0 ? d.Obst / 2 : 0;
+        if (d.type === 'PETZVAL') {
+            const { spec, sys } = d.Petz; const P = sys.surfs;
+            champs = [[0, 0], [0, sys.theta * 0.7 * 180 / Math.PI], [0, sys.theta * 180 / Math.PI]];
+            longueurs = WAVES.map((w, i) => [w * 1000, WAVE_W[i], WAVE_NAMES[i]]);
+            P.forEach((s, k) => {
+                const suivant = k + 1 < P.length ? P[k + 1].z : sys.zImage;
+                surfaces.push(S({
+                    commentaire: k % 2 === 0 ? `L${s.el + 1} face avant (${s.glass})` : `L${s.el + 1} face arrière`,
+                    type_surface: Math.abs(s.c) < 1e-12 ? "Plane" : "Spherique", rayon: Math.abs(s.c) < 1e-12 ? null : 1 / s.c,
+                    epaisseur: suivant - s.z, verre: s.glass ? verreSellmeier(s.glass) : "AIR", semi_diametre: sys.sd[s.el], est_diaphragme: k === 0
+                }));
+            });
+            surfaces.push(image(spec.CPL / 2));
+        } else if (d.type === 'NEWTON') {
+            const L = d.TubeD / 2 + d.B;
+            surfaces = [
+                miroir("Primaire parabolique", d.R1, -1, -(d.F - L), d.D / 2 + 0.5, { est_diaphragme: true, rayon_obstruction: obst }),
+                rupture(0),
+                S({ commentaire: `Miroir plan (petit axe ${d.D2.toFixed(1)} mm)`, type_surface: "Plane", verre: "MIROIR", semi_diametre: d.D2 / 2 * Math.SQRT2 * 1.06 }),
+                rupture(L), image(d.CPL / 2)];
+            note = "miroir plan elliptique représenté par un cercle englobant";
+        } else {
+            const nasmyth = d.type === 'NASMYTH', sct = d.type === 'SCT';
+            const plate = d.Corrector && d.Corrector.plate;
+            // Demi-diamètres : 0,5 mm de marge (les faisceaux de champ frappent les faces courbes un peu
+            // au-delà du bord de la pupille) ; primaire du SCT agrandi pour le champ de pleine lumière
+            const m1 = miroir("Primaire", d.R1, d.K1, -d.Sep, (sct && plate ? plate.D1 : d.D) / 2 + 0.5, { est_diaphragme: !sct, rayon_obstruction: obst });
+            // SCT : foyer réel, déplacé par la puissance de la lame
+            const m2ep = nasmyth ? 0.75 * d.Sep : (sct && plate) ? plate.foyerM2 : d.Sep + d.B;
+            const m2 = miroir("Secondaire", d.R2, d.K2, m2ep, d.D2 / 2 + 0.5);
+            if (sct && plate) {
+                // Face asphérique z(r) = A·(r⁴ − 1,5·r0²·r²) : sphère de base c = −3·A·r0² et terme A4
+                // corrigé du r⁴ de cette sphère (c³/8)
+                const c = -3 * plate.A * plate.r0 * plate.r0;
+                surfaces.push(S({ commentaire: "Lame de Schmidt, face plane", type_surface: "Plane", epaisseur: plate.t, verre: "N-BK7", semi_diametre: d.D / 2 + 0.5, est_diaphragme: true }));
+                surfaces.push(S({ commentaire: "Lame de Schmidt, face asphérique", type_surface: "Aspherique", rayon: 1 / c, aspheriques: [plate.A - c * c * c / 8, 0, 0, 0], epaisseur: d.Sep, semi_diametre: d.D / 2 + 0.5 }));
+                note = `focale réelle ${plate.Feff.toFixed(1)} mm avec la lame, foyer ${plate.decalage.toFixed(1)} mm plus près`;
+            } else if (sct) {
+                m1.est_diaphragme = true; note = "sans lame de Schmidt (case du correcteur décochée)";
+            }
+            surfaces.push(m1, m2);
+            if (nasmyth) {
+                const reste = 0.25 * d.Sep + d.B;
+                // Trois miroirs : la lumière repart vers −Z, l'épaisseur est négative
+                surfaces.push(rupture(0), S({ commentaire: "Miroir tertiaire Nasmyth (plan)", type_surface: "Plane", verre: "MIROIR", semi_diametre: (d.D * reste / d.F + d.CPL) / 2 * Math.SQRT2 * 1.06 }), rupture(-reste));
+            }
+            surfaces.push(image(d.CPL / 2));
+            if (d.Corrector && d.Corrector.lenses && d.Corrector.lenses.length && !plate) note = "foyer natif, correcteur (schéma de principe) non exporté";
+        }
+        return {
+            nom: `${pName} — ${ARCH_NAMES[d.type] || "Lunette Petzval apo"}` + (note ? ` (${note})` : ""),
+            longueur_onde_ref_nm: 587.5618,
+            longueurs_onde: longueurs.map(([l, w, e]) => ({ valeur_nm: l, poids: w, etiquette: e })),
+            ouverture: { PupilleEntreeMm: d.D },
+            champs_deg: champs,
+            surfaces,
+            catalogue: { verres }
+        };
+    }
+    window.freeOpticalSystem = freeOpticalSystem;
+
+    function exportFreeOptical() {
+        if (!currentData.type || currentData.pending || !document.getElementById('arch-error').hidden) {
+            archError("Export impossible : corrigez d'abord les paramètres pour obtenir un calcul valide."); return;
+        }
+        const sys = freeOpticalSystem();
+        const nom = (document.getElementById('project-name').value.trim() || "projet-optique").replace(/[^\p{L}\p{N}._-]+/gu, "_");
+        const url = URL.createObjectURL(new Blob([JSON.stringify(sys, null, 2)], { type: "application/json" }));
+        const a = document.createElement('a'); a.href = url; a.download = `${nom}-${currentData.type.toLowerCase()}.json`;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    window.exportFreeOptical = exportFreeOptical;
 
     function downloadCoursePDF() {
         const { jsPDF } = window.jspdf; const doc = new jsPDF();
